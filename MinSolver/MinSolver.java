@@ -514,7 +514,7 @@ public final class MinSolver {
 					//Do not return any other model in the cone of the new model.
 					//TODO Tuples as variable assignments cause problems here. They are among primary variables
 					//but they must not be considered.
-					for(int i = 1; i <= primary - 2; i++){
+					for(int i = 1; i <= primary; i++){
 						if(cnf.valueOf(i)){
 							notModel.add(-i);
 						}
@@ -664,7 +664,7 @@ public final class MinSolver {
 				// An array of the next constraint being added.
 				ArrayList<Integer> constraint = new ArrayList<Integer>();
 				//TODO Aagain, we should get rid of assignment tuples.
-				for(int i = 1; i <= translation.numPrimaryVariables() - 2; i++){
+				for(int i = 1; i <= translation.numPrimaryVariables(); i++){
 					boolean value = translation.cnf().valueOf(i);
 					if(value == true)
 						constraint.add(-i);
@@ -707,7 +707,7 @@ public final class MinSolver {
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
 			//TODO Again, primary variables.
-			for(int i = 1; i <= translation.numPrimaryVariables() - 2; i++){
+			for(int i = 1; i <= translation.numPrimaryVariables(); i++){
 				if(solver.valueOf(i))
 					preservedFacts.add(i);
 				else
