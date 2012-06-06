@@ -360,6 +360,104 @@ public class Main {
 		f = f.forSome(x.oneOf(Expression.UNIV)).forSome(y.oneOf(Expression.UNIV));
 		return new FormulaStruct(f, b);
 	}
+
+	//Multiplication where variables interleave (This example is not that interesting!).
+	private static FormulaStruct formula3(){
+		int size = 4;
+		Formula f = null;
+		Formula temp = null;
+
+		Set<String> allPossibleAtoms = new HashSet<String>();
+		allPossibleAtoms.add("element0");
+		allPossibleAtoms.add("element1");
+		Universe u = new Universe(allPossibleAtoms);
+		TupleFactory tfac = u.factory();
+		Bounds b = new Bounds(u);
+
+		ArrayList<Variable> xs = new ArrayList<Variable>();
+		ArrayList<Variable> ys = new ArrayList<Variable>();
+		
+		for(int i = 0; i < size; i++){
+			xs.add(Variable.unary("x" + i));
+			ys.add(Variable.unary("y" + i));
+		}
+	
+		Relation r = Relation.unary("R");
+		b.bound(r, tfac.noneOf(1), tfac.allOf(1));
+
+		for(int i = 0; i < size * 2; i++){
+			int min = (i < size) ? 0: i - size + 1;
+			int max = (i < size) ? i: size - 1;
+			int offset = i < size? 0: i - size + 1;
+			
+			temp = null;
+			
+			for(int j = min; j <= max; j++){
+				Formula t = xs.get(j).in(r).and(ys.get(max - j + offset).in(r));
+				temp = (temp == null) ? t: temp.or(t);
+			}
+			
+			if(temp != null)
+				f = (f == null) ? temp: f.and(temp);
+		}
+		
+		for(int i = 0; i < size; i++){
+			f = f.forSome(xs.get(i).oneOf(Expression.UNIV));
+			f = f.forSome(ys.get(i).oneOf(Expression.UNIV));
+		}
+
+		return new FormulaStruct(f, b);
+	}
+	
+	//Multiplication where relations interleave.
+	private static FormulaStruct formula4(){
+		int size = 4;
+		Formula f = null;
+		Formula temp = null;
+
+		Set<String> allPossibleAtoms = new HashSet<String>();
+		allPossibleAtoms.add("element0");
+		allPossibleAtoms.add("element1");
+		Universe u = new Universe(allPossibleAtoms);
+		TupleFactory tfac = u.factory();
+		Bounds b = new Bounds(u);
+
+		Variable x = Variable.unary("x");
+		Variable y = Variable.unary("y");
+		Expression xy = x.product(y);
+	
+		
+		ArrayList<ArrayList<Relation>> relations = new ArrayList<ArrayList<Relation>>();
+		for(int i = 0; i < size; i++){
+			ArrayList<Relation> relation = new ArrayList<Relation>();
+			relations.add(relation);
+			for(int j = 0; j < size; j++){
+				Relation r = Relation.binary("R" + i + "," + j);
+				relation.add(r);
+				b.bound(r, tfac.noneOf(2), tfac.allOf(2));
+			}
+		}
+		
+		for(int i = 0; i < size * 2; i++){
+			int min = (i < size) ? 0: i - size + 1;
+			int max = (i < size) ? i: size - 1;
+			int offset = i < size? 0: i - size + 1;
+			
+			temp = null;
+			
+			for(int j = min; j <= max; j++){
+				Formula t = xy.in(relations.get(j).get(max - j + offset));
+				temp = (temp == null) ? t: temp.or(t);
+			}
+			
+			if(temp != null)
+				f = (f == null) ? temp: f.and(temp);
+		}
+		
+		f = f.forSome(x.oneOf(Expression.UNIV)).forSome(y.oneOf(Expression.UNIV));
+
+		return new FormulaStruct(f, b);
+	}	
 	/**
 	 * @param args
 	 * @throws TrivialFormulaException 
@@ -370,9 +468,11 @@ public class Main {
 		
 		
 		// Generating kodkod fmlas
-		FormulaStruct fs = formula1();
+		//FormulaStruct fs = formula1();
 		//FormulaStruct fs = formula0();
 		//FormulaStruct fs = formula2();
+		FormulaStruct fs = formula3();
+		//FormulaStruct fs = formula4();
 
 		Formula fmla = fs.getFmla();
 		Bounds b = fs.getBounds();
@@ -411,6 +511,7 @@ public class Main {
 			if(counter == 0)
 			{				
 				System.out.println("========================================================");
+				System.out.println("FORMULA: " + fs.getFmla().toString());
 				System.out.println("STATISTICS: ");
 				System.out.println(model.stats().clauses()+" clauses.");
 				System.out.println(model.stats().primaryVariables()+" primary variables.");
@@ -426,7 +527,7 @@ public class Main {
 			currTime = System.currentTimeMillis();
 						
 			//TODO Cleanup the test code below:
-			Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
+			/*Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
 			Iterator<Relation> it1 = fs.bounds.relations().iterator();
 			while(it1.hasNext()){
 				Relation r = it1.next();
@@ -454,7 +555,7 @@ public class Main {
 					}
 					
 				}
-			}
+			}*/
 			
 			//System.out.println("Lifters: "+ solver.getLifters(models).relationTuples());
 			
