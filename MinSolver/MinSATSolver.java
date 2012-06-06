@@ -119,13 +119,8 @@ final class MinSATSolver implements SATSolver {
 	 * @throws ContradictionException
 	 */
 	public IConstr addConstraint(int[] lits) throws ContradictionException {
-		//if (!Boolean.FALSE.equals(sat)) {
-			clauses++;
-			return solver.addClause(wrapper.wrap(lits));
-		//}
-		//else
-			//TODO this may break some contract with the KodKod solver 
-			//return null;
+		clauses++;
+		return solver.addClause(wrapper.wrap(lits));
 	}	
 	
 	/**

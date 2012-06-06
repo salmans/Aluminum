@@ -23,6 +23,7 @@ package MinSolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -259,24 +260,23 @@ public final class MinSolver {
 			ArrayList<Integer> allLifters = new ArrayList<Integer>();
 			Map<Relation, TupleSet> solutionTuples = solution.instance().relationTuples();
 			Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
-			Set<Relation> allRelations = bounds.relations();
 			
 			//This can be a method!
-			for(Relation r : allRelations){
+			for(Relation r : solutionTuples.keySet()){
 				TupleSet tuples = solutionTuples.get(r);
 				for(Tuple t: tuples){
 					allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t));
 				}
 			}
 			
-			for(Relation r : allRelations){
+			for(Relation r : solutionTuples.keySet()){
 				TupleSet tuples = lifterTuples.get(r);
 				if(tuples != null)
 					for(Tuple t: tuples){
 						allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t));
 					}
 			}			
-			
+						
 			if (!options.solver().incremental())
 				throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 					
@@ -512,7 +512,9 @@ public final class MinSolver {
 					final ArrayList<Integer> notModel = new ArrayList<Integer>();
 					
 					//Do not return any other model in the cone of the new model.
-					for(int i = 1; i <= primary; i++){
+					//TODO Tuples as variable assignments cause problems here. They are among primary variables
+					//but they must not be considered.
+					for(int i = 1; i <= primary - 2; i++){
 						if(cnf.valueOf(i)){
 							notModel.add(-i);
 						}
@@ -520,7 +522,7 @@ public final class MinSolver {
 					
 					try{						
 						coneRestrictionClauses.add(notModel);
-							coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
+						coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
 					}
 					catch(ContradictionException e){
 						System.err.println(e.getMessage());
@@ -661,7 +663,8 @@ public final class MinSolver {
 				
 				// An array of the next constraint being added.
 				ArrayList<Integer> constraint = new ArrayList<Integer>();
-				for(int i = 1; i <= ((MyReporter)options.reporter()).getNumPrimaryVariables(); i++){
+				//TODO Aagain, we should get rid of assignment tuples.
+				for(int i = 1; i <= translation.numPrimaryVariables() - 2; i++){
 					boolean value = translation.cnf().valueOf(i);
 					if(value == true)
 						constraint.add(-i);
@@ -703,7 +706,8 @@ public final class MinSolver {
 			
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
-			for(int i = 1; i <= translation.numPrimaryVariables(); i++){
+			//TODO Again, primary variables.
+			for(int i = 1; i <= translation.numPrimaryVariables() - 2; i++){
 				if(solver.valueOf(i))
 					preservedFacts.add(i);
 				else

@@ -456,7 +456,7 @@ public class Main {
 				}
 			}
 			
-			System.out.println("Lifters: "+ solver.getLifters(models).relationTuples());
+			//System.out.println("Lifters: "+ solver.getLifters(models).relationTuples());
 			
 			
 			
