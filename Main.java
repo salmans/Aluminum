@@ -457,7 +457,51 @@ public class Main {
 		f = f.forSome(x.oneOf(Expression.UNIV)).forSome(y.oneOf(Expression.UNIV));
 
 		return new FormulaStruct(f, b);
-	}	
+	}
+	
+	//Transitive Closure
+	private static FormulaStruct formula5(){
+		Variable x = Variable.unary("x");
+		Variable y = Variable.unary("y");
+		Variable z = Variable.unary("z");
+		Variable x1 = Variable.unary("x1");
+		Variable x2 = Variable.unary("x2");
+		
+		Expression xy = x.product(y);
+		Expression xz = x.product(z);
+		Expression zy = z.product(y);
+		Expression x1x2 = x1.product(x2);
+		
+		Relation r = Relation.binary("R");
+		Relation rTC = Relation.binary("R+"); 
+		
+		Set<String> allPossibleAtoms = new HashSet<String>();
+		allPossibleAtoms.add("a");
+		allPossibleAtoms.add("b");
+		allPossibleAtoms.add("c");
+		allPossibleAtoms.add("d");
+		
+		Universe u = new Universe(allPossibleAtoms);
+		
+		//Transitive closure
+		Formula f = xy.in(r).implies(xy.in(rTC)).forAll(x.oneOf(Expression.UNIV)).forAll(y.oneOf(Expression.UNIV)) 
+				.and((xz.in(r)).and(zy.in(rTC)).implies(xy.in(rTC)).
+						forAll(x.oneOf(Expression.UNIV)).
+						forAll(y.oneOf(Expression.UNIV)).
+						forAll(z.oneOf(Expression.UNIV))).
+				//The relation is not empty!
+				and(x1x2.in(r).forSome(x1.oneOf(Expression.UNIV)).forSome(x2.oneOf(Expression.UNIV)));
+				//and(u.)
+		
+		Bounds b = new Bounds(u);
+		TupleFactory tfac = u.factory();
+		//b.bound(r, tfac.noneOf(2), tfac.allOf(2));
+		b.bound(r, tfac.range(tfac.tuple(2, 1), tfac.tuple(2, 4)), tfac.allOf(2));
+		b.bound(rTC, tfac.noneOf(2), tfac.allOf(2));
+				
+		return new FormulaStruct(f, b);
+	}
+	
 	/**
 	 * @param args
 	 * @throws TrivialFormulaException 
@@ -471,8 +515,9 @@ public class Main {
 		//FormulaStruct fs = formula1();
 		//FormulaStruct fs = formula0();
 		//FormulaStruct fs = formula2();
-		FormulaStruct fs = formula3();
+		//FormulaStruct fs = formula3();
 		//FormulaStruct fs = formula4();
+		FormulaStruct fs = formula5();
 
 		Formula fmla = fs.getFmla();
 		Bounds b = fs.getBounds();
@@ -566,17 +611,6 @@ public class Main {
 			counter++;
 			
 		}
-		
-		// If the fmla is unsatisfiable, you do get ONE solution in the iterator with:
-		// sol.outcome.equals(Solution.UNSAT) or Solution.TRIVIALLY_UNSAT
-		
-		
-		/*while(models.hasNext())
-		{
-			MinSolution amodel = models.next();
-			System.out.println(amodel+"--------------------------------------------------------------------\n");
-			counter ++;
-		}*/
 		
 		System.out.println("Total minimal models seen: "+counter);
 	}
