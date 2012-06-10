@@ -14,6 +14,11 @@ import kodkod.instance.*;
 import kodkod.engine.fol2sat.TrivialFormulaException;
 import kodkod.engine.satlab.*;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.opts.BooleanOption;
+import org.kohsuke.args4j.opts.IntOption;
+
 class MIntArrayWrapper
 {
     private int hashCode;
@@ -290,7 +295,6 @@ class FormulaStruct{
 }
 
 public class Main {	
-	
 	private static FormulaStruct formula0(){
 		// TN: very basic fmla
 		// Every element is in either r1 or r2, possibly both:
@@ -333,7 +337,7 @@ public class Main {
 		return new FormulaStruct(f, b);
 	}
 
-	private static FormulaStruct formula2(){
+	private static FormulaStruct formula2(int length){
 		Variable x = Variable.unary("x");
 		Variable y = Variable.unary("y");
 		Expression xy = x.product(y);
@@ -348,7 +352,7 @@ public class Main {
 		Bounds b = new Bounds(u);
 		
 		
-		for(int i = 0; i < 100; i++){
+		for(int i = 0; i < length; i++){
 			Relation r = Relation.binary("R" + i);
 			b.bound(r, tfac.noneOf(2), tfac.allOf(2));
 			Formula temp = xy.in(r).and(yx.in(r)); 
@@ -362,8 +366,8 @@ public class Main {
 	}
 
 	//Multiplication where variables interleave (This example is not that interesting!).
-	private static FormulaStruct formula3(){
-		int size = 4;
+	private static FormulaStruct formula3(int length){
+		int size = length;
 		Formula f = null;
 		Formula temp = null;
 
@@ -410,8 +414,8 @@ public class Main {
 	}
 	
 	//Multiplication where relations interleave.
-	private static FormulaStruct formula4(){
-		int size = 4;
+	private static FormulaStruct formula4(int length){
+		int size = length;
 		Formula f = null;
 		Formula temp = null;
 
@@ -491,7 +495,6 @@ public class Main {
 						forAll(z.oneOf(Expression.UNIV))).
 				//The relation is not empty!
 				and(x1x2.in(r).forSome(x1.oneOf(Expression.UNIV)).forSome(x2.oneOf(Expression.UNIV)));
-				//and(u.)
 		
 		Bounds b = new Bounds(u);
 		TupleFactory tfac = u.factory();
@@ -509,22 +512,46 @@ public class Main {
 	 * @throws TimeoutException 
 	 */
 	public static void main(String[] args) throws TrivialFormulaException, ContradictionException, TimeoutException {
+		//input formula ranging from 0 to 4. 
+		IntOption optFormula = new IntOption("-f");
+		BooleanOption optAugmentation = new BooleanOption("-a");
+		IntOption optLength = new IntOption("-l", 10);
 		
+		CmdLineParser optParser = new CmdLineParser();
+		optParser.addOption(optFormula);
+		optParser.addOption(optAugmentation);
+		optParser.addOption(optLength);
+		
+		
+		try{
+			optParser.parse(args);
+		}
+		catch(CmdLineException e){
+			System.err.println(e.getMessage());
+		}
 		
 		// Generating kodkod fmlas
-		//FormulaStruct fs = formula1();
-		//FormulaStruct fs = formula0();
-		//FormulaStruct fs = formula2();
-		//FormulaStruct fs = formula3();
-		//FormulaStruct fs = formula4();
-		FormulaStruct fs = formula5();
+		if(!optFormula.isSet){
+			System.err.println("No formula specified.");
+			System.exit(0);
+		}
+		
+		FormulaStruct fs = null;
+		switch (optFormula.value){
+			case 0: fs = formula0(); break;
+			case 1: fs = formula1(); break;
+			case 2: fs = formula2(optLength.value); break;
+			case 3: fs = formula3(optLength.value); break;
+			case 4: fs = formula4(optLength.value); break;
+			case 5: fs = formula5(); break;
+		}
 
 		Formula fmla = fs.getFmla();
 		Bounds b = fs.getBounds();
 		
 		MyReporter rep = new MyReporter();		
 		
-		// Invoking the solver		
+		// Invoking the solver
 		MinSolver solver = new MinSolver();
 		solver.options().setFlatten(true);	
 		solver.options().setSymmetryBreaking(0); // check we get 4 models not 2
@@ -540,9 +567,7 @@ public class Main {
 		// Ask for models of R(x) satisfying those bounds, over that universe.
 		// But kodkod only accepts SENTENCES. All vars must be bound:
 		Iterator<MinSolution> models = solver.solveAll(fmla, b);
-		/*MinSolution model = solver.solve(fmla, b); */
 		 
-		//for (int i = 0; i < 10; i++){
 		int counter = 0;
 		while(models.hasNext())
 		{
@@ -557,12 +582,15 @@ public class Main {
 			{				
 				System.out.println("========================================================");
 				System.out.println("FORMULA: " + fs.getFmla().toString());
+				System.out.println("Bounds: " + fs.getBounds().toString());
+				System.out.println("-------------------------------------------------------\n");
 				System.out.println("STATISTICS: ");
 				System.out.println(model.stats().clauses()+" clauses.");
 				System.out.println(model.stats().primaryVariables()+" primary variables.");
 				System.out.println(model.stats().variables()+" total variables.");
 				System.out.println(model.stats().translationTime()+" translation time.");
 				System.out.println("========================================================\n");
+				System.out.println("MODELS:");
 			}
 			
 			// !!! question: how much of this delay in producing lifters is due to having to remove clauses?
@@ -571,42 +599,40 @@ public class Main {
 			System.out.println("Time to produce+print minimal model or UNSAT (ms): "+(System.currentTimeMillis()-currTime));
 			currTime = System.currentTimeMillis();
 						
-			//TODO Cleanup the test code below:
-			/*Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
-			Iterator<Relation> it1 = fs.bounds.relations().iterator();
-			while(it1.hasNext()){
-				Relation r = it1.next();
-				TupleSet tuples = results.get(r);				
-				Iterator<Tuple> it2 = tuples.iterator();
-				while(it2.hasNext()){
-					Instance instance = new Instance(fs.bounds.universe());
-					TupleSet s = fs.bounds.universe().factory().setOf(it2.next()); 
-					
-					instance.add(r, s);
-					
-					System.out.println("-------------------------------------------------------");
-					System.out.println("Lifter:   " + instance.relationTuples());
-					System.out.println("Model:    " + model.instance().relationTuples());
-		
-					Iterator<MinSolution> liftModels = 
-							solver.lift(fs.fmla, fs.bounds, solver.getTranslation(models), model, instance);
-					
-					while(liftModels.hasNext()){
-						MinSolution liftModel = liftModels.next();
-						if(MinSolution.Outcome.UNSATISFIABLE.equals(liftModel.outcome()) ||
-								MinSolution.Outcome.TRIVIALLY_UNSATISFIABLE.equals(liftModel.outcome()))
-							break;						
-						System.out.println("Lifted model:  " + liftModel.instance().relationTuples());
+			if(optAugmentation.isOn()){
+				Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
+				Iterator<Relation> it1 = fs.bounds.relations().iterator();
+				while(it1.hasNext()){
+					Relation r = it1.next();
+					TupleSet tuples = results.get(r);				
+					Iterator<Tuple> it2 = tuples.iterator();
+					while(it2.hasNext()){
+						Instance instance = new Instance(fs.bounds.universe());
+						TupleSet s = fs.bounds.universe().factory().setOf(it2.next()); 
+						
+						instance.add(r, s);
+						
+						System.out.println("-------------------------------------------------------");
+						System.out.println("Consistent Fact:   " + instance.relationTuples());
+						System.out.println("Model:    " + model.instance().relationTuples());
+			
+						Iterator<MinSolution> liftModels = 
+								solver.lift(fs.fmla, fs.bounds, solver.getTranslation(models), model, instance);
+						
+						while(liftModels.hasNext()){
+							MinSolution liftModel = liftModels.next();
+							if(MinSolution.Outcome.UNSATISFIABLE.equals(liftModel.outcome()) ||
+									MinSolution.Outcome.TRIVIALLY_UNSATISFIABLE.equals(liftModel.outcome()))
+								break;						
+							System.out.println("Lifted model:  " + liftModel.instance().relationTuples());
+						}
+						
 					}
-					
 				}
-			}*/
 			
-			//System.out.println("Lifters: "+ solver.getLifters(models).relationTuples());
-			
-			
-			
-			System.out.println("Time to produce+print lifters (ms): "+(System.currentTimeMillis()-currTime));
+			//System.out.println("Augmentations: "+ solver.getLifters(models).relationTuples());			
+				System.out.println("Time to produce+print augmentations (ms): "+(System.currentTimeMillis()-currTime));
+			}
 			System.out.println("========================================================\n");
 			counter++;
 			
