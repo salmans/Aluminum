@@ -11,6 +11,8 @@ import MinSolver.*;
 import kodkod.ast.*;
 import kodkod.ast.visitor.*;
 import kodkod.instance.*;
+import kodkod.engine.Solution;
+import kodkod.engine.Solver;
 import kodkod.engine.fol2sat.TrivialFormulaException;
 import kodkod.engine.satlab.*;
 
@@ -18,6 +20,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.opts.BooleanOption;
 import org.kohsuke.args4j.opts.IntOption;
+import org.kohsuke.args4j.opts.StringOption;
 
 import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
 
@@ -507,9 +510,22 @@ public class Main {
 		return new FormulaStruct(f, b);
 	}
 
-	private static FormulaStruct formula6(String fileName){
+	/**
+	 * Builds a formula from the content of a SATLib example file.
+	 * @param fileName is the address of the example file.
+	 * @return a formula
+	 */
+	private static FormulaStruct exampleFormula(String fileName){
 		Variable x = Variable.unary("x");
 		ExampleLoader example = new ExampleLoader(fileName);
+		ArrayList<ArrayList<Integer>> data = example.getContent();
+
+		System.out.println("STATISTICS:");
+		System.out.println("3-SAT formula");
+		System.out.println("number of clauses: " + example.getNumOfClauses());
+		System.out.println("number of propositional variables: " + example.getNumOfVars());	
+		System.out.println("---------------------------------------------------");
+		
 		ArrayList<Relation> relations = new ArrayList<Relation>();
 	
 		Set<String> allPossibleAtoms = new HashSet<String>();
@@ -520,43 +536,59 @@ public class Main {
 		Bounds b = new Bounds(u);
 		TupleFactory tfac = u.factory();
 		
+		Formula f = null;
+		
 		//Building relations:
-		for(int i = 1; i < example.getNumOfVars(); i++){
+		for(int i = 1; i <= example.getNumOfVars(); i++){
 			Relation r = Relation.unary("R" + i);
 			b.bound(r, tfac.noneOf(1), tfac.allOf(1));
 			relations.add(r);
 		}
 		
-		//Formula f = x.in(r1).or(x.in(r2)).and(x.in(r3)).forSome(x.oneOf(Expression.UNIV));
-		Formula f = null;		
+		for(int i = 0; i < data.size(); i++){
+			ArrayList<Integer> clause = data.get(i);
+			Formula clauseFormula;
+			clauseFormula = null;
+			for(int j = 0; j < clause.size(); j++){
+				int relation = clause.get(j);
+				boolean negation = relation < 0;
+				relation = (relation > 0)? relation: -relation;
+
+				if(!negation){
+					if(clauseFormula == null)
+						clauseFormula = x.in(relations.get(relation - 1));
+					else
+						clauseFormula = clauseFormula.or(x.in(relations.get(relation - 1)));
+				}
+				else{
+					if(clauseFormula == null)
+						clauseFormula = x.in(relations.get(relation - 1)).not();
+					else
+						clauseFormula = clauseFormula.or(x.in(relations.get(relation - 1)).not());
+				}
+			}
+			
+			if(f == null)
+				f = clauseFormula;
+			else
+				f = f.and(clauseFormula);
+		}
+		f = f.forSome(x.oneOf(Expression.UNIV));
+		
 		return new FormulaStruct(f, b);
 	}
 	
 	/**
-	 * @param args
-	 * @throws TrivialFormulaException 
-	 * @throws ContradictionException 
-	 * @throws TimeoutException 
+	 * Gets executed when parameter "-m formula" is passed to the program.
+	 * @param optFormula parameter -f
+	 * @param optAugmentation parameter -a 
+	 * @param optLength parameter -l
+	 * @throws TimeoutException
+	 * @throws ContradictionException
 	 */
-	public static void main(String[] args) throws TrivialFormulaException, ContradictionException, TimeoutException {
-		//input formula ranging from 0 to 4. 
-		IntOption optFormula = new IntOption("-f");
-		BooleanOption optAugmentation = new BooleanOption("-a");
-		IntOption optLength = new IntOption("-l", 10);
-		
-		CmdLineParser optParser = new CmdLineParser();
-		optParser.addOption(optFormula);
-		optParser.addOption(optAugmentation);
-		optParser.addOption(optLength);
-		
-		
-		try{
-			optParser.parse(args);
-		}
-		catch(CmdLineException e){
-			System.err.println(e.getMessage());
-		}
-		
+	private static void formulaMode(IntOption optFormula,
+			BooleanOption optAugmentation, IntOption optLength)
+			throws TimeoutException, ContradictionException {
 		// Generating kodkod fmlas
 		if(!optFormula.isSet){
 			System.err.println("No formula specified.");
@@ -667,4 +699,104 @@ public class Main {
 		
 		System.out.println("Total minimal models seen: "+counter);
 	}
+	
+	/**
+	 * Gets executed when parameter "-m example" is passed to the program.
+	 */
+	private static void exampleMode(StringOption optExampleFile, IntOption optTotalModels) {
+		if((optExampleFile.value == null) || (optExampleFile.value.length() == 0)){
+			System.err.println("No SATLib example file has been provided.");
+			System.exit(0);
+		}
+
+		FormulaStruct fs = exampleFormula(optExampleFile.value);
+		Formula fmla = fs.getFmla();
+		Bounds bnds = fs.getBounds();
+		
+		MyReporter rep = new MyReporter();		
+		
+		// Invoking the solver
+		MinSolver minSolver = new MinSolver();
+		minSolver.options().setFlatten(true);	
+		minSolver.options().setSymmetryBreaking(0); // check we get 4 models not 2
+		MinSATSolverFactory minimalFactory = new MinSATSolverFactory(rep);		
+		minSolver.options().setSolver(minimalFactory);
+
+		Solver solver = new Solver();
+		solver.options().setFlatten(true);	
+		solver.options().setSymmetryBreaking(0); // check we get 4 models not 2
+		
+		// tuple in upper bound ---> that tuple CAN appear in the relation
+		// tuple in lower bound ---> tuple MUST appear in the relation
+		
+		minSolver.options().setReporter(rep);
+		
+		long totalTime = 0;
+		long currTime;
+		int count = 0;
+		int totalModels = optTotalModels.value;
+		
+		Iterator<MinSolution> minModels = minSolver.solveAll(fmla, bnds);
+		while(minModels.hasNext()){
+			currTime = System.currentTimeMillis();
+			minModels.next();
+			totalTime += System.currentTimeMillis() - currTime;
+			count ++;
+		}
+		
+		System.out.println("MINIMAL MODELS:");
+		System.out.println("# of Models " + count);		
+		System.out.println("Total Time: " + totalTime);
+		System.out.println("Average Time: " + totalTime/count);
+	
+		totalTime = 0;
+		count = 0;
+		
+		Iterator<Solution> models = solver.solveAll(fmla, bnds);
+		while(models.hasNext()){
+			currTime = System.currentTimeMillis();
+			models.next();
+			totalTime += System.currentTimeMillis() - currTime;
+			if(count++ == totalModels)
+				break;
+		}
+		System.out.println("---------------------------------------------------");
+		System.out.println("ARBITRARY MODELS:");
+		System.out.println("# of Models : " + count);
+		System.out.println("Total Time: " + totalTime);
+		System.out.println("Average Time: " + totalTime/count);		
+	}
+	
+	/**
+	 * The main method of the demo program.
+	 */
+	public static void main(String[] args) throws TrivialFormulaException, ContradictionException, TimeoutException {
+		//input formula ranging from 0 to 4. 
+		IntOption optFormula = new IntOption("-f");
+		BooleanOption optAugmentation = new BooleanOption("-a");
+		IntOption optLength = new IntOption("-l", 10);
+		StringOption optMode = new StringOption("-m", "formula");
+		StringOption optExampleFile = new StringOption("-e");
+		IntOption optTotalModels = new IntOption("-t", 100);
+		
+		CmdLineParser optParser = new CmdLineParser();
+		optParser.addOption(optMode);		
+		optParser.addOption(optFormula);
+		optParser.addOption(optAugmentation);
+		optParser.addOption(optLength);
+		optParser.addOption(optExampleFile);
+		optParser.addOption(optTotalModels);
+		
+		try{
+			optParser.parse(args);
+		}
+		catch(CmdLineException e){
+			System.err.println(e.getMessage());
+		}
+		
+		if(optMode.value.equals("formula"))
+			formulaMode(optFormula, optAugmentation, optLength);
+		else
+			exampleMode(optExampleFile, optTotalModels);
+	}	
 }
