@@ -504,6 +504,31 @@ public class Main {
 				
 		return new FormulaStruct(f, b);
 	}
+
+	private static FormulaStruct formula6(String fileName){
+		Variable x = Variable.unary("x");
+		ExampleLoader example = new ExampleLoader(fileName);
+		ArrayList<Relation> relations = new ArrayList<Relation>();
+	
+		Set<String> allPossibleAtoms = new HashSet<String>();
+		allPossibleAtoms.add("element0");
+		allPossibleAtoms.add("element1");
+		Universe u = new Universe(allPossibleAtoms);
+	
+		Bounds b = new Bounds(u);
+		TupleFactory tfac = u.factory();
+		
+		//Building relations:
+		for(int i = 1; i < example.getNumOfVars(); i++){
+			Relation r = Relation.unary("R" + i);
+			b.bound(r, tfac.noneOf(1), tfac.allOf(1));
+			relations.add(r);
+		}
+		
+		//Formula f = x.in(r1).or(x.in(r2)).and(x.in(r3)).forSome(x.oneOf(Expression.UNIV));
+		Formula f = null;		
+		return new FormulaStruct(f, b);
+	}
 	
 	/**
 	 * @param args
