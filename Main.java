@@ -19,6 +19,8 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.opts.BooleanOption;
 import org.kohsuke.args4j.opts.IntOption;
 
+import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
+
 class MIntArrayWrapper
 {
     private int hashCode;
@@ -626,7 +628,7 @@ public class Main {
 						
 			if(optAugmentation.isOn()){
 				Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
-				Iterator<Relation> it1 = fs.bounds.relations().iterator();
+				Iterator<Relation> it1 = results.keySet().iterator();
 				while(it1.hasNext()){
 					Relation r = it1.next();
 					TupleSet tuples = results.get(r);				
