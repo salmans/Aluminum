@@ -1,3 +1,6 @@
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.*;
 
 import org.sat4j.core.VecInt;
@@ -19,10 +22,9 @@ import kodkod.engine.satlab.*;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.opts.BooleanOption;
+import org.kohsuke.args4j.opts.FileOption;
 import org.kohsuke.args4j.opts.IntOption;
 import org.kohsuke.args4j.opts.StringOption;
-
-import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
 
 class MIntArrayWrapper
 {
@@ -299,6 +301,42 @@ class FormulaStruct{
 	}		
 }
 
+class OutputData{
+	/**
+	 * A list to store times to generate minimal models.
+	 */
+	int[] minimalTime;
+	
+	/**
+	 * A list to store times to generate random models.
+	 */
+	int[] randomTime;
+	
+	/**
+	 * A list to store the number of SAT solving iterations for computing
+	 * minimal models. 
+	 */
+	int[] iterations;
+	
+	/**
+	 * The size of the lists. 
+	 */
+	final int size;
+	
+	OutputData(int size){
+		this.size = size;
+		minimalTime = new int[size];
+		randomTime = new int[size];
+		iterations = new int[size];
+		
+		for(int i = 0; i < size; i++){
+			minimalTime[i] = 0;
+			randomTime[i] = 0;
+			iterations[i] = 0;
+		}
+	}
+}
+
 public class Main {	
 	private static FormulaStruct formula0(){
 		// TN: very basic fmla
@@ -519,12 +557,6 @@ public class Main {
 		Variable x = Variable.unary("x");
 		ExampleLoader example = new ExampleLoader(fileName);
 		ArrayList<ArrayList<Integer>> data = example.getContent();
-
-		System.out.println("STATISTICS:");
-		System.out.println("3-SAT formula");
-		System.out.println("number of clauses: " + example.getNumOfClauses());
-		System.out.println("number of propositional variables: " + example.getNumOfVars());	
-		System.out.println("---------------------------------------------------");
 		
 		ArrayList<Relation> relations = new ArrayList<Relation>();
 	
@@ -604,7 +636,7 @@ public class Main {
 			case 4: fs = formula4(optLength.value); break;
 			case 5: fs = formula5(); break;
 		}
-
+		
 		Formula fmla = fs.getFmla();
 		Bounds b = fs.getBounds();
 		
@@ -701,15 +733,123 @@ public class Main {
 	}
 	
 	/**
-	 * Gets executed when parameter "-m example" is passed to the program.
+	 * Processing a single example file where "-m example".
+	 * @param optInputFile the input file option.
+	 * @param optOutputFile the output file option.
+	 * @param optNumberOfModels the option corresponding to the number of models
+	 * to generate.
 	 */
-	private static void exampleMode(StringOption optExampleFile, IntOption optTotalModels) {
-		if((optExampleFile.value == null) || (optExampleFile.value.length() == 0)){
+	private static void exampleModeFile(FileOption optInputFile, 
+			FileOption optOutputFile, IntOption optNumberOfModels) {
+		if(optInputFile.value == null){
 			System.err.println("No SATLib example file has been provided.");
 			System.exit(0);
 		}
 
-		FormulaStruct fs = exampleFormula(optExampleFile.value);
+		int numberOfModels = 0;
+		if(optNumberOfModels.isSet)
+			numberOfModels = optNumberOfModels.value;
+		
+		String inputFilePath = optInputFile.value.getAbsolutePath();
+		String outputFilePath = null;
+		if(optOutputFile.value != null)
+			outputFilePath = optOutputFile.value.getAbsolutePath();
+		else{
+			String fileName = optInputFile.value.getName();
+			fileName = fileName.substring(0, fileName.lastIndexOf('.'));
+			fileName += ".dat";
+			outputFilePath = optInputFile.value.getParentFile().
+					getAbsolutePath() + File.separator + fileName;
+		}
+		
+		exampleModeHelper(inputFilePath, outputFilePath, numberOfModels, null);
+	}
+
+	/**
+	 * Processing the files in a directory where "-m example".
+	 * @param optInputFile the input file option corresponding to the input directory.
+	 * @param optOutputFile the output file option for the output directory.
+	 * @param optNumberOfModels the option for the number of models to generate.
+	 */
+	private static void exampleModeDirectory(FileOption optInputFile, 
+			FileOption optOutputFile, IntOption optNumberOfModels,
+			FileOption optSummaryFile) {
+		if(optInputFile.value == null){
+			System.err.println("No SATLib example file has been provided.");
+			System.exit(0);
+		}
+		if(optOutputFile.value != null){
+			if(!optOutputFile.value.isDirectory()){
+				System.err.println("The output has to be a path to a directory.");
+				System.exit(0);
+			}
+		}
+		
+		int numberOfModels = 0;
+		if(optNumberOfModels.isSet)
+			numberOfModels = optNumberOfModels.value;
+		
+		String outputFilePath = null;
+		if(optOutputFile.value != null)
+			outputFilePath = optOutputFile.value.getAbsolutePath();
+		else
+			outputFilePath = optInputFile.value.getAbsolutePath();
+		
+		OutputData summary = null;
+		if(optSummaryFile.value != null)
+			summary = new OutputData(numberOfModels);
+		
+		File files[] = optInputFile.value.listFiles();
+		for(int i = 0; i < files.length; i++){
+			String fileName = files[i].getName();
+			fileName = fileName.substring(0, fileName.lastIndexOf('.'));
+			fileName += ".dat";
+			
+			System.out.print("Processing "+ files[i].getName() + "...");
+			
+			exampleModeHelper(
+					files[i].getAbsolutePath(), 
+					outputFilePath + File.separator + fileName, 
+					numberOfModels, summary);
+			
+			System.out.println("done!");
+		}
+
+		if(optSummaryFile.value != null){
+			//Writing the summary file:
+			try{			
+				FileWriter fstream = new FileWriter(optSummaryFile.value);
+				BufferedWriter out = new BufferedWriter(fstream);
+	
+				// Writing the header row:
+				out.write("iteration random minimal loops\n");
+				// Writing data rows:
+				for(int i = 1; i <= summary.size; i++){
+					out.write(i + " " 
+							+ summary.randomTime[i - 1] + " "
+							+ summary.minimalTime[i - 1] + " "
+							+ summary.iterations[i - 1] + "\n");				
+				}
+				
+				out.close();
+			}catch (Exception e){
+				System.err.println("Error: " + e.getMessage());
+			}
+		}
+	}
+	
+	/**
+	 * Helper for example mode functions.
+	 * @param inputFilePath the path of input example file.
+	 * @param outputFilePath the path of output file.
+	 * @param numberOfModels the number of models to generate.
+	 * @param summary the input OutputData object to store a summary.
+	 * @return the summary.
+	 */
+	private static OutputData exampleModeHelper(String inputFilePath,
+			String outputFilePath, int numberOfModels, OutputData summary) {
+		FormulaStruct fs = exampleFormula(inputFilePath);
+		
 		Formula fmla = fs.getFmla();
 		Bounds bnds = fs.getBounds();
 		
@@ -717,54 +857,79 @@ public class Main {
 		
 		// Invoking the solver
 		MinSolver minSolver = new MinSolver();
-		minSolver.options().setFlatten(true);	
-		minSolver.options().setSymmetryBreaking(0); // check we get 4 models not 2
+		minSolver.options().setFlatten(true);
+		
+		//TODO parameterize symmetry breaking
+		minSolver.options().setSymmetryBreaking(0);
+		
 		MinSATSolverFactory minimalFactory = new MinSATSolverFactory(rep);		
 		minSolver.options().setSolver(minimalFactory);
 
 		Solver solver = new Solver();
 		solver.options().setFlatten(true);	
-		solver.options().setSymmetryBreaking(0); // check we get 4 models not 2
-		
-		// tuple in upper bound ---> that tuple CAN appear in the relation
-		// tuple in lower bound ---> tuple MUST appear in the relation
+		solver.options().setSymmetryBreaking(0);
 		
 		minSolver.options().setReporter(rep);
 		
-		long totalTime = 0;
 		long currTime;
-		int count = 0;
-		int totalModels = optTotalModels.value;
+
+		ArrayList<Long> randomModelTimes = new ArrayList<Long>();
+		ArrayList<Long> minimalModelTimes = new ArrayList<Long>();
+		ArrayList<Integer> minimalModelIterations = new ArrayList<Integer>();		
 		
 		Iterator<MinSolution> minModels = minSolver.solveAll(fmla, bnds);
+		
+		//Generating minimal models:
 		while(minModels.hasNext()){
 			currTime = System.currentTimeMillis();
 			minModels.next();
-			totalTime += System.currentTimeMillis() - currTime;
-			count ++;
-		}
+			minimalModelTimes.add(System.currentTimeMillis() - currTime);
+			minimalModelIterations.add(rep.getIterations());
+			
+			if(numberOfModels != 0){
+				if(minimalModelTimes.size() == numberOfModels)
+					break;
+			}
+		}	
 		
-		System.out.println("MINIMAL MODELS:");
-		System.out.println("# of Models " + count);		
-		System.out.println("Total Time: " + totalTime);
-		System.out.println("Average Time: " + totalTime/count);
-	
-		totalTime = 0;
-		count = 0;
-		
+		//Generating arbitrary models:
 		Iterator<Solution> models = solver.solveAll(fmla, bnds);
 		while(models.hasNext()){
 			currTime = System.currentTimeMillis();
 			models.next();
-			totalTime += System.currentTimeMillis() - currTime;
-			if(count++ == totalModels)
+			randomModelTimes.add(System.currentTimeMillis() - currTime);
+
+			if(randomModelTimes.size() == minimalModelTimes.size())
 				break;
 		}
-		System.out.println("---------------------------------------------------");
-		System.out.println("ARBITRARY MODELS:");
-		System.out.println("# of Models : " + count);
-		System.out.println("Total Time: " + totalTime);
-		System.out.println("Average Time: " + totalTime/count);		
+		
+		//Writing the output file:
+		try{			
+			FileWriter fstream = new FileWriter(outputFilePath);
+			BufferedWriter out = new BufferedWriter(fstream);
+
+			// Writing the header row:
+			out.write("iteration random minimal loops\n");
+			// Writing data rows:
+			for(int i = 1; i <= minimalModelTimes.size(); i++){
+				out.write(i + " " 
+						+ randomModelTimes.get(i - 1) + " "
+						+ minimalModelTimes.get(i - 1) + " "
+						+ minimalModelIterations.get(i - 1) + "\n");
+				
+				if(summary != null){
+					summary.minimalTime[i - 1] += minimalModelTimes.get(i - 1);
+					summary.randomTime[i - 1] += randomModelTimes.get(i - 1);
+					summary.iterations[i - 1] += minimalModelIterations.get(i - 1);
+				}
+			}
+			
+			out.close();
+		}catch (Exception e){
+			System.err.println("Error: " + e.getMessage());
+		}
+		
+		return summary;
 	}
 	
 	/**
@@ -776,16 +941,20 @@ public class Main {
 		BooleanOption optAugmentation = new BooleanOption("-a");
 		IntOption optLength = new IntOption("-l", 10);
 		StringOption optMode = new StringOption("-m", "formula");
-		StringOption optExampleFile = new StringOption("-e");
-		IntOption optTotalModels = new IntOption("-t", 100);
+		FileOption optInputFile = new FileOption("-i");
+		FileOption optOutputFile = new FileOption("-o");
+		IntOption optNumberOfModels = new IntOption("-n");
+		FileOption optSummaryFile = new FileOption("-s");
 		
 		CmdLineParser optParser = new CmdLineParser();
 		optParser.addOption(optMode);		
 		optParser.addOption(optFormula);
 		optParser.addOption(optAugmentation);
 		optParser.addOption(optLength);
-		optParser.addOption(optExampleFile);
-		optParser.addOption(optTotalModels);
+		optParser.addOption(optInputFile);
+		optParser.addOption(optOutputFile);
+		optParser.addOption(optNumberOfModels);
+		optParser.addOption(optSummaryFile);
 		
 		try{
 			optParser.parse(args);
@@ -796,7 +965,12 @@ public class Main {
 		
 		if(optMode.value.equals("formula"))
 			formulaMode(optFormula, optAugmentation, optLength);
-		else
-			exampleMode(optExampleFile, optTotalModels);
+		else{
+			if(optInputFile.value.isDirectory())
+				exampleModeDirectory(optInputFile, optOutputFile, 
+						optNumberOfModels, optSummaryFile);
+			else
+				exampleModeFile(optInputFile, optOutputFile, optNumberOfModels);
+		}
 	}	
 }

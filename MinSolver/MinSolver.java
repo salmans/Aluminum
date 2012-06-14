@@ -23,7 +23,6 @@ package MinSolver;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -654,7 +653,9 @@ public final class MinSolver {
 			
 			//Salman: The cloning operation can be improved. 
 			ArrayList<Integer> unitClauses = toArrayList(lifters);
-						
+			
+			int iterationCounter = 1;
+			
 			do
 			{				
 				// Given that candidate for minimal-model, try to make something smaller.
@@ -674,8 +675,12 @@ public final class MinSolver {
 				
 				//System.out.println("constraint: "+constraint);
 				constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
+				
+				iterationCounter++;
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
+			
+			((MyReporter)options.reporter()).setIterations(iterationCounter);
 			
 			// Remove all the cone-specific constraints we just added from the solver:
 			Iterator<IConstr> it = constraints.iterator();

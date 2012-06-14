@@ -15,6 +15,7 @@ public class MyReporter implements Reporter
 {
 	Bounds skolemBounds = null; 
 	private int primaryVars;
+	private int iterations;
 	
 	@Override
 	public void detectedSymmetries(Set<IntSet> parts) {
@@ -58,6 +59,14 @@ public class MyReporter implements Reporter
 	@Override
 	public void translatingToCNF(BooleanFormula circuit) {				
 	}
+	
+	public void setIterations(int iterations){
+		this.iterations = iterations;
+	}
+
+	public int getIterations(){
+		return iterations;
+	}	
 	
 	int getNumPrimaryVariables()
 	{
