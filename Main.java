@@ -943,7 +943,7 @@ public class Main {
 		StringOption optMode = new StringOption("-m", "formula");
 		FileOption optInputFile = new FileOption("-i");
 		FileOption optOutputFile = new FileOption("-o");
-		IntOption optNumberOfModels = new IntOption("-n");
+		IntOption optNumberOfModels = new IntOption("-n", 10);
 		FileOption optSummaryFile = new FileOption("-s");
 		
 		CmdLineParser optParser = new CmdLineParser();
