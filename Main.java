@@ -3,13 +3,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
 
+import minsolver.*;
+
 import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.TimeoutException;
 
-import MinSolver.*;
 
 import kodkod.ast.*;
 import kodkod.ast.visitor.*;

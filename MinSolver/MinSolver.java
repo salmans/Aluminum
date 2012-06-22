@@ -1,4 +1,4 @@
-package MinSolver;
+package minsolver;
 
 /* 
  * Kodkod -- Copyright (c) 2005-2007, Emina Torlak
@@ -130,7 +130,6 @@ public final class MinSolver {
 	 */
 	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
 			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
-		
 		if (options.logTranslation()>0 || !options.solver().minimizer())
 			throw new IllegalStateException();
 		
@@ -190,7 +189,6 @@ public final class MinSolver {
 	 */
 	public MinSolution solve(Formula formula, Bounds bounds)
 			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
-		
 		final long startTransl = System.currentTimeMillis();
 		
 		try {		
@@ -241,12 +239,10 @@ public final class MinSolver {
 	 */
 	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds bounds) 
 		throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
-		
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
-		return new MinSolutionIterator(formula, bounds, options);
-		
+		return new MinSolutionIterator(formula, bounds, options);		
 	}
 
 	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Translation translation,

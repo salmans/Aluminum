@@ -1,4 +1,4 @@
-package MinSolver;
+package minsolver;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package MinSolver;
+package minsolver;
 import java.util.Iterator;
 
 import kodkod.ast.Formula;

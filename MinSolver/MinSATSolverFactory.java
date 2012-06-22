@@ -1,4 +1,4 @@
-package MinSolver;
+package minsolver;
 
 import kodkod.engine.satlab.SATFactory;
 import kodkod.engine.satlab.SATSolver;
@@ -8,6 +8,11 @@ import org.sat4j.minisat.SolverFactory;
 public class MinSATSolverFactory extends SATFactory
 {   
 	private MyReporter theReporter; 
+
+	public MinSATSolverFactory()
+	{
+		super();
+	}
 	
 	public MinSATSolverFactory(MyReporter theReporter)
 	{
