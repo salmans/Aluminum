@@ -54,7 +54,7 @@ import minalloy.translator.MinA4SolutionReader;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import minalloy.translator.MinTranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import minalloyviz.MinVizGUI;
 
 /** This helper method is used by SimpleGUI. */
 
@@ -62,14 +62,14 @@ final class MinSimpleReporter extends A4Reporter {
 
     public static final class SimpleCallback1 implements WorkerCallback {
         private final SimpleGUI gui;
-        private final VizGUI viz;
+        private final MinVizGUI viz;
         private final SwingLogPanel span;
         private final Set<ErrorWarning> warnings = new HashSet<ErrorWarning>();
         private final List<String> results = new ArrayList<String>();
         private int len2=0, len3=0, verbosity=0;
         private final String latestName;
         private final int latestVersion;
-        public SimpleCallback1(SimpleGUI gui, VizGUI viz, SwingLogPanel span, int verbosity, String latestName, int latestVersion) {
+        public SimpleCallback1(SimpleGUI gui, MinVizGUI viz, SwingLogPanel span, int verbosity, String latestName, int latestVersion) {
             this.gui=gui; this.viz=viz; this.span=span; this.verbosity=verbosity;
             this.latestName=latestName; this.latestVersion=latestVersion;
             len2 = len3 = span.getLength();

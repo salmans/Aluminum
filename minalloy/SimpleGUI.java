@@ -122,7 +122,7 @@ import edu.mit.csail.sdg.alloy4.Util.BooleanPref;
 import edu.mit.csail.sdg.alloy4.Util.IntPref;
 import edu.mit.csail.sdg.alloy4.Util.StringPref;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import minalloyviz.MinVizGUI;
 import minalloy.MinSimpleReporter.SimpleCallback1;
 import minalloy.MinSimpleReporter.SimpleTask1;
 import minalloy.MinSimpleReporter.SimpleTask2;
@@ -267,7 +267,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private JFrame frame;
 
     /** The JFrame for the visualizer window. */
-    private VizGUI viz;
+    private MinVizGUI viz;
 
     /** The "File", "Edit", "Run", "Option", "Window", and "Help" menus. */
     private JMenu filemenu, editmenu, runmenu, optmenu, windowmenu, windowmenu2, helpmenu;
@@ -1829,7 +1829,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
 
         // Pre-load the visualizer
-        viz = new VizGUI(false, "", windowmenu2, enumerator, evaluator);
+        viz = new MinVizGUI(false, "", windowmenu2, enumerator, evaluator);
         viz.doSetFontSize(FontSize.get());
 
         // Create the toolbar
