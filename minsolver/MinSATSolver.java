@@ -46,7 +46,7 @@ final class MinSATSolver implements SATSolver {
 	private Boolean sat; 
 	private int vars, clauses;
 	private int[] lastModel = null;
-	
+
 	/**
 	 * Constructs a wrapper for the given instance
 	 * of ISolver.
@@ -120,7 +120,8 @@ final class MinSATSolver implements SATSolver {
 	 */
 	public IConstr addConstraint(int[] lits) throws ContradictionException {
 		clauses++;
-		return solver.addClause(wrapper.wrap(lits));
+		IConstr temp = solver.addClause(wrapper.wrap(lits));
+		return temp;
 	}	
 	
 	/**
@@ -197,7 +198,7 @@ final class MinSATSolver implements SATSolver {
 	 * @see kodkod.engine.satlab.SATSolver#free()
 	 */
 	public synchronized final void free() {
-		solver = null;
+		//solver = null;
 	}
 	
 	/**

@@ -70,6 +70,9 @@ import kodkod.util.ints.IntSet;
  */
 public final class MinSolver {
 	private final Options options;
+	
+	//The iterator that acquires the SAT solver.
+	private MinSolutionIterator activeIterator;
 
 	/**
 	 * Constructs a new Solver with the default options.
@@ -98,12 +101,6 @@ public final class MinSolver {
 	 */
 	public Options options() {
 		return options;
-	}
-
-	//TODO Remove after test
-	public Translation getTranslation(Iterator<MinSolution> iterator){
-		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
-		return theIterator.translation;
 	}
 	
 	/**
@@ -242,10 +239,26 @@ public final class MinSolver {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
-		return new MinSolutionIterator(formula, bounds, options);		
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options);
+		
+		return iterator;
 	}
-
-	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Translation translation,
+	
+	/**
+	 * Augments a model from an iterator with a set of facts aka lifters.
+	 * @param formula the original FOL formula.
+	 * @param bounds the bounds.
+	 * @param iterator the previous iterator.
+	 * @param solution the current solution of the previous iterator being lifted.
+	 * @param lifters the facts to augment.
+	 * @return a new iterator over the augmented models.
+	 * @throws HigherOrderDeclException
+	 * @throws UnboundLeafException
+	 * @throws MinAbortedException
+	 */
+	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
+	//via previous iterator.
+	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Iterator<MinSolution> prevIterator,
 			MinSolution solution, Instance lifters) 
 			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
 			//Create lifters from solution and lifters.
@@ -260,7 +273,7 @@ public final class MinSolver {
 			for(Relation r : solutionTuples.keySet()){
 				TupleSet tuples = solutionTuples.get(r);
 				for(Tuple t: tuples){
-					allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t));
+					allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t));
 				}
 			}
 			
@@ -268,15 +281,15 @@ public final class MinSolver {
 				TupleSet tuples = lifterTuples.get(r);
 				if(tuples != null)
 					for(Tuple t: tuples){
-						allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t));
+						allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t));
 					}
 			}			
 						
 			if (!options.solver().incremental())
 				throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 					
-			return new MinSolutionIterator(formula, bounds, options, allLifters);
-			
+			MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
+			return iterator;
 		}	
 	
 	/**
@@ -286,7 +299,6 @@ public final class MinSolver {
 	 * @throws TimeoutException
 	 * @throws ContradictionException
 	 */
-	//TODO This method can be accessible in a more intuitive way.
 	public Instance getLifters(Iterator<MinSolution> iterator) throws TimeoutException, ContradictionException{
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 		return MinTwoWayTranslator.translatePropositions(
@@ -420,6 +432,9 @@ public final class MinSolver {
 		private long translTime;
 		private int trivial;
 		
+		//the MinSolver instance that creates the iterator.
+		private final MinSolver minSolver;
+		
 		//Modifications for minimal models
 		private Boolean sat = null;
 		/**
@@ -443,8 +458,8 @@ public final class MinSolver {
 		/**
 		 * Constructs a solution iterator for the given formula, bounds, and options.
 		 */
-		MinSolutionIterator(Formula formula, Bounds bounds, Options options) {
-			this(formula, bounds, options, null);
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds bounds, Options options) {
+			this(minSolver, formula, bounds, options, null, null);
 		}
 
 		/**
@@ -453,14 +468,25 @@ public final class MinSolver {
 		 * @param bounds
 		 * @param options
 		 * @param lifters
+		 * @param prevIterator
 		 */
-		MinSolutionIterator(Formula formula, Bounds bounds, Options options, ArrayList<Integer> lifters) {
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds bounds, Options options, ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
+			this.minSolver = minSolver;
 			this.formula = formula;
 			this.bounds = bounds;
 			this.options = options;
 			this.translation = null;
 			this.trivial = 0;
 			this.lifters = (lifters == null) ? null : toIntCollection(lifters);
+			
+			if(prevIterator != null){  //if lifting on a previous iterator
+				this.translation = prevIterator.getTranslation();
+				
+				//Inherit the initial coneRestrictionClauses and coneRestrictionConstraints 
+				//from the previous iterator:
+				//this.coneRestrictionClauses = prevIterator.cloneConeRestrictionClauses();
+				//this.coneRestrictionConstraints = prevIterator.cloneConeRestrictionConstraints();				
+			}
 		}
 		
 		/**
@@ -507,8 +533,6 @@ public final class MinSolver {
 					final ArrayList<Integer> notModel = new ArrayList<Integer>();
 					
 					//Do not return any other model in the cone of the new model.
-					//TODO Tuples as variable assignments cause problems here. They are among primary variables
-					//but they must not be considered.
 					for(int i = 1; i <= primary; i++){
 						if(cnf.valueOf(i)){
 							notModel.add(-i);
@@ -588,6 +612,9 @@ public final class MinSolver {
 		 */
 		public MinSolution next() {
 			if (!hasNext()) throw new NoSuchElementException();
+			
+			claimSATSolver();
+
 			if (translation==null) {
 				try {
 					translTime = System.currentTimeMillis();
@@ -601,6 +628,26 @@ public final class MinSolver {
 			} else {
 				return nonTrivialSolution();
 			}
+		}
+
+		/**
+		 * Prepares the solver to be used by the current iterator.
+		 */
+		private void claimSATSolver() {
+			if(minSolver.activeIterator != null && minSolver.activeIterator != this){
+				//Remove all the constraints of the previous active iterator.
+				minSolver.activeIterator.removeAllConstraints();
+				//Add the constraints of the current iterator.
+				try{
+					if(coneRestrictionConstraints.isEmpty())
+						addAllClauses();
+				}
+				catch(ContradictionException e){
+					System.err.println(e.getMessage());
+				}
+			}
+			//Set the activeIterator
+			minSolver.activeIterator = this;
 		}		
 		
 		/**
@@ -647,7 +694,6 @@ public final class MinSolver {
 			ArrayList<IConstr> constraints = new ArrayList<IConstr>();
 			//All the unit clauses being passed to the solver as assumptions.
 			
-			//Salman: The cloning operation can be improved. 
 			ArrayList<Integer> unitClauses = toArrayList(lifters);
 			
 			int iterationCounter = 1;
@@ -660,7 +706,6 @@ public final class MinSolver {
 				
 				// An array of the next constraint being added.
 				ArrayList<Integer> constraint = new ArrayList<Integer>();
-				//TODO Aagain, we should get rid of assignment tuples.
 				for(int i = 1; i <= translation.numPrimaryVariables(); i++){
 					boolean value = translation.cnf().valueOf(i);
 					if(value == true)
@@ -703,11 +748,12 @@ public final class MinSolver {
 			ArrayList<Integer> retVal = new ArrayList<Integer>();
 			List<Integer> preservedFacts = new ArrayList<Integer>();
 			
+			//TODO claimSATSolver does not have to fill all the clauses in here.
+			claimSATSolver();
 			removeAllConstraints();
 			
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
-			//TODO Again, primary variables.
 			for(int i = 1; i <= translation.numPrimaryVariables(); i++){
 				if(solver.valueOf(i))
 					preservedFacts.add(i);
@@ -763,6 +809,33 @@ public final class MinSolver {
 			return toIntCollection(retVal);
 		}
 		
+		/**
+		 * Returns the translation for this iterator.
+		 * @return the translation.
+		 */
+		public Translation getTranslation(){
+			return translation;
+		}
+		//COMMENT maybe useful:
+		/*private Set<List<Integer>> cloneConeRestrictionClauses(){
+			Set<List<Integer>> retVal = new HashSet<List<Integer>>();
+			for(List<Integer> list: coneRestrictionClauses){
+				ArrayList<Integer> tempList = new ArrayList<Integer>();
+				for(Integer val: list){
+					tempList.add(val);
+				}
+				retVal.add(tempList);
+			}
+			return retVal;
+		}
+		
+		private Set<IConstr> cloneConeRestrictionConstraints(){
+			Set<IConstr> retVal = new HashSet<IConstr>();
+			for(IConstr constr: coneRestrictionConstraints){
+				retVal.add(constr);
+			}
+			return retVal;
+		}*/
 		
 		//Helpers:
 		/**
@@ -770,9 +843,8 @@ public final class MinSolver {
 		 * @throws ContradictionException
 		 */
 		private void addAllClauses() throws ContradictionException{
-			Iterator<List<Integer>> it = coneRestrictionClauses.iterator();
-			while(it.hasNext()){
-				coneRestrictionConstraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(it.next())));	
+			for(List<Integer> list: coneRestrictionClauses){
+				coneRestrictionConstraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(list)));					
 			}
 		}
 		
@@ -782,7 +854,8 @@ public final class MinSolver {
 		private void removeAllConstraints(){
 			Iterator<IConstr> it = coneRestrictionConstraints.iterator();
 			while(it.hasNext()){
-				((MinSATSolver)translation.cnf()).removeConstraint(it.next());
+				IConstr temp = it.next();
+				((MinSATSolver)translation.cnf()).removeConstraint(temp);
 				it.remove();
 			}
 		}		
