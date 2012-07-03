@@ -21,7 +21,6 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import kodkod.engine.satlab.SATSolver;
@@ -208,6 +207,7 @@ final class MinSATSolver implements SATSolver {
 	 * @author Emina Torlak
 	 */
 	private static final class ReadOnlyIVecInt implements IVecInt {
+		private static final long serialVersionUID = 1L;
 		private int[] vec;
 		
 		/**

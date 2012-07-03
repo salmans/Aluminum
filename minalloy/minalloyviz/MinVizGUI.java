@@ -103,7 +103,7 @@ public final class MinVizGUI implements ComponentListener {
    private final JButton projectionButton, openSettingsButton, closeSettingsButton,
    magicLayout, loadSettingsButton, saveSettingsButton, saveAsSettingsButton,
    resetSettingsButton, updateSettingsButton, openEvaluatorButton, closeEvaluatorButton, enumerateButton,
-   saveModelButton, vizButton, xmlButton, treeButton, dotButton;
+   exploreNextButton, saveModelButton, vizButton, xmlButton, treeButton, dotButton;
    
    /** This list must contain all the display mode buttons (that is, vizButton, xmlButton...) */
    private final List<JButton> solutionButtons = new ArrayList<JButton>();
@@ -116,6 +116,9 @@ public final class MinVizGUI implements ComponentListener {
 
    /** The "show next" menu item. */
    private final JMenuItem enumerateMenu;
+
+   /** The "show next" menu item. */
+   private final JMenuItem exploreNextMenu;
    
    /** The "save model" menu item. */
    private final JMenuItem saveModelMenu;   
@@ -162,6 +165,9 @@ public final class MinVizGUI implements ComponentListener {
 
    /** If nonnull, you can pass in an XML file to find the next solution. */
    private final Computer enumerator;
+   
+   /** If nonnull, you can pass in an XML file to find the next model consistent with an input fact. */
+   private final Computer explorer;   
 
    //==============================================================================================//
 
@@ -316,7 +322,7 @@ public final class MinVizGUI implements ComponentListener {
     * <p> Note: if standalone==false and xmlFileName.length()==0, then we will initially hide the window.
     */
    public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu) {
-      this(standalone, xmlFileName, windowmenu, null, null);
+      this(standalone, xmlFileName, windowmenu, null, null, null);
    }
 
    /** Creates a new visualization GUI window; this method can only be called by the AWT event thread.
@@ -328,8 +334,8 @@ public final class MinVizGUI implements ComponentListener {
     *
     * <p> Note: if standalone==false and xmlFileName.length()==0, then we will initially hide the window.
     */
-   public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator) {
-      this(standalone, xmlFileName, windowmenu, enumerator, evaluator, true);
+   public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator, Computer explorer) {
+      this(standalone, xmlFileName, windowmenu, enumerator, evaluator, explorer, true);
    }
 
    /** Creates a new visualization GUI window; this method can only be called by the AWT event thread.
@@ -342,9 +348,10 @@ public final class MinVizGUI implements ComponentListener {
     *
     * <p> Note: if standalone==false and xmlFileName.length()==0 and makeWindow==true, then we will initially hide the window.
     */
-   public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator, boolean makeWindow) {
+   public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator, Computer explorer, boolean makeWindow) {
 
       this.enumerator = enumerator;
+      this.explorer = explorer;
       this.standalone = standalone;
       this.evaluator = evaluator;
       this.frame = makeWindow ? new JFrame("Alloy Visualizer") : null;
@@ -370,6 +377,7 @@ public final class MinVizGUI implements ComponentListener {
          if (standalone) menuItem(fileMenu, "Quit", 'Q', 'Q', doCloseAll()); else menuItem(fileMenu, "Close All", 'A', doCloseAll());
          JMenu instanceMenu = menu(mb, "&Instance", null);
          enumerateMenu = menuItem(instanceMenu, "Show Next Solution", 'N', 'N', doNext());
+         exploreNextMenu = menuItem(instanceMenu, "Explore the next consistent model", 'E', 'E', doExploreNext());         
          saveModelMenu = menuItem(instanceMenu, "Save Model", 'S', 'S', doSaveModelAs());
          thememenu = menu(mb, "&Theme", doRefreshTheme());
          if (standalone || windowmenu==null) windowmenu = menu(mb, "&Window", doRefreshWindow());
@@ -411,6 +419,7 @@ public final class MinVizGUI implements ComponentListener {
          toolbar.add(openEvaluatorButton=OurUtil.button("Evaluator", "Open the evaluator", "images/24_settings.gif", doOpenEvalPanel()));
          toolbar.add(closeEvaluatorButton=OurUtil.button("Close Evaluator", "Close the evaluator", "images/24_settings_close2.gif", doCloseEvalPanel()));
          toolbar.add(enumerateButton=OurUtil.button("Next", "Show the next solution", "images/24_history.gif", doNext()));
+         toolbar.add(exploreNextButton=OurUtil.button("Explore Next", "Explore the next consistent model", "images/24_graph.gif", doExploreNext()));         
          toolbar.add(saveModelButton=OurUtil.button("Save", "Save the current model", "images/24_save.gif", doSaveModelAs()));         
          toolbar.add(projectionButton);
          toolbar.add(loadSettingsButton=OurUtil.button("Load", "Load the theme customization from a theme file", "images/24_open.gif", doLoadTheme()));
@@ -522,8 +531,10 @@ public final class MinVizGUI implements ComponentListener {
       openEvaluatorButton.setVisible(!isMeta && settingsOpen==0 && evaluator!=null);
       closeEvaluatorButton.setVisible(!isMeta && settingsOpen==2 && evaluator!=null);
       enumerateMenu.setEnabled(!isMeta && settingsOpen==0 && enumerator!=null);
+      exploreNextMenu.setEnabled(!isMeta && settingsOpen==0 && explorer!=null);      
       saveModelMenu.setEnabled(!isMeta && settingsOpen==0);
       enumerateButton.setVisible(!isMeta && settingsOpen==0 && enumerator!=null);
+      exploreNextButton.setVisible(!isMeta && settingsOpen==0 && explorer!=null);      
       saveModelButton.setVisible(!isMeta && settingsOpen==0);
       toolbar.setVisible(true);
       // Now, generate the graph or tree or textarea that we want to display on the right
@@ -954,6 +965,20 @@ public final class MinVizGUI implements ComponentListener {
       return null;
    }
 
+   /** This method attempts to explore models consistent with an input fact. */
+   private Runner doExploreNext() {
+      if (wrap) return wrapMe();
+      if (settingsOpen!=0) return null;
+      if (xmlFileName.length()==0) {
+         OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
+      } else if (enumerator==null) {
+         OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
+      } else {
+         try { explorer.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
+      }
+      return null;
+   }   
+   
    /** This method updates the graph with the current theme customization. */
    private Runner doApply() {
       if (!wrap) updateDisplay();

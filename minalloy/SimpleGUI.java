@@ -126,6 +126,7 @@ import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import minalloy.MinSimpleReporter.SimpleCallback1;
 import minalloy.MinSimpleReporter.SimpleTask1;
 import minalloy.MinSimpleReporter.SimpleTask2;
+import minalloy.MinSimpleReporter.ExploreNextTask;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
 
@@ -1587,6 +1588,39 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
     };
 
+    /** This object performs solution exploration. */
+    private final Computer explorer = new Computer() {
+        public String compute(Object input) {
+            final String arg = (String)input;
+            OurUtil.show(frame);
+            if (WorkerEngine.isBusy())
+                throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
+            SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, Verbosity.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
+            ExploreNextTask task = new ExploreNextTask();
+            task.filename = arg;
+            try {
+                WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
+            } catch(Throwable ex) {
+                WorkerEngine.stop();
+                log.logBold("Fatal Error: Solver failed due to unknown reason.\n" +
+                  "One possible cause is that, in the Options menu, your specified\n" +
+                  "memory size is larger than the amount allowed by your OS.\n" +
+                  "Also, please make sure \"java\" is in your program path.\n");
+                log.logDivider();
+                log.flush();
+                doStop(2);
+                return arg;
+            }
+            //TODO it suggest a change in doStop:
+            subrunningTask=3;
+            runmenu.setEnabled(false);
+            runbutton.setVisible(false);
+            showbutton.setEnabled(false);
+            stopbutton.setVisible(true);
+            return arg;
+        }
+    };
+
     /** Converts an A4TupleSet into a SimTupleset object. */
     private static SimTupleset convert(Object object) throws Err {
         if (!(object instanceof MinA4TupleSet)) throw new ErrorFatal("Unexpected type error: expecting an A4TupleSet.");
@@ -1829,7 +1863,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
 
         // Pre-load the visualizer
-        viz = new MinVizGUI(false, "", windowmenu2, enumerator, evaluator);
+        viz = new MinVizGUI(false, "", windowmenu2, enumerator, evaluator, explorer);
         viz.doSetFontSize(FontSize.get());
 
         // Create the toolbar
