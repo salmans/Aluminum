@@ -28,6 +28,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstMap;
@@ -259,6 +260,7 @@ final class MinSimpleReporter extends A4Reporter {
             }
             latestKodkods.clear();
             latestKodkods.add(sol.toString());
+
             latestKodkod=sol;
             latestKodkodXML=filename;
         }
@@ -412,92 +414,16 @@ final class MinSimpleReporter extends A4Reporter {
         }
     }
 
-    /** Task that perform one command. */
-    static final class ExploreTask implements WorkerTask {
-        private static final long serialVersionUID = 0;
-        public MinA4Options options;
-        public String tempdir;
-        public boolean bundleWarningNonFatal;
-        public int bundleIndex;
-        public int resolutionMode;
-        public Map<String,String> map;
-        public ExploreTask() { }
-        public void cb(WorkerCallback out, Object... objs) throws IOException { out.callback(objs); }
-        public void run(WorkerCallback out) throws Exception {
-            cb(out, "S2", "Starting the solver...\n\n");
-            final MinSimpleReporter rep = new MinSimpleReporter(out, options.recordKodkod);
-            final Module world = CompUtil.parseEverything_fromFile(rep, map, options.originalFilename, resolutionMode);
-            final List<Sig> sigs = world.getAllReachableSigs();
-            final ConstList<Command> cmds = world.getAllCommands();
-            cb(out, "warnings", bundleWarningNonFatal);
-            if (rep.warn>0 && !bundleWarningNonFatal) return;
-            List<String> result = new ArrayList<String>(cmds.size());
-            if (bundleIndex==-2) {
-                final String outf=tempdir+File.separatorChar+"m.xml";
-                cb(out, "S2", "Generating the metamodel...\n");
-                PrintWriter of = new PrintWriter(outf, "UTF-8");
-                Util.encodeXMLs(of, "\n<alloy builddate=\"", Version.buildDate(), "\">\n\n");
-                A4SolutionWriter.writeMetamodel(ConstList.make(sigs), options.originalFilename, of);
-                Util.encodeXMLs(of, "\n</alloy>");
-                Util.close(of);
-                if ("yes".equals(System.getProperty("debug"))) validate(outf);
-                cb(out, "metamodel", outf);
-                synchronized(MinSimpleReporter.class) { latestMetamodelXML=outf; }
-            } else for(int i=0; i<cmds.size(); i++) if (bundleIndex<0 || i==bundleIndex) {
-                synchronized(MinSimpleReporter.class) { latestModule=world; latestKodkodSRC=ConstMap.make(map); }
-                final String tempXML=tempdir+File.separatorChar+i+".cnf.xml";
-                final String tempCNF=tempdir+File.separatorChar+i+".cnf";
-                final Command cmd=cmds.get(i);
-                rep.tempfile=tempCNF;
-                cb(out, "bold", "Executing \""+cmd+"\"\n");
-                MinA4Solution ai= MinTranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
-                if (ai==null) result.add(null);
-                else if (ai.satisfiable()) result.add(tempXML);
-                else if (ai.highLevelCore().a.size()>0) result.add(tempCNF+".core");
-                else result.add("");
-            }
-            (new File(tempdir)).delete(); // In case it was UNSAT, or canceled...
-            if (result.size()>1) {
-                rep.cb("bold", "" + result.size() + " commands were executed. The results are:\n");
-                for(int i=0; i<result.size(); i++) {
-                    Command r=world.getAllCommands().get(i);
-                    if (result.get(i)==null) { rep.cb("", "   #"+(i+1)+": Unknown.\n"); continue; }
-                    if (result.get(i).endsWith(".xml")) {
-                        rep.cb("", "   #"+(i+1)+": ");
-                        rep.cb("link", r.check?"Counterexample found. ":"Instance found. ", "XML: "+result.get(i));
-                        rep.cb("", r.label+(r.check?" is invalid":" is consistent"));
-                        if (r.expects==0) rep.cb("", ", contrary to expectation");
-                        else if (r.expects==1) rep.cb("", ", as expected");
-                    } else if (result.get(i).endsWith(".core")) {
-                        rep.cb("", "   #"+(i+1)+": ");
-                        rep.cb("link", r.check?"No counterexample found. ":"No instance found. ", "CORE: "+result.get(i));
-                        rep.cb("", r.label+(r.check?" may be valid":" may be inconsistent"));
-                        if (r.expects==1) rep.cb("", ", contrary to expectation");
-                        else if (r.expects==0) rep.cb("", ", as expected");
-                    } else {
-                        if (r.check) rep.cb("", "   #"+(i+1)+": No counterexample found. "+r.label+" may be valid");
-                        else rep.cb("", "   #"+(i+1)+": No instance found. "+r.label+" may be inconsistent");
-                        if (r.expects==1) rep.cb("", ", contrary to expectation");
-                        else if (r.expects==0) rep.cb("", ", as expected");
-                    }
-                    rep.cb("", ".\n");
-                }
-                rep.cb("", "\n");
-            }
-            if (rep.warn>1) rep.cb("bold", "Note: There were "+rep.warn+" compilation warnings. Please scroll up to see them.\n");
-            if (rep.warn==1) rep.cb("bold", "Note: There was 1 compilation warning. Please scroll up to see it.\n");
-        }
-    }    
-    
     /** Task that performs solution exploration. */
-    static final class ExploreNextTask implements WorkerTask {
+    static final class ExploreTask implements WorkerTask {
         private static final long serialVersionUID = 0;
         public String filename = "";
         public transient WorkerCallback out = null;
+        public MinA4Options options;
         private void cb(Object... objs) throws Exception { out.callback(objs); }
         public void run(WorkerCallback out) throws Exception {
             this.out = out;
-            cb("S2", "Exploring...\n");
+            cb("S2", "Enumerating...\n");
             MinA4Solution sol;
             Module mod;
             synchronized(MinSimpleReporter.class) {
@@ -515,16 +441,26 @@ final class MinSimpleReporter extends A4Reporter {
             if (!sol.isIncremental())
                 {cb("pop", "Error: This solution was not generated by an incremental SAT solver.\n" +
                 "Currently only MiniSat and SAT4J are supported."); return;}
-            int tries=0;
+            //int tries=0;
             while(true) {
-                sol=sol.next();
+                sol=sol.lift();
+                
+                if(sol == null){
+                	cb("pop", "The input fact is not valid!");
+                	return;
+                }
+                
                 if (!sol.satisfiable())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
                    "some equivalent solutions may have been omitted."); return;}
                 String toString = sol.toString();
+
                 synchronized(MinSimpleReporter.class) {
-                    if (!latestKodkods.add(toString)) if (tries<100) { tries++; continue; }
+                    //TODO Ideally, we may have a stack for any iteration and keep the tryings
+                    //As we explore and backtrack, we may see duplicate solutions
+                	latestKodkods.add(toString);
+                    //if (!latestKodkods.add(toString)) {if (tries<100) { tries++; continue; }}
                     // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going
                     writeXML(null, mod, filename, sol, latestKodkodSRC); latestKodkod=sol;
                 }
@@ -533,6 +469,88 @@ final class MinSimpleReporter extends A4Reporter {
             }
         }
     }
+    
+    /** Task that performs solution exploration. */
+    static final class BacktrackTask implements WorkerTask {
+        private static final long serialVersionUID = 0;
+        public String filename = "";
+        public transient WorkerCallback out = null;
+        private void cb(Object... objs) throws Exception { out.callback(objs); }
+        public void run(WorkerCallback out) throws Exception {
+            this.out = out;
+            cb("S2", "Enumerating...\n");
+            MinA4Solution sol;
+            Module mod;
+            synchronized(MinSimpleReporter.class) {
+                if (latestMetamodelXML!=null && latestMetamodelXML.equals(filename))
+                   {cb("pop", "You cannot enumerate a metamodel.\n"); return;}
+                if (latestKodkodXML==null || !latestKodkodXML.equals(filename))
+                   {cb("pop", "You can only enumerate the solutions of the most-recently-solved command."); return;}
+                if (latestKodkod==null || latestModule==null || latestKodkodSRC==null)
+                   {cb("pop", "Error: the SAT solver that generated the instance has exited,\nso we cannot enumerate unless you re-solve that command.\n"); return;}
+                sol=latestKodkod;
+                mod=latestModule;
+            }
+            if (!sol.satisfiable())
+                {cb("pop", "Error: This command is unsatisfiable,\nso there are no solutions to enumerate."); return;}
+            if (!sol.isIncremental())
+                {cb("pop", "Error: This solution was not generated by an incremental SAT solver.\n" +
+                "Currently only MiniSat and SAT4J are supported."); return;}
+            //int tries=0;
+            while(true) {
+                sol=sol.backtrack();
+                if (!sol.satisfiable())
+                   {cb("pop", "There are no more satisfying instances.\n\n" +
+                   "Note: due to symmetry breaking and other optimizations,\n" +
+                   "some equivalent solutions may have been omitted."); return;}
+                String toString = sol.toString();
+                
+                synchronized(MinSimpleReporter.class) {
+                    //TODO Ideally, we may have a stack for any iteration and keep the tryings
+                    //As we explore and backtrack, we may see duplicate solutions
+                	latestKodkods.add(toString);
+                    //if (!latestKodkods.add(toString)) {cb("S2", "banana\n"); if (tries<100) { tries++; cb("S2", "orange\n");continue; }}
+                    // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going
+                    writeXML(null, mod, filename, sol, latestKodkodSRC); latestKodkod=sol;
+                }
+                cb("declare", filename);
+                return;
+            }
+        }
+    }
+    
+    /** Task that performs solution exploration. */
+    static final class FindConsistentFactsTask implements WorkerTask {
+        private static final long serialVersionUID = 0;
+        public String filename = "";
+        public transient WorkerCallback out = null;
+        private void cb(Object... objs) throws Exception { out.callback(objs); }
+        public void run(WorkerCallback out) throws Exception {
+            this.out = out;
+            cb("S2", "Finding consistent facts...\n");
+            MinA4Solution sol;
+            synchronized(MinSimpleReporter.class) {
+                if (latestMetamodelXML!=null && latestMetamodelXML.equals(filename))
+                   {cb("pop", "You cannot enumerate a metamodel.\n"); return;}
+                if (latestKodkodXML==null || !latestKodkodXML.equals(filename))
+                   {cb("pop", "You can only enumerate the solutions of the most-recently-solved command."); return;}
+                if (latestKodkod==null || latestModule==null || latestKodkodSRC==null)
+                   {cb("pop", "Error: the SAT solver that generated the instance has exited,\nso we cannot enumerate unless you re-solve that command.\n"); return;}
+                sol=latestKodkod;
+            }
+            if (!sol.satisfiable())
+                {cb("pop", "Error: This command is unsatisfiable,\nso there are no solutions to enumerate."); return;}
+            if (!sol.isIncremental())
+                {cb("pop", "Error: This solution was not generated by an incremental SAT solver.\n" +
+                "Currently only MiniSat and SAT4J are supported."); return;}
+            
+            String results = sol.findConsistentFacts();
+			out.done();
+            cb("S2", results + "\n");
+            cb("S2", "\n");
+            out.done();
+        }
+    }    
     
     /** Validate the given filename to see if it is a valid Alloy XML instance file. */
     private static void validate(String filename) throws Exception {

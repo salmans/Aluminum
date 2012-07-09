@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.StringTokenizer;
+
+import javax.swing.JOptionPane;
 
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
@@ -258,42 +261,48 @@ public final class MinSolver {
 	 */
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
-	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Iterator<MinSolution> prevIterator,
-			MinSolution solution, Instance lifters) 
+	
+	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Iterator<MinSolution> prevIterator, 
+			Instance lifters) 
 			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
-			//Create lifters from solution and lifters.
-			//Create a solution iterator.
-			//Return the solution iterator.
+		if (!options.solver().incremental())
+			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
+
+		ArrayList<Integer> allLifters = new ArrayList<Integer>();
+		Map<Relation, TupleSet> solutionTuples = ((MinSolutionIterator)prevIterator).getLastSolution().instance().relationTuples();
+		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
 		
-			ArrayList<Integer> allLifters = new ArrayList<Integer>();
-			Map<Relation, TupleSet> solutionTuples = solution.instance().relationTuples();
-			Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
-			
-			//This can be a method!
-			for(Relation r : solutionTuples.keySet()){
-				TupleSet tuples = solutionTuples.get(r);
-				for(Tuple t: tuples){
-					allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t));
-				}
+		//This can be a method!
+		for(Relation r : solutionTuples.keySet()){
+			TupleSet tuples = solutionTuples.get(r);
+			for(Tuple t: tuples){
+				int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);
+				//if there is no primary variables assigned to this relation, continue.
+				if(index == -1)
+					continue;
+				allLifters.add(index);
 			}
-			
-			for(Relation r : solutionTuples.keySet()){
-				TupleSet tuples = lifterTuples.get(r);
-				if(tuples != null)
-					for(Tuple t: tuples){
-						allLifters.add(MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t));
-					}
-			}			
-						
-			if (!options.solver().incremental())
-				throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
-					
-			MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
-			return iterator;
-		}	
+		}
+		
+		for(Relation r : lifterTuples.keySet()){
+			TupleSet tuples = lifterTuples.get(r);
+			if(tuples != null)
+				for(Tuple t: tuples){
+					int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);					
+					//if there is no primary variables assigned to this relation, continue.
+					if(index == -1)
+						continue;
+					allLifters.add(index);
+				}
+		}			
+
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
+
+		return iterator;
+	}	
 	
 	/**
-	 * Returns the lifters for the current model loaded in an iterator.
+	 * Returns the lifters for the current model loaded in the given iterator.
 	 * @param iterator the iterator.
 	 * @return the lifters tuple relations of an instance.
 	 * @throws TimeoutException
@@ -301,10 +310,101 @@ public final class MinSolver {
 	 */
 	public Instance getLifters(Iterator<MinSolution> iterator) throws TimeoutException, ContradictionException{
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
+		
 		return MinTwoWayTranslator.translatePropositions(
 				theIterator.translation, theIterator.bounds, theIterator.getLifters());
+		
 	}
+	
+	/**
+	 * Returns a list of lifters for the current model loaded in the given iterator as 
+	 * a line separated string.
+	 * @param iterator the iterator.
+	 * @return returns a list of line separated strings of lifters. If an exception occurs,
+	 * it returns an empty string.
+	 */    
+	public String getLiftersList(Iterator<MinSolution> iterator){
+		String retVal = "";
+		Translation translation = ((MinSolutionIterator)iterator).translation;
+		Bounds bounds = ((MinSolutionIterator)iterator).bounds;
+		Instance lifters = null;
+		
+		try{
+			lifters = getLifters(iterator);
+		}
+		catch(Exception e){
+			return "";
+		}
+		
+		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
+		
+		//This can be a method!
+		for(Relation r : lifterTuples.keySet()){
+			TupleSet tuples = lifterTuples.get(r);
+			for(Tuple t: tuples){
+				int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t);
+				//if there is no primary variables assigned to this relation, continue.
+				if(index == -1)
+					continue;
+				
+				retVal += t.toString() + "\n";
+			}
+		}
+		
+		return retVal;
+	}
+	
+	
+	public Instance parseString(String inputStr, Iterator<MinSolution> iterator){
+		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
+		
+		StringTokenizer tokenizer = new StringTokenizer(inputStr, ",");
+		ArrayList<String> tokens = new ArrayList<String>();
+		while(tokenizer.hasMoreTokens()){
+			tokens.add(tokenizer.nextToken());
+		}
 
+		Bounds bounds = theIterator.bounds;
+		
+		Set<Relation> relations = bounds.relations();
+		Relation relation = null;
+		for(Relation r: relations){
+			if(r.name().equals(tokens.get(0))){
+				relation = r;
+				break;
+			}
+		}
+
+		//Relation does not exist.
+		if(relation == null)
+			return null;
+		
+		TupleSet tuples = bounds.upperBound(relation);
+		if(tuples == null)
+			return null;
+		
+		Tuple tuple = null;
+		for(Tuple t: tuples){
+			boolean found = true;
+			for(int i = 0; i < t.arity(); i++){
+				if(!t.atom(i).toString().equals(tokens.get(i + 1))){
+					found = false;
+					break;
+				}
+			}
+			if(found == true){
+				tuple = t;
+			}
+		}
+		
+		if(tuple == null)
+			return null;
+
+		Instance retVal = new Instance(bounds.universe());
+		retVal.add(relation, bounds.universe().factory().setOf(tuple));
+		return retVal;
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 * @see java.lang.Object#toString()
@@ -431,6 +531,7 @@ public final class MinSolver {
 		private Translation translation;
 		private long translTime;
 		private int trivial;
+		private MinSolution lastSolution;
 		
 		//the MinSolver instance that creates the iterator.
 		private final MinSolver minSolver;
@@ -470,6 +571,7 @@ public final class MinSolver {
 		 * @param lifters
 		 * @param prevIterator
 		 */
+		
 		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds bounds, Options options, ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
 			this.minSolver = minSolver;
 			this.formula = formula;
@@ -620,14 +722,16 @@ public final class MinSolver {
 					translTime = System.currentTimeMillis();
 					translation = Translator.translate(formula, bounds, options);
 					translTime = System.currentTimeMillis() - translTime;
-					return nonTrivialSolution();
+					lastSolution = nonTrivialSolution();
 				} catch (TrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
-					return trivialSolution(tfe);
+					lastSolution = trivialSolution(tfe);
 				} 
 			} else {
-				return nonTrivialSolution();
+				lastSolution = nonTrivialSolution();
 			}
+			
+			return lastSolution;
 		}
 
 		/**
@@ -816,6 +920,15 @@ public final class MinSolver {
 		public Translation getTranslation(){
 			return translation;
 		}
+		
+		/**
+		 * Returns the last solution of the iterator.
+		 * @return the last solution.
+		 */
+		private MinSolution getLastSolution(){
+			return lastSolution;
+		}
+		
 		//COMMENT maybe useful:
 		/*private Set<List<Integer>> cloneConeRestrictionClauses(){
 			Set<List<Integer>> retVal = new HashSet<List<Integer>>();
@@ -903,9 +1016,7 @@ public final class MinSolver {
 		 * @return
 		 */
 		private static Instance translatePropositions(Translation translation, Bounds bounds, int[] theVars)
-				//throws MInternalNoBoundsException
 		{
-			
 			// Populate an empty instance over the universe we're using:
 			Instance result = new Instance(bounds.universe());
 
@@ -917,6 +1028,11 @@ public final class MinSolver {
 			for(Relation r : bounds.relations())
 			{
 				IntSet varsForThisRelation = translation.primaryVariables(r);
+				
+				//if there is no primary variable for this relation, continue:
+				if(varsForThisRelation == null)
+					continue;
+				
 				IntIterator itVarsForThis = varsForThisRelation.iterator();
 				while(itVarsForThis.hasNext())
 				{
@@ -928,10 +1044,12 @@ public final class MinSolver {
 			
 			// Now that we have the mapping from var --> its relation, we can find the tuple:		
 			for(int i = 0; i < theVars.length; i++)
-			{			
+			{	
 				int theVar = theVars[i];
 				Relation myRelation = mapVarToRelation.get(theVar);
-				IntSet s = translation.primaryVariables(myRelation);		
+				
+				IntSet s = translation.primaryVariables(myRelation);
+				
 				Tuple myTuple = getTupleForPropVariable(
 							bounds, translation, s, myRelation, theVar);
 					
@@ -947,7 +1065,6 @@ public final class MinSolver {
 				result.add(myRelation, theContents);
 			}
 			
-			
 			// Set<RelationalFact> would be better than Instance. But for now use Instance
 			
 			// Return an instance (should not be interpreted as a model of the qry!!) that contains
@@ -961,12 +1078,11 @@ public final class MinSolver {
 		{		        
 			// The relation's upper bound has a list of tuple indices. The "index" variable below is an index
 			// into that list of indices. (If our upper bound was _everything_, would be no need to de-reference.)
-			
 	        int minVarForR = s.min();    	
 			
 			// Compute index: (variable - minvariable) of this relation's variables 
-	        int index = theVar - minVarForR;                            
-	                                
+	        int index = theVar - minVarForR;
+	        
 	        // OPT: How slow is this? May want to cache...
 	        int[] arr = theBounds.upperBound(r).indexView().toArray();
 	        
@@ -982,7 +1098,32 @@ public final class MinSolver {
 		
 		private static int getPropVariableForTuple(Bounds bounds, Translation translation, Relation r, Tuple tuple){
 			IntSet s = translation.primaryVariables(r);
-			return s.min() + tuple.index();
+
+			//if there is no primary variable for this relation, return -1
+			if(s == null)
+				return -1;
+			
+			TupleSet upperBound = bounds.upperBound(r);
+			
+			if(upperBound == null)
+				return -1;
+			
+			int[] arr = upperBound.indexView().toArray();
+
+			
+	        TupleFactory factory = bounds.universe().factory();
+	        
+	        int index = -1;
+	        //Not the best way of doing this!
+	        for(int i = 0; i < arr.length; i++){
+	        	if(tuple.equals(factory.tuple(r.arity(), arr[i])))
+	        		index = i;
+	        }
+	        
+	        if(index == -1)
+	        	return -1;
+	        
+			return s.min() + index;//s.min() + tuple.index();
 		}
 	}
 	
