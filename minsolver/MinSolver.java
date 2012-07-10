@@ -347,7 +347,7 @@ public final class MinSolver {
 				if(index == -1)
 					continue;
 				
-				retVal += t.toString() + "\n";
+				retVal += r.toString() + t.toString() + "\n";
 			}
 		}
 		

@@ -1028,6 +1028,9 @@ public final class MinA4Solution {
         Formula fgoal = Formula.and(formulas);
         
         String inputFact = JOptionPane.showInputDialog("Enter a fact: ");
+        if(inputFact == null || inputFact.length() == 0) //If the user hits the cancel button
+        	return null;
+        
         Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator);
         
         //if the fact does not exists in the given bounds:
