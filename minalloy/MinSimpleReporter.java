@@ -455,7 +455,7 @@ final class MinSimpleReporter extends A4Reporter {
                    "Note: due to symmetry breaking and other optimizations,\n" +
                    "some equivalent solutions may have been omitted."); return;}
                 String toString = sol.toString();
-
+                
                 synchronized(MinSimpleReporter.class) {
                     //TODO Ideally, we may have a stack for any iteration and keep the tryings
                     //As we explore and backtrack, we may see duplicate solutions
@@ -498,7 +498,12 @@ final class MinSimpleReporter extends A4Reporter {
                 "Currently only MiniSat and SAT4J are supported."); return;}
             //int tries=0;
             while(true) {
-                sol=sol.backtrack();
+            	sol=sol.backtrack();
+            	if(sol == null){
+            		cb("pop", "There is nothing to backtrack!");
+            		return;
+            	}
+            	
                 if (!sol.satisfiable())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
