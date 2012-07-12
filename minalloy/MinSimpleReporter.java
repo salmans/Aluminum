@@ -404,6 +404,7 @@ final class MinSimpleReporter extends A4Reporter {
                    "some equivalent solutions may have been omitted."); return;}
                 String toString = sol.toString();
                 synchronized(MinSimpleReporter.class) {
+                	//TODO what should we do with this code:
                     if (!latestKodkods.add(toString)) if (tries<100) { tries++; continue; }
                     // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going
                     writeXML(null, mod, filename, sol, latestKodkodSRC); latestKodkod=sol;
@@ -550,8 +551,10 @@ final class MinSimpleReporter extends A4Reporter {
                 "Currently only MiniSat and SAT4J are supported."); return;}
             
             String results = sol.findConsistentFacts();
-			out.done();
-            cb("S2", results + "\n");
+            if(results == null || results.length() == 0)
+            	results = "No consistent facts found!";
+            
+            cb("S2", results + "\nDone\n");
             cb("S2", "\n");
             out.done();
         }

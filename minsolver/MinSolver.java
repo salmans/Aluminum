@@ -23,6 +23,7 @@ package minsolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -295,7 +296,7 @@ public final class MinSolver {
 					allLifters.add(index);
 				}
 		}			
-
+		
 		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
 
 		return iterator;
@@ -312,7 +313,9 @@ public final class MinSolver {
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 		
 		return MinTwoWayTranslator.translatePropositions(
-				theIterator.translation, theIterator.bounds, theIterator.getLifters());
+				theIterator.translation, theIterator.bounds,
+				theIterator.mapVarToRelation,
+				theIterator.getLifters());
 		
 	}
 	
@@ -356,12 +359,22 @@ public final class MinSolver {
 	
 	
 	public Instance parseString(String inputStr, Iterator<MinSolution> iterator){
+		inputStr = inputStr.trim();
+		inputStr = inputStr.replaceAll(" ", "");
+		
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 		
-		StringTokenizer tokenizer = new StringTokenizer(inputStr, ",");
-		ArrayList<String> tokens = new ArrayList<String>();
+		String relationName = null;
+		
+		relationName = inputStr.substring(0, inputStr.indexOf('['));
+		
+		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(inputStr.indexOf('[') + 1
+				, inputStr.indexOf(']')), ",");
+		
+		ArrayList<String> constants = new ArrayList<String>();
+		
 		while(tokenizer.hasMoreTokens()){
-			tokens.add(tokenizer.nextToken());
+			constants.add(tokenizer.nextToken());
 		}
 
 		Bounds bounds = theIterator.bounds;
@@ -369,14 +382,14 @@ public final class MinSolver {
 		Set<Relation> relations = bounds.relations();
 		Relation relation = null;
 		for(Relation r: relations){
-			if(r.name().equals(tokens.get(0))){
+			if(r.name().equals(relationName)){
 				relation = r;
 				break;
 			}
 		}
 
-		//Relation does not exist.
-		if(relation == null)
+		
+		if(relation == null) //Relation does not exist.
 			return null;
 		
 		TupleSet tuples = bounds.upperBound(relation);
@@ -387,7 +400,7 @@ public final class MinSolver {
 		for(Tuple t: tuples){
 			boolean found = true;
 			for(int i = 0; i < t.arity(); i++){
-				if(!t.atom(i).toString().equals(tokens.get(i + 1))){
+				if(!t.atom(i).toString().equals(constants.get(i))){
 					found = false;
 					break;
 				}
@@ -397,7 +410,7 @@ public final class MinSolver {
 			}
 		}
 		
-		if(tuple == null)
+		if(tuple == null) //There is no such tuple
 			return null;
 
 		Instance retVal = new Instance(bounds.universe());
@@ -421,7 +434,7 @@ public final class MinSolver {
 	 * @return the result of solving a sat formula.
 	 */
 	private static MinSolution sat(Bounds bounds, Translation translation, MinStatistics stats) {
-		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds));
+		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), null);
 		translation.cnf().free();
 		return sol;
 	}
@@ -436,9 +449,9 @@ public final class MinSolver {
 		final SATSolver cnf = translation.cnf();
 		final TranslationLog log = translation.log();
 		if (cnf instanceof SATProver && log != null) {
-			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log));
+			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null);
 		} else { // can free memory
-			final MinSolution sol = MinSolution.unsatisfiable(stats, null);
+			final MinSolution sol = MinSolution.unsatisfiable(stats, null, null);
 			cnf.free();
 			return sol;
 		}
@@ -465,9 +478,9 @@ public final class MinSolver {
 	private static MinSolution trivial(Bounds bounds, TrivialFormulaException desc, long translTime) {
 		final MinStatistics stats = new MinStatistics(trivialPrimaries(desc.bounds()), 0, 0, translTime, 0);
 		if (desc.value().booleanValue()) {
-			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds));
+			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), null);
 		} else {
-			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()));
+			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()), null);
 		}
 	}
 	
@@ -529,6 +542,7 @@ public final class MinSolver {
 		private Formula formula;
 		private Bounds bounds;
 		private Translation translation;
+		private Map<Integer, Relation> mapVarToRelation;
 		private long translTime;
 		private int trivial;
 		private MinSolution lastSolution;
@@ -583,6 +597,7 @@ public final class MinSolver {
 			
 			if(prevIterator != null){  //if lifting on a previous iterator
 				this.translation = prevIterator.getTranslation();
+				this.mapVarToRelation = prevIterator.mapVarToRelation;
 				
 				//Inherit the initial coneRestrictionClauses and coneRestrictionConstraints 
 				//from the previous iterator:
@@ -623,15 +638,24 @@ public final class MinSolver {
 				
 				options.reporter().solvingCNF(translation.numPrimaryVariables(), cnf.numberOfVariables(), cnf.numberOfClauses());				
 				final long startSolve = System.currentTimeMillis();
+				
 				final boolean isSat = solve();//cnf.solve();
 				final long endSolve = System.currentTimeMillis();
 
 				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
 				if (isSat) {
+					int[] propositionalModel = ((MinSATSolver)translation.cnf()).getLastModel().clone();
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds));
+					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), propositionalModel);
 					// add the negation of the current model to the solver
 					final int primary = translation.numPrimaryVariables();
+					
+					//IMPORTANT COMMENT:
+					//THIS ASSSUMES THAT PRIMARY VARIABLES THAT DO NOT SHOW UP
+					//IN RELATIONS COME AFTER THE ONES THAT DO SHOW UP AS TUPLES
+					//IN RELATIONS:
+					//final int primary = mapVarToRelation.size();
+					
 					final ArrayList<Integer> notModel = new ArrayList<Integer>();
 					
 					//Do not return any other model in the cone of the new model.
@@ -644,6 +668,11 @@ public final class MinSolver {
 					try{						
 						coneRestrictionClauses.add(notModel);
 						coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
+						//DEBUG
+						/*JOptionPane.showMessageDialog(null, 
+								"notModel \n" + notModel.toString());
+						JOptionPane.showMessageDialog(null, 
+								"# of constraints: " + coneRestrictionConstraints.size());*/
 					}
 					catch(ContradictionException e){
 						System.err.println(e.getMessage());
@@ -675,7 +704,7 @@ public final class MinSolver {
 				trivial++;
 				final Bounds translBounds = tfe.bounds();
 				final Instance trivialInstance = padInstance(toInstance(translBounds), bounds);
-				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance);
+				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, null);
 				
 				final List<Formula> changes = new LinkedList<Formula>();
 								
@@ -705,7 +734,7 @@ public final class MinSolver {
 				return sol;
 			} else {
 				formula = null; bounds = null;
-				return MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()));
+				return MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null);
 			}
 		}
 		/**
@@ -722,6 +751,8 @@ public final class MinSolver {
 					translTime = System.currentTimeMillis();
 					translation = Translator.translate(formula, bounds, options);
 					translTime = System.currentTimeMillis() - translTime;
+					//We use this data structure for translation:
+					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					lastSolution = nonTrivialSolution();
 				} catch (TrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
@@ -774,8 +805,14 @@ public final class MinSolver {
 
 				if(sat)
 				{	
-					try{		
+					try{
+						//DEBUG
+						/*JOptionPane.showMessageDialog(null, 
+								"before minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/						
 						minimize();
+						//DEBUG
+						/*JOptionPane.showMessageDialog(null, 
+								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
 					}
 					catch(ContradictionException e)
 					{System.err.println(e.getMessage());}
@@ -803,14 +840,23 @@ public final class MinSolver {
 			int iterationCounter = 1;
 			
 			do
-			{				
+			{	
+				//DEBUG
+				/*JOptionPane.showMessageDialog(null,
+						"model: \n" +
+						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
 				// Given that candidate for minimal-model, try to make something smaller.
 				// add: disjunction of negations of all positive literals in M (constraint)
 				// add: all negative literals as unit clauses
 				
 				// An array of the next constraint being added.
 				ArrayList<Integer> constraint = new ArrayList<Integer>();
-				for(int i = 1; i <= translation.numPrimaryVariables(); i++){
+				
+				//READ THE COMMENT ABOUT mapVarToRelation.size() ABOVE:
+				//int numPrimaryVariables = mapVarToRelation.size();
+				int numPrimaryVariables = translation.numPrimaryVariables();
+					
+				for(int i = 1; i <= numPrimaryVariables; i++){
 					boolean value = translation.cnf().valueOf(i);
 					if(value == true)
 						constraint.add(-i);
@@ -822,6 +868,12 @@ public final class MinSolver {
 				constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
 				
 				iterationCounter++;
+				
+				//DEBUG
+				/*JOptionPane.showMessageDialog(null, 
+						"Unit Clauses: \n" + unitClauses.toString());
+				JOptionPane.showMessageDialog(null, 
+						"Constraints: \n" + constraints.toString());*/
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
 			
@@ -858,13 +910,19 @@ public final class MinSolver {
 			
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
-			for(int i = 1; i <= translation.numPrimaryVariables(); i++){
-				if(solver.valueOf(i))
+			
+			//READ THE COMMENT ABOUT mapVarToRelation.size() ABOVE:
+			//int numPrimaryVariables = mapVarToRelation.size();
+			int numPrimaryVariables = translation.numPrimaryVariables();
+			int[] propositionalModel = lastSolution.getPropositionalModel();
+			
+			for(int i = 1; i <= numPrimaryVariables; i++){
+				if(propositionalModel[i - 1] > 0)
 					preservedFacts.add(i);
 				else
 					wantToAdd.add(i);
 			}
-					
+			
 			boolean wasSatisfiable = false;
 			List<Integer> unitClauses = new ArrayList<Integer>(preservedFacts);
 			// Loop while (a) there are facts left to find and (b) still satisfiable.
@@ -1007,23 +1065,9 @@ public final class MinSolver {
 	 * @author Salman
 	 *
 	 */
-	public static class MinTwoWayTranslator {
-		/**
-		 * Converts a set of primary propositional variables into set of relational expressions.
-		 * @param translation the translation.
-		 * @param bounds the bounds.
-		 * @param theVars a VectInt of the variables to convert.
-		 * @return
-		 */
-		private static Instance translatePropositions(Translation translation, Bounds bounds, int[] theVars)
-		{
-			// Populate an empty instance over the universe we're using:
-			Instance result = new Instance(bounds.universe());
-
-			//////////////////////////////////////////////////////////////////////////
-			//TODO
-			// Very inefficient! Cache this later. Do in advance of this function!!!
-			// E.g. map 158 ---> R if 158 represents <tup> in R for some <tup>.
+	public static class MinTwoWayTranslator{
+		private static Map<Integer, Relation> buildVarToRelationMap(
+				Translation translation, Bounds bounds){
 			Map<Integer, Relation> mapVarToRelation = new HashMap<Integer, Relation>(); 
 			for(Relation r : bounds.relations())
 			{
@@ -1040,8 +1084,23 @@ public final class MinSolver {
 				}
 					
 			}
-			//////////////////////////////////////////////////////////////////////////
 			
+			return mapVarToRelation;
+		}
+		
+		/**
+		 * Converts a set of primary propositional variables into set of relational expressions.
+		 * @param translation the translation.
+		 * @param bounds the bounds.
+		 * @param theVars a VectInt of the variables to convert.
+		 * @return
+		 */
+		private static Instance translatePropositions(Translation translation, Bounds bounds,
+				Map<Integer, Relation> mapVarToRelation, int[] theVars)
+		{
+			// Populate an empty instance over the universe we're using:
+			Instance result = new Instance(bounds.universe());
+
 			// Now that we have the mapping from var --> its relation, we can find the tuple:		
 			for(int i = 0; i < theVars.length; i++)
 			{	
@@ -1075,10 +1134,10 @@ public final class MinSolver {
 		
 		private static Tuple getTupleForPropVariable(Bounds theBounds, Translation theTranslation, IntSet s, Relation r, int theVar)
 		//throws MInternalNoBoundsException
-		{		        
+		{
 			// The relation's upper bound has a list of tuple indices. The "index" variable below is an index
 			// into that list of indices. (If our upper bound was _everything_, would be no need to de-reference.)
-	        int minVarForR = s.min();    	
+	        int minVarForR = s.min();
 			
 			// Compute index: (variable - minvariable) of this relation's variables 
 	        int index = theVar - minVarForR;

@@ -46,6 +46,10 @@ final class MinSATSolver implements SATSolver {
 	private int vars, clauses;
 	private int[] lastModel = null;
 
+	public int[] getLastModel() {
+		return lastModel;
+	}
+
 	/**
 	 * Constructs a wrapper for the given instance
 	 * of ISolver.
