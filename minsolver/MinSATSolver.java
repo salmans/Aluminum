@@ -46,6 +46,19 @@ final class MinSATSolver implements SATSolver {
 	private int vars, clauses;
 	private int[] lastModel = null;
 
+	
+	public void setLastModel() {
+		lastModel = new int[vars];
+		for(int i = 1; i <= vars; i++){
+			if(solver.model(i))
+				lastModel[i-1] = -i;
+			else
+				//in the minimization algorithm, we want to treat unknown variables 
+				//(don't cares) as they are true.
+				lastModel[i-1] = i; 
+		}
+	}	
+	
 	public int[] getLastModel() {
 		return lastModel;
 	}
@@ -146,7 +159,9 @@ final class MinSATSolver implements SATSolver {
 			//if (!Boolean.FALSE.equals(sat)){
 				sat = Boolean.valueOf(solver.isSatisfiable());
 				if(sat)
-					lastModel = solver.model();
+					setLastModel();
+				
+				
 			//}
 			return sat;
 		} catch (org.sat4j.specs.TimeoutException e) {
@@ -164,7 +179,7 @@ final class MinSATSolver implements SATSolver {
 			//if (!Boolean.FALSE.equals(sat)){
 				sat = Boolean.valueOf(solver.isSatisfiable(new VecInt(assumptions)));
 				if(sat)
-					lastModel = solver.model();
+					setLastModel();
 			//}
 			return sat;
 		} catch (org.sat4j.specs.TimeoutException e) {

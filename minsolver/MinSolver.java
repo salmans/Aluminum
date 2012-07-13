@@ -22,6 +22,7 @@ package minsolver;
  * THE SOFTWARE.
  */
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -329,6 +330,19 @@ public final class MinSolver {
 	public String getLiftersList(Iterator<MinSolution> iterator){
 		String retVal = "";
 		Translation translation = ((MinSolutionIterator)iterator).translation;
+		
+		//Using reflection to invoke the internal values of translation
+		try{
+			Field f = translation.getClass().getDeclaredField("primaryVarUsage"); //NoSuchFieldException
+			f.setAccessible(true);
+			Map<Relation, IntSet> primaryVarUsage = (Map<Relation, IntSet>) f.get(translation); //IllegalAccessException
+			JOptionPane.showMessageDialog(null, primaryVarUsage.toString());
+		}
+		catch(Exception e){
+			JOptionPane.showMessageDialog(null, e.getMessage());
+		}
+		
+		
 		Bounds bounds = ((MinSolutionIterator)iterator).bounds;
 		Instance lifters = null;
 		
@@ -668,11 +682,6 @@ public final class MinSolver {
 					try{						
 						coneRestrictionClauses.add(notModel);
 						coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
-						//DEBUG
-						/*JOptionPane.showMessageDialog(null, 
-								"notModel \n" + notModel.toString());
-						JOptionPane.showMessageDialog(null, 
-								"# of constraints: " + coneRestrictionConstraints.size());*/
 					}
 					catch(ContradictionException e){
 						System.err.println(e.getMessage());
@@ -811,8 +820,8 @@ public final class MinSolver {
 								"before minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/						
 						minimize();
 						//DEBUG
-						/*JOptionPane.showMessageDialog(null, 
-								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
+						JOptionPane.showMessageDialog(null, 
+								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));
 					}
 					catch(ContradictionException e)
 					{System.err.println(e.getMessage());}
@@ -833,18 +842,19 @@ public final class MinSolver {
 			//This keeps constraints to be removed from the solver
 			//after finding the next model.
 			ArrayList<IConstr> constraints = new ArrayList<IConstr>();
-			//All the unit clauses being passed to the solver as assumptions.
 			
+			//All the unit clauses being passed to the solver as assumptions.
 			ArrayList<Integer> unitClauses = toArrayList(lifters);
 			
 			int iterationCounter = 1;
 			
 			do
-			{	
+			{
 				//DEBUG
-				/*JOptionPane.showMessageDialog(null,
+				JOptionPane.showMessageDialog(null,
 						"model: \n" +
-						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
+						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));
+								
 				// Given that candidate for minimal-model, try to make something smaller.
 				// add: disjunction of negations of all positive literals in M (constraint)
 				// add: all negative literals as unit clauses
@@ -857,11 +867,10 @@ public final class MinSolver {
 				int numPrimaryVariables = translation.numPrimaryVariables();
 					
 				for(int i = 1; i <= numPrimaryVariables; i++){
-					boolean value = translation.cnf().valueOf(i);
-					if(value == true)
+					if(translation.cnf().valueOf(i))
 						constraint.add(-i);
 					else
-						unitClauses.add(-i);
+						unitClauses.add(-i);					
 				}
 				
 				//System.out.println("constraint: "+constraint);
@@ -870,10 +879,10 @@ public final class MinSolver {
 				iterationCounter++;
 				
 				//DEBUG
-				/*JOptionPane.showMessageDialog(null, 
+				JOptionPane.showMessageDialog(null, 
 						"Unit Clauses: \n" + unitClauses.toString());
 				JOptionPane.showMessageDialog(null, 
-						"Constraints: \n" + constraints.toString());*/
+						"Constraints: \n" + constraints.toString());
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
 			
