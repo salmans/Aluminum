@@ -22,9 +22,7 @@ package minsolver;
  * THE SOFTWARE.
  */
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,8 +33,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.StringTokenizer;
-
-import javax.swing.JOptionPane;
 
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
@@ -330,17 +326,6 @@ public final class MinSolver {
 	public String getLiftersList(Iterator<MinSolution> iterator){
 		String retVal = "";
 		Translation translation = ((MinSolutionIterator)iterator).translation;
-		
-		//Using reflection to invoke the internal values of translation
-		try{
-			Field f = translation.getClass().getDeclaredField("primaryVarUsage"); //NoSuchFieldException
-			f.setAccessible(true);
-			Map<Relation, IntSet> primaryVarUsage = (Map<Relation, IntSet>) f.get(translation); //IllegalAccessException
-			JOptionPane.showMessageDialog(null, primaryVarUsage.toString());
-		}
-		catch(Exception e){
-			JOptionPane.showMessageDialog(null, e.getMessage());
-		}
 		
 		
 		Bounds bounds = ((MinSolutionIterator)iterator).bounds;
@@ -820,8 +805,8 @@ public final class MinSolver {
 								"before minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/						
 						minimize();
 						//DEBUG
-						JOptionPane.showMessageDialog(null, 
-								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));
+						/*JOptionPane.showMessageDialog(null, 
+								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
 					}
 					catch(ContradictionException e)
 					{System.err.println(e.getMessage());}
@@ -851,9 +836,9 @@ public final class MinSolver {
 			do
 			{
 				//DEBUG
-				JOptionPane.showMessageDialog(null,
+				/*JOptionPane.showMessageDialog(null,
 						"model: \n" +
-						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));
+						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
 								
 				// Given that candidate for minimal-model, try to make something smaller.
 				// add: disjunction of negations of all positive literals in M (constraint)
@@ -867,22 +852,21 @@ public final class MinSolver {
 				int numPrimaryVariables = translation.numPrimaryVariables();
 					
 				for(int i = 1; i <= numPrimaryVariables; i++){
-					if(translation.cnf().valueOf(i))
+					if(translation.cnf().valueOf(i) == true)
 						constraint.add(-i);
 					else
-						unitClauses.add(-i);					
+						unitClauses.add(-i);
 				}
 				
-				//System.out.println("constraint: "+constraint);
 				constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
 				
 				iterationCounter++;
 				
 				//DEBUG
-				JOptionPane.showMessageDialog(null, 
+				/*JOptionPane.showMessageDialog(null, 
 						"Unit Clauses: \n" + unitClauses.toString());
 				JOptionPane.showMessageDialog(null, 
-						"Constraints: \n" + constraints.toString());
+						"Constraints: \n" + constraint.toString());*/
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
 			

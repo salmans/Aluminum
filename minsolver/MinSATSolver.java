@@ -47,15 +47,24 @@ final class MinSATSolver implements SATSolver {
 	private int[] lastModel = null;
 
 	
+	/** Fills lastModel from solver.model(). We have to do this because sometimes,
+	 * the solver drops some indices.
+	 */
 	public void setLastModel() {
+		int[] model = solver.model();
 		lastModel = new int[vars];
+
+		//in the minimization algorithm, we want to treat unknown variables 
+		//(don't cares) as they are true.		
 		for(int i = 1; i <= vars; i++){
-			if(solver.model(i))
-				lastModel[i-1] = -i;
-			else
-				//in the minimization algorithm, we want to treat unknown variables 
-				//(don't cares) as they are true.
-				lastModel[i-1] = i; 
+			lastModel[i - 1] = i; 
+		}
+		
+		for(int i = 0; i < model.length; i++){
+			int value = model[i];
+			
+			if(value < 0)
+				lastModel[-value - 1] = value;
 		}
 	}	
 	
