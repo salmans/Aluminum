@@ -34,8 +34,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import javax.swing.JOptionPane;
-
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.TimeoutException;
@@ -331,7 +329,6 @@ public final class MinSolver {
 	public String getLiftersList(Iterator<MinSolution> iterator){
 		String retVal = "";
 		Translation translation = ((MinSolutionIterator)iterator).translation;
-		
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		Instance lifters = null;
@@ -759,7 +756,7 @@ public final class MinSolver {
 					//We use this data structure for translation:
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 
-							((MyReporter)options.reporter()).skolemBounds);					
+							((MyReporter)options.reporter()).skolemBounds);
 					lastSolution = nonTrivialSolution();
 				} catch (TrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
