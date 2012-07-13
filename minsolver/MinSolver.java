@@ -23,7 +23,6 @@ package minsolver;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,6 +33,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+import javax.swing.JOptionPane;
 
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
@@ -567,6 +568,12 @@ public final class MinSolver {
 		private Set<IConstr> coneRestrictionConstraints = new HashSet<IConstr>();
 
 		/**
+		 * Keeps a list of all the unit constraints due to a bug in SAT4J that does not
+		 * return a handle to remove unit constraints.
+		 */
+		private Set<Integer> coneRestrictionUnits = new HashSet<Integer>();
+		
+		/**
 		 * The lifters for this iteration.
 		 */
 		private final int[] lifters;
@@ -666,7 +673,9 @@ public final class MinSolver {
 						}
 					}
 					
-					try{						
+					try{
+						if(notModel.size() == 1)
+							coneRestrictionUnits.add(notModel.get(0));
 						coneRestrictionClauses.add(notModel);
 						coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
 					}
@@ -796,10 +805,14 @@ public final class MinSolver {
 		 */
 		private boolean solve(){
 			try{
-				if(lifters == null)
+				ArrayList<Integer> allUnits = new ArrayList<Integer>();
+				allUnits.addAll(toArrayList(lifters));
+				allUnits.addAll(coneRestrictionUnits);
+				
+				if(allUnits.size() == 0)
 					sat = Boolean.valueOf(((MinSATSolver)translation.cnf()).solve());
 				else
-					sat = Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(lifters));
+					sat = Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(allUnits)));
 
 				if(sat)
 				{	
@@ -828,6 +841,10 @@ public final class MinSolver {
 			
 			//All the unit clauses being passed to the solver as assumptions.
 			ArrayList<Integer> unitClauses = toArrayList(lifters);
+			//Add all coneRestrictionUnits
+			for(Integer value: coneRestrictionUnits)
+				unitClauses.add(value);
+			
 			
 			int iterationCounter = 1;
 			
@@ -851,12 +868,16 @@ public final class MinSolver {
 						unitClauses.add(-i);
 				}
 				
-				constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
+				//Handling SAT4J's bug when it returns null for unit constraints:
+				if(constraint.size() == 1)
+					unitClauses.add(constraint.get(0));
+				else
+					constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
 				
 				iterationCounter++;
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
-			
+
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
 			
 			// Remove all the cone-specific constraints we just added from the solver:
@@ -868,7 +889,6 @@ public final class MinSolver {
 			// Do NOT add a constraint here to force the solver out of this cone. 
 			// Do that in the next solve() call. We want to leave open the possibility
 			// of landing in this cone again to support lifting/exporation!
-			
 		}
 		
 		/**
