@@ -23,6 +23,7 @@ package minsolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -260,21 +261,24 @@ public final class MinSolver {
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
 	
-	public Iterator<MinSolution> lift(final Formula formula, final Bounds bounds, Iterator<MinSolution> prevIterator, 
+	public Iterator<MinSolution> lift(final Formula formula, Bounds bounds, Iterator<MinSolution> prevIterator, 
 			Instance lifters) 
 			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
-
+		
+		//Lifting is always performed on skolemBounds.
+		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
+		
 		ArrayList<Integer> allLifters = new ArrayList<Integer>();
 		Map<Relation, TupleSet> solutionTuples = ((MinSolutionIterator)prevIterator).getLastSolution().instance().relationTuples();
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
-		
+
 		//This can be a method!
 		for(Relation r : solutionTuples.keySet()){
 			TupleSet tuples = solutionTuples.get(r);
 			for(Tuple t: tuples){
-				int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);
+				int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);
 				//if there is no primary variables assigned to this relation, continue.
 				if(index == -1)
 					continue;
@@ -286,16 +290,16 @@ public final class MinSolver {
 			TupleSet tuples = lifterTuples.get(r);
 			if(tuples != null)
 				for(Tuple t: tuples){
-					int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);					
+					int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);					
 					//if there is no primary variables assigned to this relation, continue.
 					if(index == -1)
 						continue;
 					allLifters.add(index);
 				}
-		}			
+		}
 		
 		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
-
+		
 		return iterator;
 	}	
 	
@@ -310,7 +314,7 @@ public final class MinSolver {
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 		
 		return MinTwoWayTranslator.translatePropositions(
-				theIterator.translation, theIterator.bounds,
+				theIterator.translation, ((MyReporter)theIterator.options.reporter()).skolemBounds,
 				theIterator.mapVarToRelation,
 				theIterator.getLifters());
 		
@@ -328,7 +332,7 @@ public final class MinSolver {
 		Translation translation = ((MinSolutionIterator)iterator).translation;
 		
 		
-		Bounds bounds = ((MinSolutionIterator)iterator).bounds;
+		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		Instance lifters = null;
 		
 		try{
@@ -361,8 +365,6 @@ public final class MinSolver {
 		inputStr = inputStr.trim();
 		inputStr = inputStr.replaceAll(" ", "");
 		
-		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
-		
 		String relationName = null;
 		
 		relationName = inputStr.substring(0, inputStr.indexOf('['));
@@ -376,7 +378,7 @@ public final class MinSolver {
 			constants.add(tokenizer.nextToken());
 		}
 
-		Bounds bounds = theIterator.bounds;
+		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		
 		Set<Relation> relations = bounds.relations();
 		Relation relation = null;
@@ -746,7 +748,9 @@ public final class MinSolver {
 					translation = Translator.translate(formula, bounds, options);
 					translTime = System.currentTimeMillis() - translTime;
 					//We use this data structure for translation:
-					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
+					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
+					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 
+							((MyReporter)options.reporter()).skolemBounds);					
 					lastSolution = nonTrivialSolution();
 				} catch (TrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
@@ -800,13 +804,7 @@ public final class MinSolver {
 				if(sat)
 				{	
 					try{
-						//DEBUG
-						/*JOptionPane.showMessageDialog(null, 
-								"before minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/						
 						minimize();
-						//DEBUG
-						/*JOptionPane.showMessageDialog(null, 
-								"after minimize:\n" + Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
 					}
 					catch(ContradictionException e)
 					{System.err.println(e.getMessage());}
@@ -835,11 +833,6 @@ public final class MinSolver {
 			
 			do
 			{
-				//DEBUG
-				/*JOptionPane.showMessageDialog(null,
-						"model: \n" +
-						Arrays.toString(((MinSATSolver)translation.cnf()).getLastModel()));*/
-								
 				// Given that candidate for minimal-model, try to make something smaller.
 				// add: disjunction of negations of all positive literals in M (constraint)
 				// add: all negative literals as unit clauses
@@ -861,12 +854,6 @@ public final class MinSolver {
 				constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
 				
 				iterationCounter++;
-				
-				//DEBUG
-				/*JOptionPane.showMessageDialog(null, 
-						"Unit Clauses: \n" + unitClauses.toString());
-				JOptionPane.showMessageDialog(null, 
-						"Constraints: \n" + constraint.toString());*/
 			}
 			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
 			
