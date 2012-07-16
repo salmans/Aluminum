@@ -23,7 +23,6 @@ package minsolver;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,12 +42,12 @@ import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.Cost;
 import kodkod.engine.config.Options;
-import kodkod.engine.fol2sat.HigherOrderDeclException;
-import kodkod.engine.fol2sat.Translation;
-import kodkod.engine.fol2sat.TranslationLog;
-import kodkod.engine.fol2sat.Translator;
-import kodkod.engine.fol2sat.TrivialFormulaException;
-import kodkod.engine.fol2sat.UnboundLeafException;
+import minsolver.fol2sat.MinHigherOrderDeclException;
+import minsolver.fol2sat.MinTranslation;
+import minsolver.fol2sat.MinTranslationLog;
+import minsolver.fol2sat.MinTranslator;
+import minsolver.fol2sat.MinTrivialFormulaException;
+import minsolver.fol2sat.MinUnboundLeafException;
 import kodkod.engine.satlab.SATAbortedException;
 import kodkod.engine.satlab.SATMinSolver;
 import kodkod.engine.satlab.SATProver;
@@ -128,14 +127,14 @@ public final class MinSolver {
 	 * @see Cost
 	 */
 	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
-			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		if (options.logTranslation()>0 || !options.solver().minimizer())
 			throw new IllegalStateException();
 		
 		final long startTransl = System.currentTimeMillis();
 		try {
 			
-			final Translation translation = Translator.translate(formula, bounds, options);
+			final MinTranslation translation = MinTranslator.translate(formula, bounds, options);
 			final long endTransl = System.currentTimeMillis();
 
 			final SATMinSolver cnf = (SATMinSolver)translation.cnf();
@@ -157,7 +156,7 @@ public final class MinSolver {
 			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
 			
 			return isSat ? sat(bounds, translation, stats) : unsat(translation, stats);
-		} catch (TrivialFormulaException trivial) {
+		} catch (MinTrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(bounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
@@ -187,12 +186,12 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public MinSolution solve(Formula formula, Bounds bounds)
-			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		final long startTransl = System.currentTimeMillis();
 		
 		try {		
 		
-			final Translation translation = Translator.translate(formula, bounds, options);
+			final MinTranslation translation = MinTranslator.translate(formula, bounds, options);
 			final long endTransl = System.currentTimeMillis();
 
 			final SATSolver cnf = translation.cnf();
@@ -205,7 +204,7 @@ public final class MinSolver {
 			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
 			return isSat ? sat(bounds, translation, stats) : unsat(translation, stats);
 			
-		} catch (TrivialFormulaException trivial) {
+		} catch (MinTrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(bounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
@@ -237,7 +236,7 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds bounds) 
-		throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+		throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
@@ -254,7 +253,7 @@ public final class MinSolver {
 	 * @param solution the current solution of the previous iterator being lifted.
 	 * @param lifters the facts to augment.
 	 * @return a new iterator over the augmented models.
-	 * @throws HigherOrderDeclException
+	 * @throws MinHigherOrderDeclException
 	 * @throws UnboundLeafException
 	 * @throws MinAbortedException
 	 */
@@ -263,7 +262,7 @@ public final class MinSolver {
 	
 	public Iterator<MinSolution> lift(final Formula formula, Bounds bounds, Iterator<MinSolution> prevIterator, 
 			Instance lifters) 
-			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 		
@@ -329,7 +328,7 @@ public final class MinSolver {
 	 */    
 	public String getLiftersList(Iterator<MinSolution> iterator){
 		String retVal = "";
-		Translation translation = ((MinSolutionIterator)iterator).translation;
+		MinTranslation translation = ((MinSolutionIterator)iterator).translation;
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		Instance lifters = null;
@@ -433,7 +432,7 @@ public final class MinSolver {
 	 * @param stats translation / solving stats
 	 * @return the result of solving a sat formula.
 	 */
-	private static MinSolution sat(Bounds bounds, Translation translation, MinStatistics stats) {
+	private static MinSolution sat(Bounds bounds, MinTranslation translation, MinStatistics stats) {
 		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), null);
 		translation.cnf().free();
 		return sol;
@@ -445,9 +444,9 @@ public final class MinSolver {
 	 * @param stats translation / solving stats
 	 * @return the result of solving an unsat formula.
 	 */
-	private static MinSolution unsat(Translation translation, MinStatistics stats) {
+	private static MinSolution unsat(MinTranslation translation, MinStatistics stats) {
 		final SATSolver cnf = translation.cnf();
-		final TranslationLog log = translation.log();
+		final MinTranslationLog log = translation.log();
 		if (cnf instanceof SATProver && log != null) {
 			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null);
 		} else { // can free memory
@@ -475,7 +474,7 @@ public final class MinSolver {
 	 * @param translTime translation time
 	 * @return the result of solving a trivially (un)sat formula.
 	 */
-	private static MinSolution trivial(Bounds bounds, TrivialFormulaException desc, long translTime) {
+	private static MinSolution trivial(Bounds bounds, MinTrivialFormulaException desc, long translTime) {
 		final MinStatistics stats = new MinStatistics(trivialPrimaries(desc.bounds()), 0, 0, translTime, 0);
 		if (desc.value().booleanValue()) {
 			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), null);
@@ -491,7 +490,7 @@ public final class MinSolver {
 	 * @return a proof for the trivially unsatisfiable log.formula,
 	 * provided that log is non-null.  Otherwise returns null.
 	 */
-	private static MinProof trivialProof(TranslationLog log) {
+	private static MinProof trivialProof(MinTranslationLog log) {
 		return log==null ? null : new MinTrivialProof(log);
 	}
 	
@@ -541,7 +540,7 @@ public final class MinSolver {
 		private final Options options;
 		private Formula formula;
 		private Bounds bounds;
-		private Translation translation;
+		private MinTranslation translation;
 		private Map<Integer, Relation> mapVarToRelation;
 		private long translTime;
 		private int trivial;
@@ -701,7 +700,7 @@ public final class MinSolver {
 		 * trivial solution from the set of possible solutions.
 		 * @return current solution
 		 */
-		private MinSolution trivialSolution(TrivialFormulaException tfe) {
+		private MinSolution trivialSolution(MinTrivialFormulaException tfe) {
 			final MinStatistics stats = new MinStatistics(0, 0, 0, translTime, 0);
 			if (tfe.value().booleanValue()) {
 				trivial++;
@@ -752,14 +751,14 @@ public final class MinSolver {
 			if (translation==null) {
 				try {
 					translTime = System.currentTimeMillis();
-					translation = Translator.translate(formula, bounds, options);
+					translation = MinTranslator.translate(formula, bounds, options);
 					translTime = System.currentTimeMillis() - translTime;
 					//We use this data structure for translation:
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 
 							((MyReporter)options.reporter()).skolemBounds);
 					lastSolution = nonTrivialSolution();
-				} catch (TrivialFormulaException tfe) {
+				} catch (MinTrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
 					lastSolution = trivialSolution(tfe);
 				} 
@@ -973,7 +972,7 @@ public final class MinSolver {
 		 * Returns the translation for this iterator.
 		 * @return the translation.
 		 */
-		public Translation getTranslation(){
+		public MinTranslation getTranslation(){
 			return translation;
 		}
 		
@@ -1065,7 +1064,7 @@ public final class MinSolver {
 	 */
 	public static class MinTwoWayTranslator{
 		private static Map<Integer, Relation> buildVarToRelationMap(
-				Translation translation, Bounds bounds){
+				MinTranslation translation, Bounds bounds){
 			Map<Integer, Relation> mapVarToRelation = new HashMap<Integer, Relation>(); 
 			for(Relation r : bounds.relations())
 			{
@@ -1093,7 +1092,7 @@ public final class MinSolver {
 		 * @param theVars a VectInt of the variables to convert.
 		 * @return
 		 */
-		private static Instance translatePropositions(Translation translation, Bounds bounds,
+		private static Instance translatePropositions(MinTranslation translation, Bounds bounds,
 				Map<Integer, Relation> mapVarToRelation, int[] theVars)
 		{
 			// Populate an empty instance over the universe we're using:
@@ -1130,7 +1129,7 @@ public final class MinSolver {
 		}
 
 		
-		private static Tuple getTupleForPropVariable(Bounds theBounds, Translation theTranslation, IntSet s, Relation r, int theVar)
+		private static Tuple getTupleForPropVariable(Bounds theBounds, MinTranslation theTranslation, IntSet s, Relation r, int theVar)
 		//throws MInternalNoBoundsException
 		{
 			// The relation's upper bound has a list of tuple indices. The "index" variable below is an index
@@ -1153,7 +1152,7 @@ public final class MinSolver {
 	        return tup;
 		}
 		
-		private static int getPropVariableForTuple(Bounds bounds, Translation translation, Relation r, Tuple tuple){
+		private static int getPropVariableForTuple(Bounds bounds, MinTranslation translation, Relation r, Tuple tuple){
 			IntSet s = translation.primaryVariables(r);
 
 			//if there is no primary variable for this relation, return -1

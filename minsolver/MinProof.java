@@ -26,8 +26,8 @@ import java.util.Map;
 import kodkod.ast.Formula;
 import kodkod.ast.Node;
 import kodkod.engine.config.Options;
-import kodkod.engine.fol2sat.TranslationLog;
-import kodkod.engine.fol2sat.TranslationRecord;
+import minsolver.fol2sat.MinTranslationLog;
+import minsolver.fol2sat.MinTranslationRecord;
 import kodkod.engine.satlab.ReductionStrategy;
 import kodkod.util.nodes.Nodes;
 
@@ -38,13 +38,13 @@ import kodkod.util.nodes.Nodes;
  * @specfield log: TranslationLog // log of the translation of this.formula with respect to this.bounds
  */
 public abstract class MinProof {
-	private final TranslationLog log;
+	private final MinTranslationLog log;
 	
 	/**
 	 * Constructs a new Proof of unsatisfiability for log.formula.
 	 * @effects this.log = log
 	 */
-	MinProof(TranslationLog log) {
+	MinProof(MinTranslationLog log) {
 		this.log = log;
 	}
 	
@@ -80,15 +80,15 @@ public abstract class MinProof {
 	public abstract void minimize(ReductionStrategy strategy);
 	
 	/**
-	 * Returns an iterator over the {@link TranslationRecord log records} for the nodes
+	 * Returns an iterator over the {@link MinTranslationRecord log records} for the nodes
 	 * that are in the unsatisfiable core of this.log.formula.   The record objects returned by the iterator are not 
 	 * guaranteed to be immutable.  In particular, the state of a record object
 	 * returned by <tt>next()</tt> is guaranteed to remain the same only until the
 	 * subsequent call to <tt>next()</tt>.
-	 * @return  an iterator over the {@link TranslationRecord log records} for the nodes
+	 * @return  an iterator over the {@link MinTranslationRecord log records} for the nodes
 	 * that are in the unsatisfiable core of this.log.formula.
 	 */
-	public abstract Iterator<TranslationRecord> core() ;
+	public abstract Iterator<MinTranslationRecord> core() ;
 	
 	/**
 	 * Returns a map whose key set is the unsatisfiable subset of the top-level conjunctions of this.log.formula
@@ -106,7 +106,7 @@ public abstract class MinProof {
 	 * in this proof.
 	 * @return log of the translation that resulted in this proof
 	 */
-	public final TranslationLog log() {
+	public final MinTranslationLog log() {
 		return log;
 	}
 	

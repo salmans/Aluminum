@@ -19,9 +19,9 @@ import kodkod.ast.QuantifiedFormula;
 import kodkod.ast.RelationPredicate;
 import kodkod.ast.Variable;
 import kodkod.ast.visitor.AbstractVoidVisitor;
-import kodkod.engine.fol2sat.RecordFilter;
-import kodkod.engine.fol2sat.TranslationLog;
-import kodkod.engine.fol2sat.TranslationRecord;
+import minsolver.fol2sat.MinRecordFilter;
+import minsolver.fol2sat.MinTranslationLog;
+import minsolver.fol2sat.MinTranslationRecord;
 import kodkod.engine.satlab.ReductionStrategy;
 import kodkod.instance.TupleSet;
 import kodkod.util.collections.IdentityHashSet;
@@ -37,7 +37,7 @@ import kodkod.util.ints.TreeSequence;
  */
 final class MinTrivialProof extends MinProof {
 	private Map<Formula,Node> coreRoots;
-	private RecordFilter coreFilter;
+	private MinRecordFilter coreFilter;
 	
 	/**
 	 * Constructs a proof of unsatisfiability for the trivially unsatisfiable
@@ -45,7 +45,7 @@ final class MinTrivialProof extends MinProof {
 	 * @requires log != null
 	 * @effects this.formula' = log.formula
 	 */
-	MinTrivialProof(TranslationLog log) {
+	MinTrivialProof(MinTranslationLog log) {
 		super(log);
 		this.coreFilter = null;
 		this.coreRoots = null;
@@ -55,9 +55,9 @@ final class MinTrivialProof extends MinProof {
 	 * {@inheritDoc}
 	 * @see kodkod.engine.Proof#core()
 	 */
-	public final Iterator<TranslationRecord> core() { 
+	public final Iterator<MinTranslationRecord> core() { 
 		if (coreFilter==null) {
-			coreFilter = new RecordFilter() {
+			coreFilter = new MinRecordFilter() {
 				final Set<Node> coreNodes = NodePruner.relevantNodes(log(),  coreRoots==null ? log().roots() : coreRoots.keySet());
 				public boolean accept(Node node, Formula translated, int literal, Map<Variable, TupleSet> env) {
 					return coreNodes.contains(translated) ;
@@ -73,11 +73,11 @@ final class MinTrivialProof extends MinProof {
 	 */
 	public final Map<Formula,Node> highLevelCore() {
 		if (coreRoots==null) { 
-			final Iterator<TranslationRecord> itr = core();
+			final Iterator<MinTranslationRecord> itr = core();
 			final Set<Formula> roots = log().roots();
 			coreRoots = new LinkedHashMap<Formula,Node>();
 			while( itr.hasNext() ) {
-				TranslationRecord rec = itr.next();
+				MinTranslationRecord rec = itr.next();
 				if (roots.contains(rec.translated()))
 					coreRoots.put(rec.translated(), rec.node());
 			}
@@ -102,8 +102,8 @@ final class MinTrivialProof extends MinProof {
 		final Map<Formula, Node> rootNodes = new LinkedHashMap<Formula, Node>();
 		final Set<Formula> roots = log().roots();
 		
-		for(Iterator<TranslationRecord> itr = core(); itr.hasNext();) { 
-			final TranslationRecord rec = itr.next();
+		for(Iterator<MinTranslationRecord> itr = core(); itr.hasNext();) { 
+			final MinTranslationRecord rec = itr.next();
 			if (roots.contains(rec.translated())) { 
 				// simply record the most recent output value for each formula:
 				// this is guaranteed to be the final output value for that 
@@ -160,19 +160,19 @@ final class MinTrivialProof extends MinProof {
 		 * @effects this.log' = log
 		 */
 		@SuppressWarnings("unchecked")
-		NodePruner(TranslationLog log) {
+		NodePruner(MinTranslationLog log) {
 			visited = new IdentityHashSet<Node>();
 			relevant = new IdentityHashSet<Node>();
 						
-			final RecordFilter filter = new RecordFilter() {
+			final MinRecordFilter filter = new MinRecordFilter() {
 				public boolean accept(Node node, Formula translated, int literal, Map<Variable, TupleSet> env) {
 					return env.isEmpty();
 				}	
 			};
 			
 			constNodes = new LinkedHashMap<Formula,Boolean>();
-			for(Iterator<TranslationRecord> itr = log.replay(filter); itr.hasNext(); ) { 
-				TranslationRecord rec = itr.next();
+			for(Iterator<MinTranslationRecord> itr = log.replay(filter); itr.hasNext(); ) { 
+				MinTranslationRecord rec = itr.next();
 				int lit = rec.literal();
 				if (Math.abs(lit) != Integer.MAX_VALUE) { 
 					constNodes.remove(rec.translated());
@@ -190,7 +190,7 @@ final class MinTrivialProof extends MinProof {
 		 * @requires highLevelCore in log.roots() and unsatisfiable(highLevelCore, log.bounds, log.options)
 		 * @return nodes necessary for proving the trivial unsatisfiability of log.formula.
 		 */
-		static Set<Node> relevantNodes(TranslationLog log, Set<Formula> highLevelCore) {
+		static Set<Node> relevantNodes(MinTranslationLog log, Set<Formula> highLevelCore) {
 			final NodePruner finder = new NodePruner(log);
 			for(Formula root : highLevelCore) {
 				if (!finder.isTrue(root)) {

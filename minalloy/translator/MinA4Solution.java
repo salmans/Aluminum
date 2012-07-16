@@ -57,11 +57,11 @@ import minsolver.MinSolution;
 import minsolver.MinSolver;
 import minsolver.MyReporter;
 import kodkod.engine.config.Options;
-import kodkod.engine.fol2sat.TranslationRecord;
-import kodkod.engine.fol2sat.Translator;
+import minsolver.fol2sat.MinTranslationRecord;
+import minsolver.fol2sat.MinTranslator;
 import kodkod.engine.satlab.SATFactory;
-import kodkod.engine.ucore.HybridStrategy;
-import kodkod.engine.ucore.RCEStrategy;
+import minsolver.ucore.MinHybridStrategy;
+import minsolver.ucore.MinRCEStrategy;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
@@ -541,7 +541,7 @@ public final class MinA4Solution {
 
     /** Return a modifiable TupleSet representing a sound overapproximation of the given expression. */
     TupleSet approximate(Expression expression) {
-       return factory.setOf(expression.arity(), Translator.approximate(expression, bounds, solver.options()).denseIndices());
+       return factory.setOf(expression.arity(), MinTranslator.approximate(expression, bounds, solver.options()).denseIndices());
     }
 
     /** Query the Bounds object to find the lower/upper bound; throws ErrorFatal if expr is not Relation, nor a union of Relations. */
@@ -931,7 +931,8 @@ public final class MinA4Solution {
         MinSolution sol = null;
         //final Reporter oldReporter = solver.options().reporter();
         final boolean solved[] = new boolean[]{true};
-        solver.options().setReporter(new AbstractReporter() { // Set up a reporter to catch the type+pos of skolems
+        //AbstractReporter -> MyReporter
+        solver.options().setReporter(new MyReporter() { // Set up a reporter to catch the type+pos of skolems
             @Override public void skolemizing(Decl decl, Relation skolem, List<Decl> predecl) {
                 try {
                     Type t=kv2typepos(decl.variable()).a;
@@ -974,11 +975,11 @@ public final class MinA4Solution {
                  // only perform the minimization if it was UNSATISFIABLE, rather than TRIVIALLY_UNSATISFIABLE
                  int i = p.highLevelCore().size();
                  rep.minimizing(cmd, i);
-                 if (opt.coreMinimization==0) try { p.minimize(new RCEStrategy(p.log())); } catch(Throwable ex) {}
-                 if (opt.coreMinimization==1) try { p.minimize(new HybridStrategy(p.log())); } catch(Throwable ex) {}
+                 if (opt.coreMinimization==0) try { p.minimize(new MinRCEStrategy(p.log())); } catch(Throwable ex) {}
+                 if (opt.coreMinimization==1) try { p.minimize(new MinHybridStrategy(p.log())); } catch(Throwable ex) {}
                  rep.minimized(cmd, i, p.highLevelCore().size());
               }
-              for(Iterator<TranslationRecord> it=p.core(); it.hasNext();) {
+              for(Iterator<MinTranslationRecord> it=p.core(); it.hasNext();) {
                  Object n=it.next().node();
                  if (n instanceof Formula) lCore.add((Formula)n);
               }

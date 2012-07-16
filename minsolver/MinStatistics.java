@@ -20,7 +20,7 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import kodkod.engine.fol2sat.Translation;
+import minsolver.fol2sat.MinTranslation;
 
 /**
  * Stores the statistics gathered while solving
@@ -50,7 +50,7 @@ public final class MinStatistics {
 	/**
 	 * Constructs a new Statistics object using the provided values.
 	 */
-	MinStatistics(Translation translation, long translationTime, long solvingTime) { 
+	MinStatistics(MinTranslation translation, long translationTime, long solvingTime) { 
 		this(translation.numPrimaryVariables(), translation.cnf().numberOfVariables(), 
 				translation.cnf().numberOfClauses(), translationTime, solvingTime);
 	}
