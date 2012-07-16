@@ -93,6 +93,9 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 
+import kodkod.ast.Decl;
+import kodkod.engine.config.AbstractReporter;
+
 /** This class stores a SATISFIABLE or UNSATISFIABLE solution.
  * It is also used as a staging area for the solver before generating the solution.
  * Once solve() has been called, then this object becomes immutable after that.
@@ -285,6 +288,7 @@ public final class MinA4Solution {
         this.stringBounds = stringBounds.unmodifiableView();
         bounds.boundExactly(KK_STRING, this.stringBounds);
         int sym = (expected==1 ? 0 : opt.symmetry);
+        
         solver = new MinSolver();
         solver.options().setFlatten(false); // added for now, since multiplication and division circuit takes forever to flatten
         /*if (opt.solver.external()!=null) {
@@ -927,7 +931,7 @@ public final class MinA4Solution {
         MinSolution sol = null;
         //final Reporter oldReporter = solver.options().reporter();
         final boolean solved[] = new boolean[]{true};
-        /*solver.options().setReporter(new AbstractReporter() { // Set up a reporter to catch the type+pos of skolems
+        solver.options().setReporter(new AbstractReporter() { // Set up a reporter to catch the type+pos of skolems
             @Override public void skolemizing(Decl decl, Relation skolem, List<Decl> predecl) {
                 try {
                     Type t=kv2typepos(decl.variable()).a;
@@ -944,47 +948,19 @@ public final class MinA4Solution {
                if (solved[0]) return; else solved[0]=true; // initially solved[0] is true, so we won't report the # of vars/clauses
                if (rep!=null) rep.solve(primaryVars, vars, clauses);
            }
-        });*/
-        /*if (!opt.solver.equals(SatSolver.CNF) && !opt.solver.equals(SatSolver.KK) && tryBookExamples) { // try book examples
-           A4Reporter r = "yes".equals(System.getProperty("debug")) ? rep : null;
-           try { sol = BookExamples.trial(r, this, fgoal, solver, cmd.check); } catch(Throwable ex) { sol = null; }
-        }
+        });
         solved[0] = false; // this allows the reporter to report the # of vars/clauses
         for(Relation r: bounds.relations()) { formulas.add(r.eq(r)); } // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
-        // Now pick the solver and solve it!
-        if (opt.solver.equals(SatSolver.KK)) {
-            File tmpCNF = File.createTempFile("tmp", ".java", new File(opt.tempDirectory));
-            String out = tmpCNF.getAbsolutePath();
-            Util.writeAll(out, debugExtractKInput());
-            rep.resultCNF(out);
-            return null;
-         }
-        if (opt.solver.equals(SatSolver.CNF)) {
-            File tmpCNF = File.createTempFile("tmp", ".cnf", new File(opt.tempDirectory));
-            String out = tmpCNF.getAbsolutePath();
-            solver.options().setSolver(WriteCNF.factory(out));
-            try { sol = solver.solve(fgoal, bounds); } catch(WriteCNF.WriteCNFCompleted ex) { rep.resultCNF(out); return null; }
-            // The formula is trivial (otherwise, it would have thrown an exception)
-            // Since the user wants it in CNF format, we manually generate a trivially satisfiable (or unsatisfiable) CNF file.
-            Util.writeAll(out, sol.instance()!=null ? "p cnf 1 1\n1 0\n" : "p cnf 1 2\n1 0\n-1 0\n");
-            rep.resultCNF(out);
-            return null;
-         }
-        if (solver.options().solver()==SATFactory.ZChaff || !solver.options().solver().incremental()) {
-           rep.debug("Begin solve()\n");
-           if (sol==null) sol = solver.solve(fgoal, bounds);
-           rep.debug("End solve()\n");
-        } else*/ {  //Commented for MinSATSolver
-           rep.debug("Begin solveAll()\n");
-           Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
-           kEnumerator = new Peeker<MinSolution>(solution);
-           if (sol==null) sol = kEnumerator.next();
-           rep.debug("End solveAll()\n");
-        }
-        
+
+        rep.debug("Begin solveAll()\n");
+        Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
+        kEnumerator = new Peeker<MinSolution>(solution);
+        if (sol==null) sol = kEnumerator.next();
+        rep.debug("End solveAll()\n");
+
         this.currentSolution = sol;
-        
+
         if (!solved[0]) rep.solve(0, 0, 0);
         final Instance inst = sol.instance();
         // To ensure no more output during SolutionEnumeration
@@ -1066,9 +1042,6 @@ public final class MinA4Solution {
     	kEnumerator = element.kEnumerator;
     	MinSolution sol = element.currentSolution;
         //if (eval==null) return this;
-    	if(sol.instance() == null){
-    		JOptionPane.showMessageDialog(null, "stack gets null");
-    	}
         if (nextCache==null) nextCache=new MinA4Solution(this, sol);
         return nextCache;
     }    
