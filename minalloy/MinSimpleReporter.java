@@ -444,13 +444,17 @@ final class MinSimpleReporter extends A4Reporter {
                 "Currently only MiniSat and SAT4J are supported."); return;}
             //int tries=0;
             while(true) {
-                sol=sol.lift();
-                
-                if(sol == null){
-                	cb("pop", "The input fact is not valid!");
+            	try{
+            		sol=sol.lift();
+            	}
+            	catch(Exception e){
+                	cb("pop", e.getMessage());
                 	return;
-                }
+            	}
                 
+            	if(sol == null) //Do nothing! just return...
+            		return;
+            	
                 if (!sol.satisfiable())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +

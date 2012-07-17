@@ -261,8 +261,8 @@ public final class MinSolver {
 	//via previous iterator.
 	
 	public Iterator<MinSolution> lift(final Formula formula, Bounds bounds, Iterator<MinSolution> prevIterator, 
-			Instance lifters) 
-			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
+			Instance lifters)
+			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 		
@@ -289,10 +289,14 @@ public final class MinSolver {
 			TupleSet tuples = lifterTuples.get(r);
 			if(tuples != null)
 				for(Tuple t: tuples){
+					if(solutionTuples.get(r).contains(t))
+						throw new ExplorationException("The fact " + t + " is already true in the solution.");
+
 					int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);					
 					//if there is no primary variables assigned to this relation, continue.
 					if(index == -1)
 						continue;
+					
 					allLifters.add(index);
 				}
 		}
@@ -364,11 +368,17 @@ public final class MinSolver {
 		inputStr = inputStr.replaceAll(" ", "");
 		
 		String relationName = null;
+		int index1 = inputStr.indexOf('[');
+		if(index1 == -1)
+			return null;
 		
-		relationName = inputStr.substring(0, inputStr.indexOf('['));
+		relationName = inputStr.substring(0, index1);
+
+		int index2 = inputStr.indexOf(']');
+		if(index2 == -1)
+			return null;
 		
-		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(inputStr.indexOf('[') + 1
-				, inputStr.indexOf(']')), ",");
+		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(index1 + 1, index2), ",");
 		
 		ArrayList<String> constants = new ArrayList<String>();
 		
@@ -386,7 +396,6 @@ public final class MinSolver {
 				break;
 			}
 		}
-
 		
 		if(relation == null) //Relation does not exist.
 			return null;
@@ -394,7 +403,7 @@ public final class MinSolver {
 		TupleSet tuples = bounds.upperBound(relation);
 		if(tuples == null)
 			return null;
-		
+
 		Tuple tuple = null;
 		for(Tuple t: tuples){
 			boolean found = true;

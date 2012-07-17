@@ -707,9 +707,14 @@ public class Main {
 						System.out.println("-------------------------------------------------------");
 						System.out.println("Consistent Fact:   " + instance.relationTuples());
 						System.out.println("Model:    " + model.instance().relationTuples());
-			
-						Iterator<MinSolution> liftModels = 
-								solver.lift(fs.fmla, fs.bounds, models, instance);
+						Iterator<MinSolution> liftModels = null;
+						try{
+							liftModels = solver.lift(fs.fmla, fs.bounds, models, instance);
+						}
+						catch(ExplorationException e){
+							System.err.println(e.getMessage());
+							System.exit(0);
+						}
 						
 						while(liftModels.hasNext()){
 							MinSolution liftModel = liftModels.next();

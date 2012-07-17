@@ -51,6 +51,7 @@ import kodkod.ast.operator.ExprOperator;
 import kodkod.ast.operator.FormulaOperator;
 import kodkod.engine.CapacityExceededException;
 import kodkod.engine.Evaluator;
+import minsolver.ExplorationException;
 import minsolver.MinProof;
 import minsolver.MinSATSolverFactory;
 import minsolver.MinSolution;
@@ -94,7 +95,6 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 
 import kodkod.ast.Decl;
-import kodkod.engine.config.AbstractReporter;
 
 /** This class stores a SATISFIABLE or UNSATISFIABLE solution.
  * It is also used as a staging area for the solver before generating the solution.
@@ -1003,7 +1003,7 @@ public final class MinA4Solution {
     }
     
     /** Lifts a model with some augmenting facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    public MinA4Solution lift() throws Err, IOException {
+    public MinA4Solution lift() throws Err, IOException, ExplorationException {
         Formula fgoal = Formula.and(formulas);
         
         String inputFact = JOptionPane.showInputDialog("Enter a fact: ");
@@ -1011,11 +1011,10 @@ public final class MinA4Solution {
         	return null;
         
         Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator);
-        
+
         //if the fact does not exists in the given bounds:
-        if(inst == null){
-        	return null;
-        }
+        if(inst == null)
+        	throw new IOException("The input fact is not valid!");
         
         Iterator<MinSolution> solution = solver.lift(fgoal, bounds, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
 
