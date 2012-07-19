@@ -611,12 +611,7 @@ public final class MinSolver {
 			
 			if(prevIterator != null){  //if lifting on a previous iterator
 				this.translation = prevIterator.getTranslation();
-				this.mapVarToRelation = prevIterator.mapVarToRelation;
-				
-				//Inherit the initial coneRestrictionClauses and coneRestrictionConstraints 
-				//from the previous iterator:
-				//this.coneRestrictionClauses = prevIterator.cloneConeRestrictionClauses();
-				//this.coneRestrictionConstraints = prevIterator.cloneConeRestrictionConstraints();				
+				this.mapVarToRelation = prevIterator.mapVarToRelation;		
 			}
 		}
 		
@@ -663,12 +658,6 @@ public final class MinSolver {
 					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), propositionalModel);
 					// add the negation of the current model to the solver
 					final int primary = translation.numPrimaryVariables();
-					
-					//IMPORTANT COMMENT:
-					//THIS ASSSUMES THAT PRIMARY VARIABLES THAT DO NOT SHOW UP
-					//IN RELATIONS COME AFTER THE ONES THAT DO SHOW UP AS TUPLES
-					//IN RELATIONS:
-					//final int primary = mapVarToRelation.size();
 					
 					final ArrayList<Integer> notModel = new ArrayList<Integer>();
 					
@@ -863,8 +852,6 @@ public final class MinSolver {
 				// An array of the next constraint being added.
 				ArrayList<Integer> constraint = new ArrayList<Integer>();
 				
-				//READ THE COMMENT ABOUT mapVarToRelation.size() ABOVE:
-				//int numPrimaryVariables = mapVarToRelation.size();
 				int numPrimaryVariables = translation.numPrimaryVariables();
 					
 				for(int i = 1; i <= numPrimaryVariables; i++){
@@ -917,8 +904,6 @@ public final class MinSolver {
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
 			
-			//READ THE COMMENT ABOUT mapVarToRelation.size() ABOVE:
-			//int numPrimaryVariables = mapVarToRelation.size();
 			int numPrimaryVariables = translation.numPrimaryVariables();
 			int[] propositionalModel = lastSolution.getPropositionalModel();
 			
@@ -992,27 +977,6 @@ public final class MinSolver {
 		private MinSolution getLastSolution(){
 			return lastSolution;
 		}
-		
-		//COMMENT maybe useful:
-		/*private Set<List<Integer>> cloneConeRestrictionClauses(){
-			Set<List<Integer>> retVal = new HashSet<List<Integer>>();
-			for(List<Integer> list: coneRestrictionClauses){
-				ArrayList<Integer> tempList = new ArrayList<Integer>();
-				for(Integer val: list){
-					tempList.add(val);
-				}
-				retVal.add(tempList);
-			}
-			return retVal;
-		}
-		
-		private Set<IConstr> cloneConeRestrictionConstraints(){
-			Set<IConstr> retVal = new HashSet<IConstr>();
-			for(IConstr constr: coneRestrictionConstraints){
-				retVal.add(constr);
-			}
-			return retVal;
-		}*/
 		
 		//Helpers:
 		/**
