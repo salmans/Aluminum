@@ -1182,10 +1182,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
             optmenu.removeAll();
             menuItem(optmenu, "Welcome Message at Start Up: "+(Welcome.get() < welcomeLevel ? "Yes" : "No"), doOptWelcome());
             //
-            final SatSolver now = SatSolver.get();
-            final JMenu sat = new JMenu("SAT Solver: "+now);
-            for(SatSolver sc:satChoices) { menuItem(sat, ""+sc, doOptSolver(sc), sc==now?iconYes:iconNo); }
-            optmenu.add(sat);
+            // No choice in Aluminum: Always use SAT4j.
+            // (Also disabled the core options below)
+            //final SatSolver now = SatSolver.get();
+            //final JMenu sat = new JMenu("SAT Solver: "+now);
+            //for(SatSolver sc:satChoices) { menuItem(sat, ""+sc, doOptSolver(sc), sc==now?iconYes:iconNo); }
+            //optmenu.add(sat);
             //
             menuItem(optmenu, "Warnings are Fatal: "+(WarningNonfatal.get()?"No":"Yes"), doOptWarning());
             //
@@ -1245,8 +1247,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
             final String[] minLabelShort=new String[]{"Slow", "Medium", "Fast"};
             final JMenu cmMenu = new JMenu("Unsat Core Minimization Strategy: "+minLabelShort[min]);
             for(int n=0; n<=2; n++) { menuItem(cmMenu, minLabelLong[n], doOptCore(n), n==min?iconYes:iconNo); }
-            if (now!=SatSolver.MiniSatProverJNI) cmMenu.setEnabled(false);
-            optmenu.add(cmMenu);
+            //if (now!=SatSolver.MiniSatProverJNI) cmMenu.setEnabled(false);
+            //optmenu.add(cmMenu);
             //
             menuItem(optmenu, "Visualize Automatically: "+(AutoVisualize.get()?"Yes":"No"), doOptAutoVisualize());
             menuItem(optmenu, "Record the Kodkod Input/Output: "+(RecordKodkod.get()?"Yes":"No"), doOptRecordKodkod());
