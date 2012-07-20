@@ -22,7 +22,16 @@
 package minsolver.fol2sat;
 
 import static kodkod.engine.bool.Operator.AND;
+
+import java.util.Arrays;
+
+import javax.swing.JOptionPane;
+
+import org.sat4j.minisat.constraints.cnf.UnitClause;
+
+import minsolver.MinSATSolver;
 import kodkod.engine.bool.BooleanFormula;
+import kodkod.engine.bool.BooleanValue;
 import kodkod.engine.bool.BooleanVariable;
 import kodkod.engine.bool.BooleanVisitor;
 import kodkod.engine.bool.ITEGate;
@@ -42,6 +51,36 @@ import kodkod.util.ints.Ints;
  */
 final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 
+	static boolean addClause(MinSATSolver solver, boolean sbp, int[] clause)
+	{		
+		//JOptionPane.showMessageDialog(null, "Adding clause: "+Arrays.toString(clause));
+		if(sbp) {
+			return solver.addSBPClause(clause);			
+		}
+		return solver.addClause(clause);
+	}
+	
+	static void addCircuitToSolver(MinSATSolver solver, boolean forSBP, BooleanFormula circuit, SATFactory factory, int numPrimaryVariables) {
+		
+		//JOptionPane.showMessageDialog(null, "Add circuit to solver: "+circuit);		
+		
+		final MinBool2CNFTranslator translator = new MinBool2CNFTranslator(solver, forSBP, numPrimaryVariables, circuit);
+//		System.out.println("--------------transls2-------------");
+		if (circuit.op()==Operator.AND) { 
+			for(BooleanFormula input : circuit) { 
+//				System.out.println(input);
+//				solver.addClause(input.accept(translator,null));				
+				input.accept(translator, null);		
+			}
+			for(BooleanFormula input : circuit) { 
+				translator.unaryClause[0] = input.label();
+				addClause(solver, forSBP, translator.unaryClause);
+			}
+		} else {
+			addClause(solver, forSBP, circuit.accept(translator,null));
+		}						
+	}
+
 	/**
 	 * Creates a new instance of SATSolver using the provided factory
 	 * and uses it to translate the given circuit into conjunctive normal form
@@ -51,34 +90,36 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 	 * @return a SATSolver instance returned by the given factory and initialized
 	 * to contain the CNF translation of the given circuit.
 	 */
-	static SATSolver translate(BooleanFormula circuit, SATFactory factory, int numPrimaryVariables) {
-		final SATSolver solver = factory.instance();
-		final MinBool2CNFTranslator translator = new MinBool2CNFTranslator(solver, numPrimaryVariables, circuit);
-//		System.out.println("--------------transls2-------------");
-		if (circuit.op()==Operator.AND) { 
-			for(BooleanFormula input : circuit) { 
-//				System.out.println(input);
-//				solver.addClause(input.accept(translator,null));
-				input.accept(translator, null);
-			}
-			for(BooleanFormula input : circuit) { 
-				translator.unaryClause[0] = input.label();
-				solver.addClause(translator.unaryClause);
-			}
-		} else {
-			solver.addClause(circuit.accept(translator,null));
+	static MinSATSolver translate(BooleanFormula circuit, BooleanValue sbp, SATFactory factory, int numPrimaryVariables) {
+		final SATSolver solver = factory.instance();		
+		
+		assert(solver instanceof MinSATSolver);
+		MinSATSolver minsolver = (MinSATSolver) solver;
+		
+		////////////////////////////////////
+		// Add the (base formula's) circuit to the solver
+		addCircuitToSolver(minsolver, false, circuit, factory, numPrimaryVariables); 
+		
+		////////////////////////////////////
+		// Add the SBP -- but also record the clauses so we can remove/re-add them later				
+		if(sbp instanceof BooleanFormula)
+		{
+			addCircuitToSolver(minsolver, true, (BooleanFormula)sbp, factory, numPrimaryVariables);
 		}
-		return solver;
+		// else do nothing (it's True; no clauses)				
+		
+		return minsolver;
 	}
-
+	
 	/**
 	 * Helper visitor that performs <i> definitional translation to cnf </i>.
 	 * @specfield root: BooleanFormula // the translated circuit
 	 */
 
-	private final SATSolver solver;
+	private final MinSATSolver solver;
 	private final IntSet visited;
 	private final PolarityDetector pdetector;
+	private final boolean forSBP;
 	private final int[] unaryClause = new int[1];
 	private final int[] binaryClause = new int[2];
 	private final int[] ternaryClause = new int[3];
@@ -87,10 +128,16 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 	 * Constructs a translator for the given circuit.
 	 * @effects this.root' = circuit
 	 */
-	private MinBool2CNFTranslator(SATSolver solver, int numPrimaryVars, BooleanFormula circuit) {
+	private MinBool2CNFTranslator(MinSATSolver solver, boolean forSBP, int numPrimaryVars, BooleanFormula circuit) {
 		final int maxLiteral = StrictMath.abs(circuit.label());
 		this.solver = solver;
-		this.solver.addVariables(StrictMath.max(numPrimaryVars, maxLiteral));
+		this.forSBP = forSBP;
+		
+		int numVariablesToHave = StrictMath.max(numPrimaryVars, maxLiteral);
+		int numVariablesToAdd = (numVariablesToHave - solver.numberOfVariables());
+		if(numVariablesToAdd > 0) 
+			this.solver.addVariables(numVariablesToAdd);
+		
 		this.pdetector = (new PolarityDetector(numPrimaryVars, maxLiteral)).apply(circuit);
 		this.visited = Ints.bestSet(pdetector.offset, StrictMath.max(pdetector.offset, maxLiteral));
 	}
@@ -136,7 +183,7 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 			for(BooleanFormula input : multigate) {
 				int iLit = input.accept(this, arg)[0];
 				if (p) {
-					solver.addClause(clause(iLit * sgn, output));
+					addClause(solver, forSBP, clause(iLit * sgn, output));
 				}
 				if (n) { 
 					lastClause[i++] = iLit * -sgn;
@@ -144,7 +191,7 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 			}
 			if (n) {
 				lastClause[i] = oLit * sgn;
-				solver.addClause(lastClause);
+				addClause(solver, forSBP, lastClause);
 			}
 		}
 		return clause(oLit);        
@@ -167,16 +214,16 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 			final int e = itegate.input(2).accept(this, arg)[0];
 			final boolean p = pdetector.positive(oLit), n = pdetector.negative(oLit);
 			if (p) {
-				solver.addClause(clause(-i, t, -oLit));
-				solver.addClause(clause(i, e, -oLit));
+				addClause(solver, forSBP, clause(-i, t, -oLit));
+				addClause(solver, forSBP, clause(i, e, -oLit));
 				// redundant clause that strengthens unit propagation
-				solver.addClause(clause(t, e, -oLit));
+				addClause(solver, forSBP, clause(t, e, -oLit));
 			}
 			if (n) {
-				solver.addClause(clause(-i, -t, oLit));	
-				solver.addClause(clause(i, -e, oLit));
+				addClause(solver, forSBP, clause(-i, -t, oLit));	
+				addClause(solver, forSBP, clause(i, -e, oLit));
 				// redundant clause that strengthens unit propagation
-				solver.addClause(clause(-t, -e, oLit));
+				addClause(solver, forSBP, clause(-t, -e, oLit));
 			}	
 		}
 		return clause(oLit);

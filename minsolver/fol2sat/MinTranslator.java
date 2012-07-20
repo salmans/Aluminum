@@ -25,6 +25,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import minsolver.MinSATSolver;
+
 import kodkod.ast.Expression;
 import kodkod.ast.Formula;
 import kodkod.ast.IntExpression;
@@ -322,7 +324,7 @@ public final class MinTranslator {
 			} 
 			return generateSBP(annotated, (BooleanFormula)circuit, interpreter, breaker);
 		}
-	}
+	}		
 	
 	/**
 	 * Adds to given accumulator an SBP generated using the given symmetry breaker and interpreter,
@@ -335,8 +337,12 @@ public final class MinTranslator {
 	private MinTranslation generateSBP(BooleanAccumulator circuit, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) {
 		options.reporter().generatingSBP();
 		final BooleanFactory factory = interpreter.factory();
-		circuit.add(breaker.generateSBP(interpreter, options.symmetryBreaking())); 
-		return toCNF((BooleanFormula)factory.accumulate(circuit), factory.numberOfVariables(), interpreter.vars());
+		//circuit.add(breaker.generateSBP(interpreter, options.symmetryBreaking())); 
+		BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking());
+		//return toCNF((BooleanFormula)factory.accumulate(circuit), factory.numberOfVariables(), interpreter.vars());
+		return toCNF((BooleanFormula)factory.accumulate(circuit), 
+				     sbp,
+				factory.numberOfVariables(), interpreter.vars());
 	}
 	
 	/**
@@ -354,7 +360,8 @@ public final class MinTranslator {
 		options.reporter().generatingSBP();
 		final BooleanFactory factory = interpreter.factory();
 		final BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking()); 
-		return flatten(annotated, (BooleanFormula)factory.and(circuit, sbp), interpreter);
+		//return flatten(annotated, (BooleanFormula)factory.and(circuit, sbp), interpreter);
+		return flatten(annotated, (BooleanFormula)circuit, sbp, interpreter);
 	}
 
 	/**
@@ -368,7 +375,7 @@ public final class MinTranslator {
 	 *  toCNF(circuit, interpreter.factory().numberOfVariables(), interpreter.vars())
 	 * @throws MinTrivialFormulaException - flattening the circuit yields a constant
 	 */
-	private MinTranslation flatten(AnnotatedNode<Formula> annotated, BooleanFormula circuit, MinLeafInterpreter interpreter) throws MinTrivialFormulaException {	
+	private MinTranslation flatten(AnnotatedNode<Formula> annotated, BooleanFormula circuit, BooleanValue sbp, MinLeafInterpreter interpreter) throws MinTrivialFormulaException {	
 		final BooleanFactory factory = interpreter.factory();
 		if (options.flatten()) {
 			options.reporter().flattening(circuit);
@@ -376,10 +383,10 @@ public final class MinTranslator {
 			if (flatCircuit.op()==Operator.CONST) {
 				throw new MinTrivialFormulaException(annotated.node(), bounds, (BooleanConstant)flatCircuit, null);
 			} else {
-				return toCNF((BooleanFormula)flatCircuit, factory.numberOfVariables(), interpreter.vars());
+				return toCNF((BooleanFormula)flatCircuit, sbp, factory.numberOfVariables(), interpreter.vars());
 			}
 		} else {
-			return toCNF(circuit, factory.numberOfVariables(), interpreter.vars());
+			return toCNF(circuit, sbp, factory.numberOfVariables(), interpreter.vars());
 		}
 	}
 	
@@ -395,9 +402,9 @@ public final class MinTranslator {
 	 * @return Translation constructed from a SAT solver initialized with the CNF translation
 	 * of the given circuit, the provided arguments, this.bounds, and this.log
 	 */
-	private MinTranslation toCNF(BooleanFormula circuit, int primaryVars, Map<Relation,IntSet> varUsage) {	
-		options.reporter().translatingToCNF(circuit);
-		final SATSolver cnf = MinBool2CNFTranslator.translate((BooleanFormula)circuit, options.solver(), primaryVars);
+	private MinTranslation toCNF(BooleanFormula fmlaCircuit, BooleanValue sbpValue, int primaryVars, Map<Relation,IntSet> varUsage) {	
+		options.reporter().translatingToCNF(fmlaCircuit);		
+		final MinSATSolver cnf = MinBool2CNFTranslator.translate((BooleanFormula)fmlaCircuit, sbpValue, options.solver(), primaryVars);		
 		return new MinTranslation(cnf, bounds, varUsage, primaryVars, log);
 	}
 	

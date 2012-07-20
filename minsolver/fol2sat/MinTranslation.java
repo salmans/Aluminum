@@ -23,6 +23,10 @@ package minsolver.fol2sat;
 
 import java.util.Map;
 
+import javax.swing.JOptionPane;
+
+import minsolver.MinSATSolver;
+
 import kodkod.ast.Relation;
 import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
@@ -58,8 +62,8 @@ public final class MinTranslation {
 	 * @requires bounds.relations = varUsage.IntSet
 	 * @effects this.solver' = solver && this.bounds' = bounds
 	 */
-	MinTranslation(SATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log) {	
-		this.solver = solver;
+	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log) {			
+		this.solver = solver;		
 		this.bounds = bounds;
 		this.primaryVarUsage = varUsage;
 		this.maxPrimaryLit = maxPrimaryLit;

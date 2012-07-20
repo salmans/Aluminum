@@ -21,11 +21,17 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
+import java.util.Set;
+
+import javax.swing.JOptionPane;
 
 import kodkod.engine.satlab.SATSolver;
 
 import org.sat4j.core.VecInt;
+import org.sat4j.minisat.constraints.cnf.UnitClause;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.ISolver;
@@ -39,13 +45,86 @@ import org.sat4j.specs.IteratorInt;
  * 
  * @author Emina Torlak
  */
-final class MinSATSolver implements SATSolver {
+public final class MinSATSolver implements SATSolver {
 	private ISolver solver;
 	private final ReadOnlyIVecInt wrapper;
 	private Boolean sat; 
 	private int vars, clauses;
 	private int[] lastModel = null;
-
+	
+	// If toRemoveSBP is empty,
+	boolean sbpActive = true;
+	private Set<int[]> sbpClauses = new HashSet<int[]>();
+	private Set<IConstr> toRemoveSBP = new HashSet<IConstr>();
+	private Set<Integer> sbpUnitClauses = new HashSet<Integer>();
+	
+	/**
+	 * Returns the number of clauses in the SBP, including unit clauses.
+	 * @return
+	 */
+	public int numSBPClauses()
+	{
+		return sbpClauses.size() + sbpUnitClauses.size();
+	}
+	
+	/**
+	 * Returns whether or not the SBP is included in the solver.
+	 * Calls to activateSBP and deactiveSBP will flip this value.
+	 * @return
+	 */
+	public boolean sbpActive()
+	{
+		return sbpActive;
+	}
+		
+	/**
+	 * Call to augment the solver's clause set with the SBP clauses.
+	 * No effect (returns false) if SBP is already included.
+	 * @return
+	 */
+	public boolean activateSBP() 
+	{
+		if(sbpActive) return false;
+				
+		for(int[] lits : sbpClauses)
+		{
+			try {
+				IConstr toRemove = solver.addClause(wrapper.wrap(lits));
+				if(toRemove != null && !(toRemove instanceof UnitClause)) 
+				{					
+					toRemoveSBP.add(toRemove);
+				}
+			} catch (ContradictionException e) {				
+				sat = Boolean.FALSE;					
+			}
+		}
+		
+		sbpActive = true;	
+		return true;
+	}
+	
+	/**
+	 * Call to *remove* SBP clauses from the solver.
+	 * No effect (returns false) if SBP is not included already.
+	 * @return
+	 */
+	public boolean deactivateSBP()
+	{
+		if(!sbpActive) return false;
+		
+		// The current implementation of sat4j does not handle REMOVING unit clauses; it forces
+		// the use of assumptions. So we need the separate assumptions list above.
+		
+		for(IConstr toRemove : toRemoveSBP)
+		{					
+			// Expect no UnitClauses here
+			solver.removeConstr(toRemove);
+		}
+		
+		toRemoveSBP.clear();
+		sbpActive = false;
+		return true;
+	}
 	
 	/** Fills lastModel from solver.model(). We have to do this because sometimes,
 	 * the solver drops some indices.
@@ -137,6 +216,49 @@ final class MinSATSolver implements SATSolver {
 		return false;
 	}
 	
+	static boolean isTautology(int[] lits)
+	{			
+		Set<Integer> litsSet = new HashSet(lits.length);
+		for(int ii : lits)
+			litsSet.add(ii);
+		for(Integer ii : litsSet)
+			if(litsSet.contains(-ii))
+				return true;
+		return false;
+	}
+	
+	public boolean addSBPClause(int[] lits)
+	{
+		// Can't just call addClause, that would obstruct the IConstr
+		try {
+			clauses++;
+
+			// Still need to use assumptions...
+			if(lits.length <= 1)
+			{
+				sbpUnitClauses.add(lits[0]);
+			}
+			else
+			{
+				IConstr toRemove = solver.addClause(wrapper.wrap(lits));
+			
+				// DO NOT store wrapper.wrap(lits); it's in a read only field that is re-used. 
+				sbpClauses.add(lits);
+			
+				if(toRemove != null)
+				{
+					//JOptionPane.showMessageDialog(null, "toRemove="+toRemove);
+					toRemoveSBP.add(toRemove);
+				}			
+			}
+			
+			return true;			
+		} catch (ContradictionException e) {
+			sat = Boolean.FALSE;
+		}
+		return false;
+	}
+	
 	/**
 	 * Similar to addClaue but returns the constraint.
 	 * @param lits the literals
@@ -160,13 +282,40 @@ final class MinSATSolver implements SATSolver {
 	}
 	
 	/**
+	 * Returns the assumptions given plus SBP assumptions if SBP is active
+	 * @param assumptions
+	 * @return
+	 */
+	IVecInt getAssumptions(int[] assumptions)
+	{
+		if(sbpActive)
+		{
+			int[] together = new int[assumptions.length+sbpUnitClauses.size()];
+			for(int ii=0;ii<assumptions.length;ii++)
+				together[ii] = assumptions[ii];
+			int ii = 0;
+			for(Integer unit : sbpUnitClauses)
+			{
+				together[ii+assumptions.length] = unit;
+				ii++;
+			}
+							
+			return new VecInt(together);
+		}
+		else
+		{
+			return new VecInt(assumptions);
+		}
+	}
+	
+	/**
 	 * {@inheritDoc}
 	 * @see kodkod.engine.satlab.SATSolver#solve()
 	 */
 	public boolean solve() {
 		try {
 			//if (!Boolean.FALSE.equals(sat)){
-				sat = Boolean.valueOf(solver.isSatisfiable());
+				sat = Boolean.valueOf(solver.isSatisfiable(getAssumptions(new int[] {})));
 				if(sat)
 					setLastModel();
 				
@@ -186,7 +335,7 @@ final class MinSATSolver implements SATSolver {
 	public boolean solve(int[] assumptions) {
 		try {
 			//if (!Boolean.FALSE.equals(sat)){
-				sat = Boolean.valueOf(solver.isSatisfiable(new VecInt(assumptions)));
+				sat = Boolean.valueOf(solver.isSatisfiable(getAssumptions(assumptions)));
 				if(sat)
 					setLastModel();
 			//}
@@ -387,8 +536,23 @@ final class MinSATSolver implements SATSolver {
 		
 		@Override
 		public int[] toArray() {
-			// TODO Auto-generated method stub
-			return null;
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public int indexOf(int arg0) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void moveTo(int arg0, int[] arg1) {
+			throw new UnsupportedOperationException();
+			
+		}
+
+		@Override
+		public IVecInt[] subset(int arg0) {
+			throw new UnsupportedOperationException();
 		}		
 	}	
 }
