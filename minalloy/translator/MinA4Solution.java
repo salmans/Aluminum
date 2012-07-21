@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import javax.swing.JOptionPane;
-
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.Expression;
@@ -1003,12 +1001,8 @@ public final class MinA4Solution {
     }
     
     /** Lifts a model with some augmenting facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    public MinA4Solution lift() throws Err, IOException, ExplorationException {
+    public MinA4Solution lift(String inputFact) throws Err, IOException, ExplorationException {
         Formula fgoal = Formula.and(formulas);
-        
-        String inputFact = JOptionPane.showInputDialog("Enter a fact: ");
-        if(inputFact == null || inputFact.length() == 0) //If the user hits the cancel button
-        	return null;
         
         Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator);
 
