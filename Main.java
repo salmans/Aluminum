@@ -83,7 +83,7 @@ class MIntArrayWrapper
 }
 
 
-class CNFSpy implements SATSolver
+/*class CNFSpy implements SATSolver
 {
     List<MIntArrayWrapper> clauses = new ArrayList<MIntArrayWrapper>();
     SATSolver internalSolver;
@@ -177,12 +177,12 @@ class CNFSpy implements SATSolver
     		// DEBUG
     		// Is this lovely clause tautologous?
     		// slow for now
-    		/*for(int ii=0;ii<wrapper.size();ii++)
-    			for(int jj=ii+1;jj<wrapper.size();jj++)
-    			{
-    				if(Math.abs(wrapper.get(ii)) == Math.abs(wrapper.get(jj)))
-    					MEnvironment.errorStream.println("TAUT");
-    			}*/
+    		//for(int ii=0;ii<wrapper.size();ii++)
+    		//	for(int jj=ii+1;jj<wrapper.size();jj++)
+    		//	{
+    		//		if(Math.abs(wrapper.get(ii)) == Math.abs(wrapper.get(jj)))
+    		//			MEnvironment.errorStream.println("TAUT");
+    		//	}
     	}
     	
     	
@@ -218,8 +218,8 @@ class CNFSpy implements SATSolver
     }
 
 }
-
-class CNFSpyFactory extends SATFactory
+*/
+/*class CNFSpyFactory extends SATFactory
 {
     private SATFactory mySATFactory;
     
@@ -234,7 +234,7 @@ class CNFSpyFactory extends SATFactory
         return new CNFSpy(mySATFactory);                      
     }
     
-}
+}*/
 
 
 

@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.JOptionPane;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstMap;
@@ -397,7 +399,7 @@ final class MinSimpleReporter extends A4Reporter {
                 "Currently only MiniSat and SAT4J are supported."); return;}
             int tries=0;
             while(true) {
-                sol=sol.next();
+                sol=sol.next();                
                 if (!sol.satisfiable())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +

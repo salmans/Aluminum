@@ -23,6 +23,7 @@ package minsolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +34,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+import javax.swing.JOptionPane;
 
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
@@ -126,7 +129,7 @@ public final class MinSolver {
 	 * @see Options
 	 * @see Cost
 	 */
-	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
+/*	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		if (options.logTranslation()>0 || !options.solver().minimizer())
 			throw new IllegalStateException();
@@ -162,7 +165,7 @@ public final class MinSolver {
 		} catch (SATAbortedException sae) {
 			throw new MinAbortedException(sae);
 		}
-	}
+	}*/
 
 	/**
 	 * Attempts to satisfy the given formula with respect to the specified bounds or
@@ -545,7 +548,7 @@ public final class MinSolver {
 	 * An iterator over all solutions of a model.
 	 * @author Emina Torlak
 	 */
-	private static final class MinSolutionIterator implements Iterator<MinSolution> {
+	static final class MinSolutionIterator implements Iterator<MinSolution> {
 		private final Options options;
 		private Formula formula;
 		private Bounds bounds;
@@ -554,6 +557,7 @@ public final class MinSolver {
 		private long translTime;
 		private int trivial;
 		private MinSolution lastSolution;
+		private long internalMinimalCandidatesFoundCounter = 0;
 		
 		//the MinSolver instance that creates the iterator.
 		private final MinSolver minSolver;
@@ -642,25 +646,29 @@ public final class MinSolver {
 					}
 				}
 				catch(ContradictionException e){
-					System.err.println(e.getMessage());
+					JOptionPane.showMessageDialog(null, "CONTRADICTION exception in nonTrivialSolution()");
 				}
 				
 				options.reporter().solvingCNF(translation.numPrimaryVariables(), cnf.numberOfVariables(), cnf.numberOfClauses());				
-				final long startSolve = System.currentTimeMillis();
-				
-				final boolean isSat = solve();//cnf.solve();
-				final long endSolve = System.currentTimeMillis();
-
-				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
-				if (isSat) {
-					int[] propositionalModel = ((MinSATSolver)translation.cnf()).getLastModel().clone();
-					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), propositionalModel);
-					// add the negation of the current model to the solver
-					final int primary = translation.numPrimaryVariables();
+				final long startSolve = System.currentTimeMillis();				
+				boolean isSat = false;
+				boolean gotNonMinimal;
+				do
+				{
+					gotNonMinimal = false;					
+					try
+					{
+						isSat = solve();
+					} catch(NotMinimalModelException e)
+					{
+						gotNonMinimal = true;
+					}
 					
-					final ArrayList<Integer> notModel = new ArrayList<Integer>();
+					//JOptionPane.showMessageDialog(null, "Solve() got:"+isSat+";"+gotNonMinimal);
 					
+					// Add constraints to forbid the current cone:
+					final int primary = translation.numPrimaryVariables();					
+					final ArrayList<Integer> notModel = new ArrayList<Integer>();					
 					//Do not return any other model in the cone of the new model.
 					for(int i = 1; i <= primary; i++){
 						if(cnf.valueOf(i)){
@@ -675,9 +683,22 @@ public final class MinSolver {
 						coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
 					}
 					catch(ContradictionException e){
-						System.err.println(e.getMessage());
+						JOptionPane.showMessageDialog(null, "CONTRADICTION exception in nonTrivialSolution(2) -- 2");
 					}
+
 					
+				} while(gotNonMinimal);
+				
+				
+				/////////////////////////////////////////////
+				// Found a minimal model (or unsat)
+				
+				final long endSolve = System.currentTimeMillis();				
+				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
+				if (isSat) {
+					int[] propositionalModel = translation.cnf().getLastModel().clone();
+					// extract the current solution; can't use the sat(..) method because it frees the sat solver
+					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), propositionalModel);										
 					return sol;
 				} else {
 					formula = null; bounds = null; // unsat, no more solutions, free up some space
@@ -762,7 +783,7 @@ public final class MinSolver {
 				} 
 			} else {
 				lastSolution = nonTrivialSolution();
-			}
+			}						
 			
 			return lastSolution;
 		}
@@ -780,7 +801,7 @@ public final class MinSolver {
 						addAllClauses();
 				}
 				catch(ContradictionException e){
-					System.err.println(e.getMessage());
+					JOptionPane.showMessageDialog(null, "CONTRADICTION exception in claimSATSolver()");
 				}
 			}
 			//Set the activeIterator
@@ -797,8 +818,9 @@ public final class MinSolver {
 		/**
 		 * Prepares a minimal model.
 		 * @return true if there is a next solution; otherwise, false.
+		 * @throws NotMinimalModelException 
 		 */
-		private boolean solve(){
+		private boolean solve() throws NotMinimalModelException{
 			try{
 				ArrayList<Integer> allUnits = new ArrayList<Integer>();
 				allUnits.addAll(toArrayList(lifters));
@@ -815,7 +837,9 @@ public final class MinSolver {
 						minimize();
 					}
 					catch(ContradictionException e)
-					{System.err.println(e.getMessage());}
+					{
+						JOptionPane.showMessageDialog(null, "CONTRADICTION exception in solve()");
+					}
 				}
 				
 				return sat;
@@ -828,20 +852,26 @@ public final class MinSolver {
 		 * Minimizes the model in the SAT solver.
 		 * @throws TimeoutException
 		 * @throws ContradictionException
+		 * @throws NotMinimalModelException 
 		 */
-		private void minimize() throws TimeoutException, ContradictionException{
-			//This keeps constraints to be removed from the solver
-			//after finding the next model.
+		private void minimize() throws TimeoutException, ContradictionException, NotMinimalModelException{
+			
+			// Assumption: Have already found a model at this point!
+			
+			// This keeps constraints to be removed from the solver
+			// after finding the next model.
 			ArrayList<IConstr> constraints = new ArrayList<IConstr>();
 			
-			//All the unit clauses being passed to the solver as assumptions.
+			// All the unit clauses being passed to the solver as assumptions.
 			ArrayList<Integer> unitClauses = toArrayList(lifters);
-			//Add all coneRestrictionUnits
+			
+			// Add all coneRestrictionUnits
 			for(Integer value: coneRestrictionUnits)
 				unitClauses.add(value);
 			
+			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());
 			
-			int iterationCounter = 1;
+			int iterationCounter = 1;						
 			
 			do
 			{
@@ -850,39 +880,78 @@ public final class MinSolver {
 				// add: all negative literals as unit clauses
 				
 				// An array of the next constraint being added.
-				ArrayList<Integer> constraint = new ArrayList<Integer>();
+				List<Integer> loseSomethingPositive = new ArrayList<Integer>();
 				
 				int numPrimaryVariables = translation.numPrimaryVariables();
 					
 				for(int i = 1; i <= numPrimaryVariables; i++){
-					if(translation.cnf().valueOf(i) == true)
-						constraint.add(-i);
-					else
+					if(theSolver.valueOf(i) == true)
+						loseSomethingPositive.add(-i);
+					else // don't set anything curr. negative to positive.
 						unitClauses.add(-i);
 				}
 				
-				//Handling SAT4J's bug when it returns null for unit constraints:
-				if(constraint.size() == 1)
-					unitClauses.add(constraint.get(0));
+				// Handling SAT4J's bug when it returns null for unit constraints:
+				if(loseSomethingPositive.size() == 1)
+					unitClauses.add(loseSomethingPositive.get(0));
 				else
-					constraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(constraint)));
+				{
+					constraints.add(theSolver.addConstraint(toIntCollection(loseSomethingPositive)));
+				}
 				
 				iterationCounter++;
 			}
-			while(Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(unitClauses))));
-
+			while(Boolean.valueOf(theSolver.solve(toIntCollection(unitClauses))));
+						
+			//////////////////////////////////
+			// Deactivate SBP. We need to see if this minimal candidate
+			// is truly minimal in the original category (NOT the category
+			// that includes the SBP.)			
+			//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
+			theSolver.deactivateSBP();
+			// Unsatisfiable w/ SBP active (or we wouldn't be here). Try without:
+			boolean badSolution = theSolver.solve(toIntCollection(unitClauses), false);			
+			// Re-activate SBP 
+			//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
+			theSolver.activateSBP();
+			//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
+			//////////////////////////////////
+			
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
 			
-			// Remove all the cone-specific constraints we just added from the solver:
+			internalMinimalCandidatesFoundCounter++;
+			
+//			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
+			
+			if(badSolution)
+				JOptionPane.showMessageDialog(null, "BAD SOLN FOUND: Iterations of min-check: "+
+			iterationCounter+"; Candidates found so far:"+internalMinimalCandidatesFoundCounter);
+			//else
+			//	JOptionPane.showMessageDialog(null, "Not a bad soln? Iterations of min-check: "+iterationCounter);					
+			
+			// Remove all the (non-unit) loseSomethingPositive constraints we just added from the solver:
 			Iterator<IConstr> it = constraints.iterator();
 			while(it.hasNext()){
-				((MinSATSolver)translation.cnf()).removeConstraint(it.next());		
+				theSolver.removeConstraint(it.next());		
 			}
 			
 			// Do NOT add a constraint here to force the solver out of this cone. 
 			// Do that in the next solve() call. We want to leave open the possibility
 			// of landing in this cone again to support lifting/exporation!
+			
+			// Finally, if this isn't a real solution, throw an exception to warn the caller.
+			if(badSolution)
+				throw new NotMinimalModelException();
 		}
+		
+		class NotMinimalModelException extends Exception
+		{
+			NotMinimalModelException()
+			{
+				
+			}
+		}
+		
 		
 		/**
 		 * Computes all the lifters for the current model loaded in the solver.
@@ -996,12 +1065,12 @@ public final class MinSolver {
 			Iterator<IConstr> it = coneRestrictionConstraints.iterator();
 			while(it.hasNext()){
 				IConstr temp = it.next();
-				((MinSATSolver)translation.cnf()).removeConstraint(temp);
+				translation.cnf().removeConstraint(temp);
 				it.remove();
 			}
 		}		
 		
-		private int[] toIntCollection(Collection<Integer> integers)
+		static int[] toIntCollection(Collection<Integer> integers)
 		{
 		    int[] ret = new int[integers.size()];
 		    int iIndex = 0;

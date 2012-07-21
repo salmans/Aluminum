@@ -49,7 +49,7 @@ import kodkod.util.ints.Ints;
  */
 public final class MinTranslation {
 	private final Bounds bounds;
-	private final SATSolver solver;
+	private final MinSATSolver solver;
 	/* maps relations to the literals that comprise their translations */
 	private final Map<Relation, IntSet> primaryVarUsage;
 	private final MinTranslationLog log;
@@ -77,7 +77,7 @@ public final class MinTranslation {
 	 * @return {s: SATSolver | [[s.clauses]] = [[this.formula]] && s.timeout() = this.options.timeout() && 
 	 *                         s.seed() = this.options.seed() } 
 	 */
-	public SATSolver cnf() {
+	public MinSATSolver cnf() {
 		return solver;
 	}
 	

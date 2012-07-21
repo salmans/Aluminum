@@ -25,6 +25,8 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.JOptionPane;
+
 import minsolver.MinSATSolver;
 
 import kodkod.ast.Expression;
@@ -358,9 +360,10 @@ public final class MinTranslator {
 	private MinTranslation generateSBP(AnnotatedNode<Formula> annotated, BooleanFormula circuit, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) 
 	throws MinTrivialFormulaException {
 		options.reporter().generatingSBP();
-		final BooleanFactory factory = interpreter.factory();
-		final BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking()); 
-		//return flatten(annotated, (BooleanFormula)factory.and(circuit, sbp), interpreter);
+		final BooleanFactory factory = interpreter.factory();		
+		final BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking());						
+		
+		//return flatten(annotated, (BooleanFormula)factory.and(circuit, sbp), factory.and(circuit, sbp), interpreter);
 		return flatten(annotated, (BooleanFormula)circuit, sbp, interpreter);
 	}
 
@@ -403,7 +406,7 @@ public final class MinTranslator {
 	 * of the given circuit, the provided arguments, this.bounds, and this.log
 	 */
 	private MinTranslation toCNF(BooleanFormula fmlaCircuit, BooleanValue sbpValue, int primaryVars, Map<Relation,IntSet> varUsage) {	
-		options.reporter().translatingToCNF(fmlaCircuit);		
+		options.reporter().translatingToCNF(fmlaCircuit);			
 		final MinSATSolver cnf = MinBool2CNFTranslator.translate((BooleanFormula)fmlaCircuit, sbpValue, options.solver(), primaryVars);		
 		return new MinTranslation(cnf, bounds, varUsage, primaryVars, log);
 	}
