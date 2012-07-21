@@ -98,12 +98,13 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 		
 		////////////////////////////////////
 		// Add the (base formula's) circuit to the solver
-		addCircuitToSolver(minsolver, false, circuit, factory, numPrimaryVariables); 
+		addCircuitToSolver(minsolver, false, circuit, factory, numPrimaryVariables); 				
 		
 		////////////////////////////////////
 		// Add the SBP -- but also record the clauses so we can remove/re-add them later				
 		if(sbp instanceof BooleanFormula)
 		{
+			//JOptionPane.showMessageDialog(null, "SB: "+sbp);
 			addCircuitToSolver(minsolver, true, (BooleanFormula)sbp, factory, numPrimaryVariables);
 		}
 		// else do nothing (it's True; no clauses)				
