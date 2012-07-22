@@ -2,9 +2,9 @@
 <classpath>
 	<classpathentry kind="src" path=""/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/Users/Salman/Dropbox/PhD projects/programs/MinSolver/org.sat4j.core.jar"/>
-	<classpathentry kind="lib" path="/Users/Salman/Dropbox/PhD projects/programs/MinSolver/kodkod.jar"/>
-	<classpathentry kind="lib" path="/Users/Salman/Dropbox/PhD projects/programs/MinSolver/alloy4.jar"/>
-	<classpathentry kind="lib" path="/Users/Salman/Dropbox/PhD projects/programs/MinSolver/args4j-1.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Tim/research/newminimal/java/org.sat4j.core.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Tim/research/newminimal/java/alloy4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Tim/research/newminimal/java/args4j-1.0.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Tim/research/newminimal/java/kodkod.jar"/>
 	<classpathentry kind="output" path=""/>
 </classpath>

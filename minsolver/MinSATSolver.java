@@ -445,7 +445,7 @@ public final class MinSATSolver implements SATSolver {
 			*/
 			
 			if(sat && saveModel)
-				setLastModel();
+				setLastModel();			
 			return sat;
 			
 		} catch (org.sat4j.specs.TimeoutException e) {
