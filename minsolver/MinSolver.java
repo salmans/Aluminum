@@ -666,6 +666,7 @@ public final class MinSolver {
 						isSat = solve();
 					} catch(NotMinimalModelException e)
 					{
+						isSat = true; // Must have gotten SOME model; need to cone restrict.
 						gotNonMinimal = true;
 					}
 					
@@ -857,10 +858,12 @@ public final class MinSolver {
 				allUnits.addAll(coneRestrictionUnits);
 				
 				if(allUnits.size() == 0)
-					sat = Boolean.valueOf(((MinSATSolver)translation.cnf()).solve());
+					sat = Boolean.valueOf(translation.cnf().solve());
 				else
-					sat = Boolean.valueOf(((MinSATSolver)translation.cnf()).solve(toIntCollection(allUnits)));
-
+					sat = Boolean.valueOf(translation.cnf().solve(toIntCollection(allUnits)));
+		
+				//JOptionPane.showMessageDialog(null, sat+" "+allUnits.size());
+				
 				if(sat)
 				{	
 					try{
@@ -870,7 +873,7 @@ public final class MinSolver {
 					{
 						JOptionPane.showMessageDialog(null, "CONTRADICTION exception in minimize() call");
 					}
-				}
+				}								
 				
 				return sat;
 			} catch (org.sat4j.specs.TimeoutException e) {
@@ -887,6 +890,7 @@ public final class MinSolver {
 		private void minimize() throws TimeoutException, ContradictionException, NotMinimalModelException{
 			
 			// Assumption: Have already found a model at this point!
+					
 			
 			// This keeps constraints to be removed from the solver
 			// after finding the next model.
@@ -977,7 +981,7 @@ public final class MinSolver {
 			
 			// Do NOT add a constraint here to force the solver out of this cone. 
 			// Do that in the next solve() call. We want to leave open the possibility
-			// of landing in this cone again to support lifting/exporation!
+			// of landing in this cone again to support lifting/exporation!		
 			
 			// Finally, if this isn't a real solution, throw an exception to warn the caller.
 			if(badSolution)
