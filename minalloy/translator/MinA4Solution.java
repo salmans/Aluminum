@@ -1001,14 +1001,14 @@ public final class MinA4Solution {
     }
     
     /** Lifts a model with some augmenting facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    public MinA4Solution lift(String inputFact) throws Err, IOException, ExplorationException {
+    public MinA4Solution lift(String inputFact) throws Err, ExplorationException {
         Formula fgoal = Formula.and(formulas);
         
         Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator);
 
         //if the fact does not exists in the given bounds:
         if(inst == null)
-        	throw new IOException("The input fact is not valid!");
+        	throw new ExplorationException("The input fact is not valid!");
         
         Iterator<MinSolution> solution = solver.lift(fgoal, bounds, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
 
