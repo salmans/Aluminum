@@ -833,7 +833,7 @@ public final class MinSolver {
 			
 			//Deactivate SBP if the iterator is augmented by some fact.
 			if(translation != null){
-				if(lifters != null && lifters.length > 0)
+				if(isAugmented()) //if the iterator is an augmentation
 					((MinSATSolver)translation.cnf()).deactivateSBP();
 				else
 					((MinSATSolver)translation.cnf()).activateSBP();
@@ -955,8 +955,9 @@ public final class MinSolver {
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
 			
 			internalMinimalCandidatesFoundCounter++;
-
-			theSolver.activateSBP();
+			
+			if(!isAugmented()) //if the iterator is NOT an augmentation, activate SBP.
+				theSolver.activateSBP();
 			
 //			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
 					
@@ -999,7 +1000,7 @@ public final class MinSolver {
 			
 			//COMMENT: With the current configuration (SB = OFF) for the augmented iterators, we don't need to
 			//check for minimality.
-			if(lifters != null && lifters.length > 0)
+			if(isAugmented()) //if the iterator is an augmentation
 				needToCheck = false;
 			
 			
@@ -1189,6 +1190,13 @@ public final class MinSolver {
 		 */
 		private MinSolution getLastSolution(){
 			return lastSolution;
+		}
+		
+		/**
+		 * Returns true if the iterator is an augmentation and returns false otherwise.
+		 */
+		private boolean isAugmented(){
+			return lifters != null && lifters.length > 0;
 		}
 		
 		//Helpers:
