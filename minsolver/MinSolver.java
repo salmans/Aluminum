@@ -23,7 +23,6 @@ package minsolver;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +30,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -43,7 +41,6 @@ import org.sat4j.specs.TimeoutException;
 
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
-import kodkod.engine.Cost;
 import kodkod.engine.config.Options;
 import minsolver.fol2sat.MinHigherOrderDeclException;
 import minsolver.fol2sat.MinTranslation;
@@ -52,7 +49,6 @@ import minsolver.fol2sat.MinTranslator;
 import minsolver.fol2sat.MinTrivialFormulaException;
 import minsolver.fol2sat.MinUnboundLeafException;
 import kodkod.engine.satlab.SATAbortedException;
-import kodkod.engine.satlab.SATMinSolver;
 import kodkod.engine.satlab.SATProver;
 import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
@@ -268,9 +264,6 @@ public final class MinSolver {
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
-		
-		//disable SBP
-		((MinSATSolver)(((MinSolutionIterator)prevIterator).getTranslation()).cnf()).deactivateSBP();
 		
 		//Lifting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
@@ -837,6 +830,14 @@ public final class MinSolver {
 			}
 			//Set the activeIterator
 			minSolver.activeIterator = this;
+			
+			//Deactivate SBP if the iterator is augmented by some fact.
+			if(translation != null){
+				if(lifters != null && lifters.length > 0)
+					((MinSATSolver)translation.cnf()).deactivateSBP();
+				else
+					((MinSATSolver)translation.cnf()).activateSBP();
+			}
 		}		
 		
 		/**
