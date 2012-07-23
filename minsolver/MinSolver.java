@@ -23,6 +23,7 @@ package minsolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1106,7 +1107,7 @@ public final class MinSolver {
 		 */
 		public int[] getLifters() throws TimeoutException, ContradictionException{
 			MinSATSolver solver = (MinSATSolver)translation.cnf();
-			
+									
 			Set<Integer> wantToAdd = new HashSet<Integer>();
 			ArrayList<Integer> retVal = new ArrayList<Integer>();
 			List<Integer> preservedFacts = new ArrayList<Integer>();
@@ -1114,6 +1115,9 @@ public final class MinSolver {
 			//TODO claimSATSolver does not have to fill all the clauses in here.
 			claimSATSolver();
 			removeAllConstraints();
+			
+			// Always deactivate SBP before searching for augmentations
+			solver.deactivateSBP();
 			
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
@@ -1127,6 +1131,7 @@ public final class MinSolver {
 				else
 					wantToAdd.add(i);
 			}
+			
 			
 			boolean wasSatisfiable = false;
 			List<Integer> unitClauses = new ArrayList<Integer>(preservedFacts);
@@ -1170,8 +1175,14 @@ public final class MinSolver {
 				// Remove the targets for this iteration (may not be needed?)
 				if(removeWTA != null)
 					solver.removeConstraint(removeWTA);
+				
 			}
 			while(wantToAdd.size() > 0 && wasSatisfiable);
+			
+			// If this is an un-augmented iterator, re-activate symmetry-breaking
+			// (Or else the next models would not benefit from SB.)
+			if(!isAugmented())
+				solver.activateSBP();
 			
 			return toIntCollection(retVal);
 		}
