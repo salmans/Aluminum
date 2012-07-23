@@ -63,7 +63,7 @@ public final class MinTranslation {
 	 * @effects this.solver' = solver && this.bounds' = bounds
 	 */
 	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log) {			
-		this.solver = solver;		
+		this.solver = solver;				
 		this.bounds = bounds;
 		this.primaryVarUsage = varUsage;
 		this.maxPrimaryLit = maxPrimaryLit;

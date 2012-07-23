@@ -870,6 +870,7 @@ public final class MinSolver {
 				if(sat)
 				{	
 					try{
+						//minimizeWithDiscard();
 						minimize();
 					}
 					catch(ContradictionException e)
@@ -891,6 +892,91 @@ public final class MinSolver {
 		 * @throws NotMinimalModelException 
 		 */
 		private void minimize() throws TimeoutException, ContradictionException, NotMinimalModelException{
+			
+			// Assumption: Have already found a model at this point!
+					
+			
+			// This keeps constraints to be removed from the solver
+			// after finding the next model.
+			Set<IConstr> constraints = new HashSet<IConstr>();
+			
+			// All the unit clauses being passed to the solver as assumptions.
+			Set<Integer> unitClauses = toSet(lifters);
+			
+			// Add all coneRestrictionUnits
+			for(Integer value: coneRestrictionUnits)
+				unitClauses.add(value);
+			
+			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());						
+			
+			theSolver.deactivateSBP();
+			
+			int iterationCounter = 1;						
+			
+			do
+			{
+				// Given that candidate for minimal-model, try to make something smaller.
+				// add: disjunction of negations of all positive literals in M (constraint)
+				// add: all negative literals as unit clauses
+				
+				// An array of the next constraint being added.
+				List<Integer> loseSomethingPositive = new ArrayList<Integer>();
+				
+				int numPrimaryVariables = translation.numPrimaryVariables();
+					
+				for(int i = 1; i <= numPrimaryVariables; i++){
+					if(theSolver.valueOf(i) == true)
+						loseSomethingPositive.add(-i);
+					else // don't set anything curr. negative to positive.
+						unitClauses.add(-i);
+				}
+				
+				if(loseSomethingPositive.size() == 0)
+				{
+					// We have minimized down to the empty model. 
+					// Avoid calling the final SAT (would be adding the empty clause)
+					break;
+				}
+				if(loseSomethingPositive.size() == 1)
+				{
+					// We have only one relational fact that can possibly be removed.
+					unitClauses.add(loseSomethingPositive.get(0));
+				}
+				else
+				{
+					constraints.add(theSolver.addConstraint(toIntCollection(loseSomethingPositive)));
+				}
+				
+				iterationCounter++;
+			}
+			while(Boolean.valueOf(theSolver.solve(toIntCollection(unitClauses))));
+							
+			((MyReporter)options.reporter()).setIterations(iterationCounter);
+			
+			internalMinimalCandidatesFoundCounter++;
+
+			theSolver.activateSBP();
+			
+//			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
+					
+			// Remove all the (non-unit) loseSomethingPositive constraints we just added from the solver:
+			Iterator<IConstr> it = constraints.iterator();
+			while(it.hasNext()){
+				theSolver.removeConstraint(it.next());		
+			}
+			
+			// Do NOT add a constraint here to force the solver out of this cone. 
+			// Do that in the next solve() call. We want to leave open the possibility
+			// of landing in this cone again to support lifting/exporation!		
+		}
+
+		/**
+		 * Minimizes the model in the SAT solver.
+		 * @throws TimeoutException
+		 * @throws ContradictionException
+		 * @throws NotMinimalModelException 
+		 */
+		private void minimizeWithDiscard() throws TimeoutException, ContradictionException, NotMinimalModelException{
 			
 			// Assumption: Have already found a model at this point!
 					
@@ -997,6 +1083,7 @@ public final class MinSolver {
 			if(badSolution)
 				throw new NotMinimalModelException();
 		}
+
 		
 		class NotMinimalModelException extends Exception
 		{			
