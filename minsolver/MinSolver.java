@@ -269,6 +269,9 @@ public final class MinSolver {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 		
+		//disable SBP
+		((MinSATSolver)(((MinSolutionIterator)prevIterator).getTranslation()).cnf()).deactivateSBP();
+		
 		//Lifting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
 		
@@ -906,6 +909,13 @@ public final class MinSolver {
 			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());
 			
 			boolean needToCheck = true;
+			
+			//COMMENT: With the current configuration (SB = OFF) for the augmented iterators, we don't need to
+			//check for minimality.
+			if(lifters != null && lifters.length > 0)
+				needToCheck = false;
+			
+			
 			int iterationCounter = 1;						
 			
 			do
