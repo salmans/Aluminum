@@ -801,6 +801,13 @@ public final class MinSolver {
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 
 							((MyReporter)options.reporter()).skolemBounds);
+					
+					// Print the translation (DEBUG ONLY!)
+					//String transStr = MinTwoWayTranslator.printTranslation(translation, 
+					//		((MyReporter)options.reporter()).skolemBounds,
+					//		mapVarToRelation);
+					//JOptionPane.showMessageDialog(null, transStr);
+					
 					lastSolution = nonTrivialSolution();
 				} catch (MinTrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
@@ -1289,6 +1296,38 @@ public final class MinSolver {
 			
 			return mapVarToRelation;
 		}
+		
+		/**
+		 * Used for debugging purposes. Print the bijection between propositional
+		 * variables and relational facts as a string.
+		 * @param translation
+		 * @param bounds
+		 * @param mapVarToRelation
+		 * @return
+		 */
+		@SuppressWarnings("unused")
+		private static String printTranslation(MinTranslation translation, Bounds bounds,
+				Map<Integer, Relation> mapVarToRelation)
+		{
+			String outs="";
+			
+			// Now that we have the mapping from var --> its relation, we can find the tuple:		
+			for(int theVar = 1; theVar <= translation.numPrimaryVariables(); theVar++)
+			{					
+				Relation myRelation = mapVarToRelation.get(theVar);
+				
+				IntSet s = translation.primaryVariables(myRelation);
+				
+				Tuple myTuple = getTupleForPropVariable(
+							bounds, translation, s, myRelation, theVar);
+					
+				
+				outs += (theVar+": "+myTuple+" "+myRelation+"\n");				
+			}
+			
+			return outs;				
+		}
+
 		
 		/**
 		 * Converts a set of primary propositional variables into set of relational expressions.
