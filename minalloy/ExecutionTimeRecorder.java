@@ -104,6 +104,16 @@ public final class ExecutionTimeRecorder {
 			BooleanOption optMinimal, IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, FileOption optAugmentation, 
 			IntOption optNumberOfTrials) throws Err {
+		
+		//Loads a dummy model in order to load Kodkod classes.
+		try{
+			initMinimal();
+		}
+		catch(Exception e){
+			System.err.println("Initialization error!");
+			System.exit(0);
+		}
+		
 		ArrayList<String> output = new ArrayList<String>();    	
         // Alloy4 sends diagnostic messages and progress reports to the A4Reporter.
         // By default, the A4Reporter ignores all these events (but you can extend the A4Reporter to display the event for the user)
@@ -225,11 +235,42 @@ public final class ExecutionTimeRecorder {
 	}
 	
 	/**
+	 * Loads Kodkod's classes by loading a dummy spec.
+	 */
+	private static void initMinimal() throws Err{
+        A4Reporter rep = new A4Reporter() {
+            // For example, here we choose to display each "warning" by printing it to System.out
+            @Override public void warning(ErrorWarning msg) {
+                System.out.print("Relevance Warning:\n"+(msg.toString().trim())+"\n\n");
+                System.out.flush();
+            }
+        };		
+		
+        Module world = CompUtil.parseEverything_fromFile(rep, null, "resources/test.als");
+        
+        // Choose some default options for how you want to execute the commands
+        MinA4Options options = new MinA4Options();
+        options.symmetry = 20;
+        
+        for(Command command: world.getAllCommands())
+        	MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);   
+	}
+	
+	/**
 	 * Runs the tests using Alloy 
 	 */
 	private static void solveNonMinimal(FileOption optInput, FileOption optOutput, 
 			BooleanOption optMinimal, IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, IntOption optNumberOfTrials) throws Err {
+		//Loads a dummy model in order to load Kodkod classes.
+		try{
+			initNonMinimal();
+		}
+		catch(Exception e){
+			System.err.println("Initialization error!");
+			System.exit(0);
+		}		
+		
 		ArrayList<String> output = new ArrayList<String>();    	
         // Alloy4 sends diagnostic messages and progress reports to the A4Reporter.
         // By default, the A4Reporter ignores all these events (but you can extend the A4Reporter to display the event for the user)
@@ -308,6 +349,31 @@ public final class ExecutionTimeRecorder {
         }
 	}
     
+	/**
+	 * Loads Kodkod's classes by loading a dummy spec.
+	 */
+	private static void initNonMinimal() throws Err{
+        A4Reporter rep = new A4Reporter() {
+            // For example, here we choose to display each "warning" by printing it to System.out
+            @Override public void warning(ErrorWarning msg) {
+                System.out.print("Relevance Warning:\n"+(msg.toString().trim())+"\n\n");
+                System.out.flush();
+            }
+        };		
+		
+        Module world = CompUtil.parseEverything_fromFile(rep, null, "resources/test.als");
+        
+        // Choose some default options for how you want to execute the commands
+        A4Options options = new A4Options();
+        options.symmetry = 20;
+        
+        for(Command command: world.getAllCommands())
+        	TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);   
+	}
+	
+	/**
+	 * Helper methods
+	 */
     private static void writeOutput(ArrayList<String> output, File outputFile) throws IOException{
     	FileWriter fstream = new FileWriter(outputFile);
     	BufferedWriter out = new BufferedWriter(fstream);
