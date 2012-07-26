@@ -263,21 +263,33 @@ public final class MinSolver {
 	public Iterator<MinSolution> lift(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance lifters)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
+		
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
+		
+		MinSolutionIterator msiterator = (MinSolutionIterator)prevIterator;
+		
+		if(msiterator.trivial)
+		{
+			// Disable augmentation and redirect them to the set of consist. facts (for now):
+			JOptionPane.showMessageDialog(null, "The spec given was trivially satisfiable, and so it had only one minimal model (shown),\n"+
+			"to which any relational fact in the set of consistent facts may be added without consequence.\n\n"+
+					"Explicit exploration is unavailable.");
+			return prevIterator;
+		}
 		
 		//Lifting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
 		
 		ArrayList<Integer> allLifters = new ArrayList<Integer>();
-		Map<Relation, TupleSet> solutionTuples = ((MinSolutionIterator)prevIterator).getLastSolution().instance().relationTuples();
+		Map<Relation, TupleSet> solutionTuples = msiterator.getLastSolution().instance().relationTuples();
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
 
 		//This can be a method!
 		for(Relation r : solutionTuples.keySet()){
 			TupleSet tuples = solutionTuples.get(r);
 			for(Tuple t: tuples){
-				int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);
+				int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, msiterator.getTranslation(), r, t);
 				//if there is no primary variables assigned to this relation, continue.
 				if(index == -1)
 					continue;
@@ -292,7 +304,7 @@ public final class MinSolver {
 					if(solutionTuples.get(r).contains(t))
 						throw new ExplorationException("The fact " + t + " is already true in the solution.");
 
-					int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, ((MinSolutionIterator)prevIterator).getTranslation(), r, t);					
+					int index = MinTwoWayTranslator.getPropVariableForTuple(skBounds, msiterator.getTranslation(), r, t);					
 					//if there is no primary variables assigned to this relation, continue.
 					if(index == -1)
 						continue;
@@ -301,7 +313,7 @@ public final class MinSolver {
 				}
 		}
 		
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, (MinSolutionIterator)prevIterator);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, msiterator);
 		
 		return iterator;
 	}	
@@ -315,7 +327,24 @@ public final class MinSolver {
 	 */
 	public Instance getLifters(Iterator<MinSolution> iterator) throws TimeoutException, ContradictionException{
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
-		
+				
+		if(theIterator.trivial)
+		{		
+			// No translation available to lift. Get the upper bounds - the lower bounds:
+			Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;			
+			Instance results = new Instance(skBounds.universe());			
+			for(Relation r : skBounds.relations())
+			{				
+				TupleSet tuples = skBounds.upperBound(r).clone();			
+				tuples.removeAll(skBounds.lowerBound(r));							
+				results.add(r, tuples);							
+			}
+			
+			//JOptionPane.showMessageDialog(null, "getLifters: "+results);			
+			return results;
+		}
+
+		// If not trivial, go through the propositional translation
 		return MinTwoWayTranslator.translatePropositions(
 				theIterator.translation, ((MyReporter)theIterator.options.reporter()).skolemBounds,
 				theIterator.mapVarToRelation,
@@ -332,7 +361,8 @@ public final class MinSolver {
 	 */    
 	public String getLiftersList(Iterator<MinSolution> iterator){
 		String retVal = "";
-		MinTranslation translation = ((MinSolutionIterator)iterator).translation;
+		MinSolutionIterator miniterator = ((MinSolutionIterator)iterator);
+		MinTranslation translation = miniterator.translation;
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		Instance lifters = null;
@@ -350,10 +380,13 @@ public final class MinSolver {
 		for(Relation r : lifterTuples.keySet()){
 			TupleSet tuples = lifterTuples.get(r);
 			for(Tuple t: tuples){
-				int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t);
-				//if there is no primary variables assigned to this relation, continue.
-				if(index == -1)
-					continue;
+				if(!miniterator.trivial)
+				{
+					int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t);
+					//if there is no primary variables assigned to this relation, continue.
+					if(index == -1)
+						continue;
+				}
 				
 				retVal += r.toString() + t.toString() + "\n";
 			}
@@ -555,10 +588,11 @@ public final class MinSolver {
 		 */
 		private Bounds origBounds;
 		
+		private boolean trivial = false;
+		
 		private MinTranslation translation;
 		private Map<Integer, Relation> mapVarToRelation;
 		private long translTime;
-		private int trivial;
 		private MinSolution lastSolution;
 		//private long internalMinimalCandidatesFoundCounter = 0;
 		
@@ -615,7 +649,6 @@ public final class MinSolver {
 			this.origBounds = origBounds;
 			this.options = options;
 			this.translation = null;
-			this.trivial = 0;
 			this.lifters = (lifters == null) ? null : toIntCollection(lifters);
 			
 			if(prevIterator != null){  //if lifting on a previous iterator
@@ -752,41 +785,27 @@ public final class MinSolver {
 		 */
 		private MinSolution trivialSolution(MinTrivialFormulaException tfe) {
 			final MinStatistics stats = new MinStatistics(0, 0, 0, translTime, 0);
-			if (tfe.value().booleanValue()) {
-				trivial++;
+			
+			// Heavily modified from original. When presenting only minimal models,
+			// only the first trivial solution needs to be presented: the lower-bounds
+			// give a unique (up to isomorphism) minimal model. So return it, but do
+			// not prepare other solutions.
+			
+			trivial = true;
+			
+			if (tfe.value().booleanValue()) {				
 				final Bounds translBounds = tfe.bounds();
 				final Instance trivialInstance = padInstance(toInstance(translBounds), origBounds);
 				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, null);
 				
-				final List<Formula> changes = new LinkedList<Formula>();
-								
-				for(Map.Entry<Relation, TupleSet> entry: trivialInstance.relationTuples().entrySet()) {
-					final Relation r = entry.getKey();
-					
-					if (!translBounds.relations().contains(r)) { 
-						translBounds.bound(r, origBounds.lowerBound(r), origBounds.upperBound(r));
-					}
-					
-					if (translBounds.lowerBound(r)!=translBounds.upperBound(r)) { // r may change
-						if (entry.getValue().isEmpty()) { 
-							changes.add(r.some());
-						} else {
-							final Relation rmodel = Relation.nary(r.name()+"_"+trivial, r.arity());
-							translBounds.boundExactly(rmodel, entry.getValue());	
-							changes.add(r.eq(rmodel).not());
-						}
-					}
-				}
-				
-				origBounds = translBounds;
-				
-				// no changes => there can be no more solutions (besides the current trivial one)
-				formula = changes.isEmpty() ? Formula.FALSE : tfe.formula().and(Formula.or(changes));
-				
+				// Disallow future solving via this iterator.
+				formula = null; origBounds = null;
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, null);
 				return sol;
 			} else {
 				formula = null; origBounds = null;
-				return MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null);
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null);
+				return unsatSolution;
 			}
 		}
 		/**
@@ -1115,9 +1134,11 @@ public final class MinSolver {
 		 * @throws TimeoutException
 		 * @throws ContradictionException
 		 */
-		public int[] getLifters() throws TimeoutException, ContradictionException{
-			MinSATSolver solver = (MinSATSolver)translation.cnf();
-									
+		public int[] getLifters() throws TimeoutException, ContradictionException
+		{
+			assert(!trivial);
+			
+			MinSATSolver solver = (MinSATSolver)translation.cnf();								
 			Set<Integer> wantToAdd = new HashSet<Integer>();
 			ArrayList<Integer> retVal = new ArrayList<Integer>();
 			List<Integer> preservedFacts = new ArrayList<Integer>();
