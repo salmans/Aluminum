@@ -1010,7 +1010,7 @@ public final class MinA4Solution {
         if(inst == null)
         	throw new ExplorationException("The input fact is not valid!");
         
-        Iterator<MinSolution> solution = solver.lift(fgoal, bounds, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
+        Iterator<MinSolution> solution = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
 
         solutionStack.push(new SolutionStackElement(kEnumerator, currentSolution));
 

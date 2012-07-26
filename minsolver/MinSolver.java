@@ -185,13 +185,13 @@ public final class MinSolver {
 	 * @see Options
 	 * @see Proof
 	 */
-	public MinSolution solve(Formula formula, Bounds bounds)
+	public MinSolution solve(Formula formula, Bounds origBounds)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		final long startTransl = System.currentTimeMillis();
 		
 		try {		
 		
-			final MinTranslation translation = MinTranslator.translate(formula, bounds, options);
+			final MinTranslation translation = MinTranslator.translate(formula, origBounds, options);
 			final long endTransl = System.currentTimeMillis();
 
 			final SATSolver cnf = translation.cnf();
@@ -202,11 +202,11 @@ public final class MinSolver {
 			final long endSolve = System.currentTimeMillis();
 
 			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
-			return isSat ? sat(bounds, translation, stats) : unsat(translation, stats);
+			return isSat ? sat(origBounds, translation, stats) : unsat(translation, stats);
 			
 		} catch (MinTrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
-			return trivial(bounds, trivial, endTransl - startTransl);
+			return trivial(origBounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
 			throw new MinAbortedException(sae);
 		}
@@ -235,12 +235,12 @@ public final class MinSolver {
 	 * @see Options
 	 * @see Proof
 	 */
-	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds bounds) 
+	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds origBounds) 
 		throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, origBounds, options);
 		
 		return iterator;
 	}
@@ -248,7 +248,7 @@ public final class MinSolver {
 	/**
 	 * Augments a model from an iterator with a set of facts aka lifters.
 	 * @param formula the original FOL formula.
-	 * @param bounds the bounds.
+	 * @param origBounds the bounds.
 	 * @param iterator the previous iterator.
 	 * @param solution the current solution of the previous iterator being lifted.
 	 * @param lifters the facts to augment.
@@ -260,7 +260,7 @@ public final class MinSolver {
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
 	
-	public Iterator<MinSolution> lift(final Formula formula, Bounds bounds, Iterator<MinSolution> prevIterator, 
+	public Iterator<MinSolution> lift(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance lifters)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
 		if (!options.solver().incremental())
@@ -301,7 +301,7 @@ public final class MinSolver {
 				}
 		}
 		
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, bounds, options, allLifters, (MinSolutionIterator)prevIterator);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, (MinSolutionIterator)prevIterator);
 		
 		return iterator;
 	}	
@@ -548,13 +548,19 @@ public final class MinSolver {
 	static final class MinSolutionIterator implements Iterator<MinSolution> {
 		private final Options options;
 		private Formula formula;
-		private Bounds bounds;
+		
+		/**
+		 * The original, pre-Skolem bounds passed to Kodkod.
+		 * Access the post-Skolem bounds via MyReporter.
+		 */
+		private Bounds origBounds;
+		
 		private MinTranslation translation;
 		private Map<Integer, Relation> mapVarToRelation;
 		private long translTime;
 		private int trivial;
 		private MinSolution lastSolution;
-		private long internalMinimalCandidatesFoundCounter = 0;
+		//private long internalMinimalCandidatesFoundCounter = 0;
 		
 		//the MinSolver instance that creates the iterator.
 		private final MinSolver minSolver;
@@ -590,23 +596,23 @@ public final class MinSolver {
 		/**
 		 * Constructs a solution iterator for the given formula, bounds, and options.
 		 */
-		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds bounds, Options options) {
-			this(minSolver, formula, bounds, options, null, null);
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options) {			
+			this(minSolver, formula, origBounds, options, null, null);			
 		}
 
 		/**
 		 * Constructs a solution iterator for the given formula, bounds, options and lifters.
 		 * @param formula
-		 * @param bounds
+		 * @param origBounds
 		 * @param options
 		 * @param lifters
 		 * @param prevIterator
 		 */
 		
-		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds bounds, Options options, ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options, ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
 			this.minSolver = minSolver;
 			this.formula = formula;
-			this.bounds = bounds;
+			this.origBounds = origBounds;
 			this.options = options;
 			this.translation = null;
 			this.trivial = 0;
@@ -718,15 +724,15 @@ public final class MinSolver {
 				if (isSat) {
 					int[] propositionalModel = translation.cnf().getLastModel().clone();
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), propositionalModel);
+					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), propositionalModel);
 					if(unsatSolution != null)
 					{
-						formula = null; bounds = null;
+						formula = null; origBounds = null;
 					}
 					return sol;
 				} else {
 					unsatSolution = unsat(translation, stats); 
-					formula = null; bounds = null; // unsat, no more solutions, free up some space
+					formula = null; origBounds = null; // unsat, no more solutions, free up some space
 					return unsatSolution;
 				}
 			} catch (SATAbortedException sae) {
@@ -749,7 +755,7 @@ public final class MinSolver {
 			if (tfe.value().booleanValue()) {
 				trivial++;
 				final Bounds translBounds = tfe.bounds();
-				final Instance trivialInstance = padInstance(toInstance(translBounds), bounds);
+				final Instance trivialInstance = padInstance(toInstance(translBounds), origBounds);
 				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, null);
 				
 				final List<Formula> changes = new LinkedList<Formula>();
@@ -758,7 +764,7 @@ public final class MinSolver {
 					final Relation r = entry.getKey();
 					
 					if (!translBounds.relations().contains(r)) { 
-						translBounds.bound(r, bounds.lowerBound(r), bounds.upperBound(r));
+						translBounds.bound(r, origBounds.lowerBound(r), origBounds.upperBound(r));
 					}
 					
 					if (translBounds.lowerBound(r)!=translBounds.upperBound(r)) { // r may change
@@ -772,14 +778,14 @@ public final class MinSolver {
 					}
 				}
 				
-				bounds = translBounds;
+				origBounds = translBounds;
 				
 				// no changes => there can be no more solutions (besides the current trivial one)
 				formula = changes.isEmpty() ? Formula.FALSE : tfe.formula().and(Formula.or(changes));
 				
 				return sol;
 			} else {
-				formula = null; bounds = null;
+				formula = null; origBounds = null;
 				return MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null);
 			}
 		}
@@ -795,7 +801,7 @@ public final class MinSolver {
 			if (translation==null) {
 				try {
 					translTime = System.currentTimeMillis();
-					translation = MinTranslator.translate(formula, bounds, options);
+					translation = MinTranslator.translate(formula, origBounds, options);
 					translTime = System.currentTimeMillis() - translTime;
 					//We use this data structure for translation:
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
@@ -902,8 +908,7 @@ public final class MinSolver {
 		 */
 		private void minimize() throws TimeoutException, ContradictionException, NotMinimalModelException{
 			
-			// Assumption: Have already found a model at this point!
-					
+			// Assumption: Have already found a model at this point!							
 			
 			// This keeps constraints to be removed from the solver
 			// after finding the next model.
@@ -961,9 +966,7 @@ public final class MinSolver {
 			while(Boolean.valueOf(theSolver.solve(toIntCollection(unitClauses))));
 							
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
-			
-			internalMinimalCandidatesFoundCounter++;
-			
+						
 			if(!isAugmented()) //if the iterator is NOT an augmentation, activate SBP.
 				theSolver.activateSBP();
 			
@@ -1075,7 +1078,7 @@ public final class MinSolver {
 			
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
 			
-			internalMinimalCandidatesFoundCounter++;
+			//internalMinimalCandidatesFoundCounter++;
 			
 //			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
 					
@@ -1271,14 +1274,16 @@ public final class MinSolver {
 	
 	/**
 	 * Handles the translation of propositional elements to relational facts and vice versa.
+	 * Caution: Pass the skolem bounds here.
 	 * @author Salman
 	 *
 	 */
 	public static class MinTwoWayTranslator{
+		
 		private static Map<Integer, Relation> buildVarToRelationMap(
-				MinTranslation translation, Bounds bounds){
+				MinTranslation translation, Bounds aBounds){
 			Map<Integer, Relation> mapVarToRelation = new HashMap<Integer, Relation>(); 
-			for(Relation r : bounds.relations())
+			for(Relation r : aBounds.relations())
 			{
 				IntSet varsForThisRelation = translation.primaryVariables(r);
 				
@@ -1301,12 +1306,12 @@ public final class MinSolver {
 		 * Used for debugging purposes. Print the bijection between propositional
 		 * variables and relational facts as a string.
 		 * @param translation
-		 * @param bounds
+		 * @param aBounds
 		 * @param mapVarToRelation
 		 * @return
 		 */
 		@SuppressWarnings("unused")
-		private static String printTranslation(MinTranslation translation, Bounds bounds,
+		private static String printTranslation(MinTranslation translation, Bounds aBounds,
 				Map<Integer, Relation> mapVarToRelation)
 		{
 			String outs="";
@@ -1319,9 +1324,8 @@ public final class MinSolver {
 				IntSet s = translation.primaryVariables(myRelation);
 				
 				Tuple myTuple = getTupleForPropVariable(
-							bounds, translation, s, myRelation, theVar);
-					
-				
+							aBounds, translation, s, myRelation, theVar);
+									
 				outs += (theVar+": "+myTuple+" "+myRelation+"\n");				
 			}
 			
@@ -1332,15 +1336,15 @@ public final class MinSolver {
 		/**
 		 * Converts a set of primary propositional variables into set of relational expressions.
 		 * @param translation the translation.
-		 * @param bounds the bounds.
+		 * @param aBounds the bounds.
 		 * @param theVars a VectInt of the variables to convert.
 		 * @return
 		 */
-		private static Instance translatePropositions(MinTranslation translation, Bounds bounds,
+		private static Instance translatePropositions(MinTranslation translation, Bounds aBounds,
 				Map<Integer, Relation> mapVarToRelation, int[] theVars)
 		{
 			// Populate an empty instance over the universe we're using:
-			Instance result = new Instance(bounds.universe());
+			Instance result = new Instance(aBounds.universe());
 
 			// Now that we have the mapping from var --> its relation, we can find the tuple:		
 			for(int i = 0; i < theVars.length; i++)
@@ -1351,14 +1355,14 @@ public final class MinSolver {
 				IntSet s = translation.primaryVariables(myRelation);
 				
 				Tuple myTuple = getTupleForPropVariable(
-							bounds, translation, s, myRelation, theVar);
+							aBounds, translation, s, myRelation, theVar);
 					
 				// .add here is actually .set -- it overwrites what is already in the relation.
 				// So we CANNOT just do:			
 				//result.add(myRelation, bounds.universe().factory().setOf(myTuple));
 				
 				TupleSet currentContents = result.tuples(myRelation);
-				TupleSet theContents = bounds.universe().factory().setOf(myTuple);
+				TupleSet theContents = aBounds.universe().factory().setOf(myTuple);
 				if(currentContents != null) // returns null instead of empty set!!
 					theContents.addAll(currentContents); 
 				
@@ -1373,7 +1377,7 @@ public final class MinSolver {
 		}
 
 		
-		private static Tuple getTupleForPropVariable(Bounds theBounds, MinTranslation theTranslation, IntSet s, Relation r, int theVar)
+		private static Tuple getTupleForPropVariable(Bounds aBounds, MinTranslation theTranslation, IntSet s, Relation r, int theVar)
 		//throws MInternalNoBoundsException
 		{
 			// The relation's upper bound has a list of tuple indices. The "index" variable below is an index
@@ -1384,9 +1388,9 @@ public final class MinSolver {
 	        int index = theVar - minVarForR;
 	        
 	        // OPT: How slow is this? May want to cache...
-	        int[] arr = theBounds.upperBound(r).indexView().toArray();
+	        int[] arr = aBounds.upperBound(r).indexView().toArray();
 	        
-	        TupleFactory factory = theBounds.universe().factory();   
+	        TupleFactory factory = aBounds.universe().factory();   
 	        Tuple tup = factory.tuple(r.arity(), arr[index]);  
 
 	        //MCommunicator.writeToLog("\ngetTupleForPropVariable: thisTuple="+tup+" for "+theVar+". Relation had vars: "+s+" and the offset was "+minVarForR+
@@ -1396,14 +1400,14 @@ public final class MinSolver {
 	        return tup;
 		}
 		
-		private static int getPropVariableForTuple(Bounds bounds, MinTranslation translation, Relation r, Tuple tuple){
+		private static int getPropVariableForTuple(Bounds aBounds, MinTranslation translation, Relation r, Tuple tuple){
 			IntSet s = translation.primaryVariables(r);
 
 			//if there is no primary variable for this relation, return -1
 			if(s == null)
 				return -1;
 			
-			TupleSet upperBound = bounds.upperBound(r);
+			TupleSet upperBound = aBounds.upperBound(r);
 			
 			if(upperBound == null)
 				return -1;
@@ -1411,7 +1415,7 @@ public final class MinSolver {
 			int[] arr = upperBound.indexView().toArray();
 
 			
-	        TupleFactory factory = bounds.universe().factory();
+	        TupleFactory factory = aBounds.universe().factory();
 	        
 	        int index = -1;
 	        //Not the best way of doing this!

@@ -709,7 +709,7 @@ public class Main {
 						System.out.println("Model:    " + model.instance().relationTuples());
 						Iterator<MinSolution> liftModels = null;
 						try{
-							liftModels = solver.lift(fs.fmla, fs.bounds, models, instance);
+							liftModels = solver.lift(fs.fmla, models, instance);
 						}
 						catch(ExplorationException e){
 							System.err.println(e.getMessage());
