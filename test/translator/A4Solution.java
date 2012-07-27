@@ -13,15 +13,15 @@
  * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package minalloy.translator;
+package test.translator;
 
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.UNIV;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.SIGINT;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.SEQIDX;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.STRING;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.NONE;
-import static minsolver.MinSolution.Outcome.UNSATISFIABLE;
-
+import static kodkod.engine.Solution.Outcome.UNSATISFIABLE;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -35,10 +35,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
+import kodkod.ast.Decl;
 import kodkod.ast.Expression;
 import kodkod.ast.Formula;
 import kodkod.ast.IntExpression;
@@ -49,18 +49,17 @@ import kodkod.ast.operator.ExprOperator;
 import kodkod.ast.operator.FormulaOperator;
 import kodkod.engine.CapacityExceededException;
 import kodkod.engine.Evaluator;
-import minsolver.ExplorationException;
-import minsolver.MinProof;
-import minsolver.MinSATSolverFactory;
-import minsolver.MinSolution;
-import minsolver.MinSolver;
-import minsolver.MyReporter;
+import kodkod.engine.Proof;
+import kodkod.engine.Solution;
+import kodkod.engine.Solver;
+import kodkod.engine.config.AbstractReporter;
 import kodkod.engine.config.Options;
-import minsolver.fol2sat.MinTranslationRecord;
-import minsolver.fol2sat.MinTranslator;
+import kodkod.engine.config.Reporter;
+import kodkod.engine.fol2sat.TranslationRecord;
+import kodkod.engine.fol2sat.Translator;
 import kodkod.engine.satlab.SATFactory;
-import minsolver.ucore.MinHybridStrategy;
-import minsolver.ucore.MinRCEStrategy;
+import kodkod.engine.ucore.HybridStrategy;
+import kodkod.engine.ucore.RCEStrategy;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
@@ -91,24 +90,14 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
-
-import kodkod.ast.Decl;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Options.SatSolver;
 
 /** This class stores a SATISFIABLE or UNSATISFIABLE solution.
  * It is also used as a staging area for the solver before generating the solution.
  * Once solve() has been called, then this object becomes immutable after that.
  */
 
-public final class MinA4Solution {
-	//An element of solutionStack is an instance of SolutionStackElement.
-	private class SolutionStackElement{
-		SolutionStackElement(Iterator<MinSolution> kEnumerator, MinSolution currentSolution){
-			this.kEnumerator = kEnumerator;
-			this.currentSolution = currentSolution;
-		}
-		Iterator<MinSolution> kEnumerator;
-		MinSolution currentSolution;
-	}	
+public final class A4Solution {
 
     //====== static immutable fields ====================================================================//
 
@@ -133,7 +122,7 @@ public final class MinA4Solution {
     //====== immutable fields ===========================================================================//
 
     /** The original Alloy options that generated this solution. */
-    private final MinA4Options originalOptions;
+    private final A4Options originalOptions;
 
     /** The original Alloy command that generated this solution; can be "" if unknown. */
     private final String originalCommand;
@@ -163,7 +152,7 @@ public final class MinA4Solution {
     private final TupleSet stringBounds;
 
     /** The Kodkod Solver object. */
-    private final MinSolver solver;
+    private final Solver solver;
 
     //====== mutable fields (immutable after solve() has been called) ===================================//
 
@@ -195,18 +184,12 @@ public final class MinA4Solution {
     private Evaluator eval = null;
 
     /** If not null, you can ask it to get another solution. */
-    private Iterator<MinSolution> kEnumerator = null;
-    
-    /** Stacks the exploration solution iterators so that we can backtrack the solutions. 
-     * this instance is shared between all the iterators in an exploration. */
-    private Stack<SolutionStackElement> solutionStack = null;
+    private Iterator<Solution> kEnumerator = null;
     
     /**
-     * Holds the current solution loaded in the current object. This object is used to
-     * be pushed into solutionStack so that we can load the current solution again when 
-     * backtracking.
+     * Holds the current solution loaded in the current object.
      */
-    private MinSolution currentSolution;
+    private Solution currentSolution;
 
     /** The map from each Sig/Field/Skolem/Atom to its corresponding Kodkod expression. */
     private Map<Expr,Expression> a2k;
@@ -234,9 +217,8 @@ public final class MinA4Solution {
      * @param opt - the Alloy options that will affect the solution and the solver
      * @param expected - whether the user expected an instance or not (1 means yes, 0 means no, -1 means the user did not express an expectation)
      */
-    MinA4Solution(String originalCommand, int bitwidth, int maxseq, Set<String> stringAtoms, Collection<String> atoms, final A4Reporter rep, MinA4Options opt, int expected) throws Err {
+    A4Solution(String originalCommand, int bitwidth, int maxseq, Set<String> stringAtoms, Collection<String> atoms, final A4Reporter rep, A4Options opt, int expected) throws Err {
         opt = opt.dup();
-        this.solutionStack = new Stack<SolutionStackElement>();
         this.currentSolution = null;
         this.unrolls = opt.unrolls;
         this.sigs = new SafeList<Sig>(Arrays.asList(UNIV, SIGINT, SEQIDX, STRING, NONE));
@@ -286,10 +268,9 @@ public final class MinA4Solution {
         this.stringBounds = stringBounds.unmodifiableView();
         bounds.boundExactly(KK_STRING, this.stringBounds);
         int sym = (expected==1 ? 0 : opt.symmetry);
-        
-        solver = new MinSolver();
+        solver = new Solver();
         solver.options().setFlatten(false); // added for now, since multiplication and division circuit takes forever to flatten
-        /*if (opt.solver.external()!=null) {
+        if (opt.solver.external()!=null) {
             String ext = opt.solver.external();
             if (opt.solverDirectory.length()>0 && ext.indexOf(File.separatorChar)<0) ext=opt.solverDirectory+File.separatorChar+ext;
             try {
@@ -297,22 +278,17 @@ public final class MinA4Solution {
                 tmp.deleteOnExit();
                 solver.options().setSolver(SATFactory.externalFactory(ext, tmp.getAbsolutePath(), "", opt.solver.options()));
             } catch(IOException ex) { throw new ErrorFatal("Cannot create temporary directory.", ex); }
-        } else if (opt.solver.equals(MinA4Options.SatSolver.ZChaffJNI)) {
+        } else if (opt.solver.equals(A4Options.SatSolver.ZChaffJNI)) {
             solver.options().setSolver(SATFactory.ZChaff);
-        } else if (opt.solver.equals(MinA4Options.SatSolver.MiniSatJNI)) {
+        } else if (opt.solver.equals(A4Options.SatSolver.MiniSatJNI)) {
             solver.options().setSolver(SATFactory.MiniSat);
-        } else if (opt.solver.equals(MinA4Options.SatSolver.MiniSatProverJNI)) {
+        } else if (opt.solver.equals(A4Options.SatSolver.MiniSatProverJNI)) {
             sym=20;
             solver.options().setSolver(SATFactory.MiniSatProver);
             solver.options().setLogTranslation(2);
-        } else*/ {
-            //solver.options().setSolver(SATFactory.DefaultSAT4J); // Even for "KK" and "CNF", we choose SAT4J here; later, just before solving, we'll change it to a Write2CNF solver
-            //Set MinSATSolverFactory to set the solver's SAT solver.
-        	MyReporter myReporter = new MyReporter();
-            solver.options().setSolver(new MinSATSolverFactory(myReporter));
-            solver.options().setReporter(myReporter);
+        } else {
+            solver.options().setSolver(SATFactory.DefaultSAT4J); // Even for "KK" and "CNF", we choose SAT4J here; later, just before solving, we'll change it to a Write2CNF solver
         }
-        //TODO parameterize this
         solver.options().setSymmetryBreaking(sym);
         solver.options().setSkolemDepth(opt.skolemDepth);
         solver.options().setBitwidth(bitwidth);
@@ -320,28 +296,13 @@ public final class MinA4Solution {
      }
 
     /** Construct a new A4Solution that is the continuation of the old one, but with the "next" instance. */
-    private MinA4Solution(MinA4Solution old) throws Err{
-    	this(old, null);
-    }
-    
-    /** Construct a new A4Solution that is the continuation of the old one. If an instance is given, the 
-     * given instance, otherwise, the "next" instance will be loaded.*/
-    private MinA4Solution(MinA4Solution old, MinSolution currentSolution) throws Err {
+    private A4Solution(A4Solution old) throws Err {
         if (!old.solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
         if (old.kEnumerator==null) throw new ErrorAPI("This solution was not generated by an incremental SAT solver.\n" + "Solution enumeration is currently only implemented for MiniSat and SAT4J.");
         if (old.eval==null) throw new ErrorAPI("This solution is already unsatisfiable, so you cannot call next() to get the next solution.");
         
-        //Pass the solutionStack to the next iterator.
-        solutionStack = old.solutionStack;
-        Instance inst = null;
-        if(currentSolution == null){
-        	this.currentSolution = old.kEnumerator.next();
-        	inst = this.currentSolution.instance();
-        }
-        else{
-        	inst = currentSolution.instance();
-        	this.currentSolution = null;
-        }
+        this.currentSolution = old.kEnumerator.next();
+        Instance inst = this.currentSolution.instance();
         
         unrolls = old.unrolls;
         originalOptions = old.originalOptions;
@@ -414,10 +375,10 @@ public final class MinA4Solution {
 
     /** Returns the maximum number of allowed loop unrolling or recursion level. */
     public int unrolls() { return unrolls; }
-    
-    /** Returns the current solution in this object */
-    public MinSolution getCurrentSolution(){ return currentSolution; }
 
+    /** Returns the current solution in this object */
+    public Solution getCurrentSolution(){ return currentSolution; }
+    
     //===================================================================================================//
 
     /** Returns the original Alloy file name that generated this solution; can be "" if unknown. */
@@ -431,9 +392,9 @@ public final class MinA4Solution {
     /** Returns the Kodkod input used to generate this solution; returns "" if unknown. */
     public String debugExtractKInput() {
        if (solved)
-          return MinTranslateKodkodToJava.convert(Formula.and(formulas), bitwidth, kAtoms, bounds, atom2name);
+          return TranslateKodkodToJava.convert(Formula.and(formulas), bitwidth, kAtoms, bounds, atom2name);
        else
-          return MinTranslateKodkodToJava.convert(Formula.and(formulas), bitwidth, kAtoms, bounds.unmodifiableView(), null);
+          return TranslateKodkodToJava.convert(Formula.and(formulas), bitwidth, kAtoms, bounds.unmodifiableView(), null);
     }
 
     //===================================================================================================//
@@ -542,7 +503,7 @@ public final class MinA4Solution {
 
     /** Return a modifiable TupleSet representing a sound overapproximation of the given expression. */
     TupleSet approximate(Expression expression) {
-       return factory.setOf(expression.arity(), MinTranslator.approximate(expression, bounds, solver.options()).denseIndices());
+       return factory.setOf(expression.arity(), Translator.approximate(expression, bounds, solver.options()).denseIndices());
     }
 
     /** Query the Bounds object to find the lower/upper bound; throws ErrorFatal if expr is not Relation, nor a union of Relations. */
@@ -600,35 +561,35 @@ public final class MinA4Solution {
     PrimSig atom2sig(Object atom) { PrimSig sig=atom2sig.get(atom); return sig==null ? UNIV : sig; }
 
     /** Caches eval(Sig) and eval(Field) results. */
-    private Map<Expr,MinA4TupleSet> evalCache = new LinkedHashMap<Expr,MinA4TupleSet>();
+    private Map<Expr,A4TupleSet> evalCache = new LinkedHashMap<Expr,A4TupleSet>();
 
     /** Return the A4TupleSet for the given sig (if solution not yet solved, or unsatisfiable, or sig not found, then return an empty tupleset) */
-    public MinA4TupleSet eval(Sig sig) {
+    public A4TupleSet eval(Sig sig) {
        try {
-          if (!solved || eval==null) return new MinA4TupleSet(factory.noneOf(1), this);
-          MinA4TupleSet ans = evalCache.get(sig);
+          if (!solved || eval==null) return new A4TupleSet(factory.noneOf(1), this);
+          A4TupleSet ans = evalCache.get(sig);
           if (ans!=null) return ans;
-          TupleSet ts = eval.evaluate((Expression) MinTranslateAlloyToKodkod.alloy2kodkod(this, sig));
-          ans = new MinA4TupleSet(ts, this);
+          TupleSet ts = eval.evaluate((Expression) TranslateAlloyToKodkod.alloy2kodkod(this, sig));
+          ans = new A4TupleSet(ts, this);
           evalCache.put(sig, ans);
           return ans;
        } catch(Err er) {
-          return new MinA4TupleSet(factory.noneOf(1), this);
+          return new A4TupleSet(factory.noneOf(1), this);
        }
     }
 
     /** Return the A4TupleSet for the given field (if solution not yet solved, or unsatisfiable, or field not found, then return an empty tupleset) */
-    public MinA4TupleSet eval(Field field) {
+    public A4TupleSet eval(Field field) {
        try {
-          if (!solved || eval==null) return new MinA4TupleSet(factory.noneOf(field.type().arity()), this);
-          MinA4TupleSet ans = evalCache.get(field);
+          if (!solved || eval==null) return new A4TupleSet(factory.noneOf(field.type().arity()), this);
+          A4TupleSet ans = evalCache.get(field);
           if (ans!=null) return ans;
-          TupleSet ts = eval.evaluate((Expression) MinTranslateAlloyToKodkod.alloy2kodkod(this, field));
-          ans = new MinA4TupleSet(ts, this);
+          TupleSet ts = eval.evaluate((Expression) TranslateAlloyToKodkod.alloy2kodkod(this, field));
+          ans = new A4TupleSet(ts, this);
           evalCache.put(field, ans);
           return ans;
        } catch(Err er) {
-          return new MinA4TupleSet(factory.noneOf(field.type().arity()), this);
+          return new A4TupleSet(factory.noneOf(field.type().arity()), this);
        }
     }
 
@@ -641,13 +602,13 @@ public final class MinA4Solution {
            if (eval==null) throw new ErrorAPI("This solution is unsatisfiable, so eval() is not allowed.");
            if (expr.ambiguous && !expr.errors.isEmpty()) expr = expr.resolve(expr.type(), null);
            if (!expr.errors.isEmpty()) throw expr.errors.pick();
-           Object result = MinTranslateAlloyToKodkod.alloy2kodkod(this, expr);
+           Object result = TranslateAlloyToKodkod.alloy2kodkod(this, expr);
            if (result instanceof IntExpression) return eval.evaluate((IntExpression)result);
            if (result instanceof Formula) return eval.evaluate((Formula)result);
-           if (result instanceof Expression) return new MinA4TupleSet(eval.evaluate((Expression)result), this);
+           if (result instanceof Expression) return new A4TupleSet(eval.evaluate((Expression)result), this);
            throw new ErrorFatal("Unknown internal error encountered in the evaluator.");
         } catch(CapacityExceededException ex) {
-           throw MinTranslateAlloyToKodkod.rethrow(ex);
+           throw TranslateAlloyToKodkod.rethrow(ex);
         }
     }
 
@@ -763,8 +724,7 @@ public final class MinA4Solution {
         }
         /** {@inheritDoc} */
         public T next() {
-            if (hasFirst) { hasFirst=false; T ans=first; first=null; return ans; } 
-            else return iterator.next();
+            if (hasFirst) { hasFirst=false; T ans=first; first=null; return ans; } else return iterator.next();
         }
         /** {@inheritDoc} */
         public void remove() { throw new UnsupportedOperationException(); }
@@ -802,7 +762,7 @@ public final class MinA4Solution {
     }
 
     /** Helper method that chooses a name for each atom based on its most specific sig; (external caller should call this method with s==null and nexts==null) */
-    private static void rename (MinA4Solution frame, PrimSig s, Map<Sig,List<Tuple>> nexts, UniqueNameGenerator un) throws Err {
+    private static void rename (A4Solution frame, PrimSig s, Map<Sig,List<Tuple>> nexts, UniqueNameGenerator un) throws Err {
         if (s==null) {
             for(ExprVar sk:frame.skolems) un.seen(sk.label);
             // Store up the skolems
@@ -903,10 +863,9 @@ public final class MinA4Solution {
     //===================================================================================================//
 
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    MinA4Solution solve(final A4Reporter rep, Command cmd, MinSimplifier simp, boolean tryBookExamples) throws Err, IOException {
+    A4Solution solve(final A4Reporter rep, Command cmd, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
         if (solved) return this;
-
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
         if (cmd==null) {
            Instance inst = new Instance(bounds.universe());
@@ -921,7 +880,7 @@ public final class MinA4Solution {
            return this;
         }
         // Otherwise, prepare to do the solve...
-        final MinA4Options opt = originalOptions;
+        final A4Options opt = originalOptions;
         long time = System.currentTimeMillis();
         rep.debug("Simplifying the bounds...\n");
         if (simp!=null && formulas.size()>0 && !simp.simplify(rep, this, formulas)) addFormula(Formula.FALSE, Pos.UNKNOWN);
@@ -929,11 +888,10 @@ public final class MinA4Solution {
         Formula fgoal = Formula.and(formulas);
         rep.debug("Generating the solution...\n");
         kEnumerator = null;
-        MinSolution sol = null;
-        //final Reporter oldReporter = solver.options().reporter();
+        Solution sol = null;
+        final Reporter oldReporter = solver.options().reporter();
         final boolean solved[] = new boolean[]{true};
-        //AbstractReporter -> MyReporter
-        solver.options().setReporter(new MyReporter() { // Set up a reporter to catch the type+pos of skolems
+        solver.options().setReporter(new AbstractReporter() { // Set up a reporter to catch the type+pos of skolems
             @Override public void skolemizing(Decl decl, Relation skolem, List<Decl> predecl) {
                 try {
                     Type t=kv2typepos(decl.variable()).a;
@@ -951,36 +909,63 @@ public final class MinA4Solution {
                if (rep!=null) rep.solve(primaryVars, vars, clauses);
            }
         });
+        if (!opt.solver.equals(SatSolver.CNF) && !opt.solver.equals(SatSolver.KK) && tryBookExamples) { // try book examples
+           A4Reporter r = "yes".equals(System.getProperty("debug")) ? rep : null;
+           try { sol = BookExamples.trial(r, this, fgoal, solver, cmd.check); } catch(Throwable ex) { sol = null; }
+        }
         solved[0] = false; // this allows the reporter to report the # of vars/clauses
         for(Relation r: bounds.relations()) { formulas.add(r.eq(r)); } // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
-
-        rep.debug("Begin solveAll()\n");
-        Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
-        kEnumerator = new Peeker<MinSolution>(solution);
-        if (sol==null) sol = kEnumerator.next();
-        rep.debug("End solveAll()\n");
-
+        // Now pick the solver and solve it!
+        if (opt.solver.equals(SatSolver.KK)) {
+            File tmpCNF = File.createTempFile("tmp", ".java", new File(opt.tempDirectory));
+            String out = tmpCNF.getAbsolutePath();
+            Util.writeAll(out, debugExtractKInput());
+            rep.resultCNF(out);
+            return null;
+         }
+        if (opt.solver.equals(SatSolver.CNF)) {
+            File tmpCNF = File.createTempFile("tmp", ".cnf", new File(opt.tempDirectory));
+            String out = tmpCNF.getAbsolutePath();
+            solver.options().setSolver(WriteCNF.factory(out));
+            try { sol = solver.solve(fgoal, bounds); } catch(WriteCNF.WriteCNFCompleted ex) { rep.resultCNF(out); return null; }
+            // The formula is trivial (otherwise, it would have thrown an exception)
+            // Since the user wants it in CNF format, we manually generate a trivially satisfiable (or unsatisfiable) CNF file.
+            Util.writeAll(out, sol.instance()!=null ? "p cnf 1 1\n1 0\n" : "p cnf 1 2\n1 0\n-1 0\n");
+            rep.resultCNF(out);
+            return null;
+         }
+        if (solver.options().solver()==SATFactory.ZChaff || !solver.options().solver().incremental()) {
+           rep.debug("Begin solve()\n");
+           if (sol==null) sol = solver.solve(fgoal, bounds);
+           rep.debug("End solve()\n");
+        } else {
+           rep.debug("Begin solveAll()\n");
+           kEnumerator = new Peeker<Solution>(solver.solveAll(fgoal, bounds));
+           if (sol==null) sol = kEnumerator.next();
+           rep.debug("End solveAll()\n");
+        }
+        
         this.currentSolution = sol;
-
+        
         if (!solved[0]) rep.solve(0, 0, 0);
         final Instance inst = sol.instance();
         // To ensure no more output during SolutionEnumeration
-        //solver.options().setReporter(oldReporter);
+        solver.options().setReporter(oldReporter);
         // If unsatisfiable, then retreive the unsat core if desired
         if (inst==null && solver.options().solver()==SATFactory.MiniSatProver) {
            try {
               lCore = new LinkedHashSet<Node>();
-              MinProof p = sol.proof();
+              Proof p = sol.proof();
               if (sol.outcome()==UNSATISFIABLE) {
                  // only perform the minimization if it was UNSATISFIABLE, rather than TRIVIALLY_UNSATISFIABLE
                  int i = p.highLevelCore().size();
                  rep.minimizing(cmd, i);
-                 if (opt.coreMinimization==0) try { p.minimize(new MinRCEStrategy(p.log())); } catch(Throwable ex) {}
-                 if (opt.coreMinimization==1) try { p.minimize(new MinHybridStrategy(p.log())); } catch(Throwable ex) {}
+                 if (opt.coreMinimization==0) try { p.minimize(new RCEStrategy(p.log())); } catch(Throwable ex) {}
+                 if (opt.coreMinimization==1) try { p.minimize(new HybridStrategy(p.log())); } catch(Throwable ex) {}
                  rep.minimized(cmd, i, p.highLevelCore().size());
               }
-              for(Iterator<MinTranslationRecord> it=p.core(); it.hasNext();) {
+              for(Iterator<TranslationRecord> it=p.core(); it.hasNext();) {
                  Object n=it.next().node();
                  if (n instanceof Formula) lCore.add((Formula)n);
               }
@@ -1002,46 +987,7 @@ public final class MinA4Solution {
         if (inst!=null) rep.resultSAT(cmd, time, this); else rep.resultUNSAT(cmd, time, this);
         return this;
     }
-    
-    /** Lifts a model with some augmenting facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    public MinA4Solution lift(String inputFact) throws Err, ExplorationException {
-        Formula fgoal = Formula.and(formulas);
-        
-        Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator);
 
-        //if the fact does not exists in the given bounds:
-        if(inst == null)
-        	throw new ExplorationException("The input fact is not valid!");
-        
-        Iterator<MinSolution> solution = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
-
-        solutionStack.push(new SolutionStackElement(kEnumerator, currentSolution));
-
-        kEnumerator = new Peeker<MinSolution>(solution);
-    	
-        if (!solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
-        //if (eval==null) return this;
-        if (nextCache==null) nextCache=new MinA4Solution(this);
-        return nextCache;
-    }
-
-    /** Returns a list of facts consistent to the current loaded solution. */
-    public String findConsistentFacts() throws Err, IOException {
-    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator);
-    }  
-    
-    /** Performs one level of backtracking to the current state in the exploration. */
-    public MinA4Solution backtrack() throws Err, IOException {
-        if (!solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
-        if(solutionStack.size() == 0)
-        	return null;
-    	SolutionStackElement element = solutionStack.pop();
-    	kEnumerator = element.kEnumerator;
-    	MinSolution sol = element.currentSolution;
-        //if (eval==null) return this;
-        if (nextCache==null) nextCache=new MinA4Solution(this, sol);
-        return nextCache;
-    }    
     //===================================================================================================//
 
     /** This caches the toString() output. */
@@ -1081,15 +1027,15 @@ public final class MinA4Solution {
     //===================================================================================================//
 
     /** If nonnull, it caches the result of calling "next()". */
-    private MinA4Solution nextCache = null;
+    private A4Solution nextCache = null;
 
     /** If this solution is UNSAT, return itself; else return the next solution (which could be SAT or UNSAT).
      * @throws ErrorAPI if the solver was not an incremental solver
      */
-    public MinA4Solution next() throws Err {
+    public A4Solution next() throws Err {
         if (!solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
         if (eval==null) return this;
-        if (nextCache==null) nextCache=new MinA4Solution(this);
+        if (nextCache==null) nextCache=new A4Solution(this);
         return nextCache;
     }
 
@@ -1183,13 +1129,13 @@ public final class MinA4Solution {
 
     /** Helper method to write out a full XML file. */
     public void writeXML(PrintWriter writer, Iterable<Func> macros, Map<String,String> sourceFiles) throws Err {
-        MinA4SolutionWriter.writeInstance(null, this, writer, macros, sourceFiles);
+        A4SolutionWriter.writeInstance(null, this, writer, macros, sourceFiles);
         if (writer.checkError()) throw new ErrorFatal("Error writing the solution XML file.");
     }
 
     /** Helper method to write out a full XML file. */
     public void writeXML(A4Reporter rep, PrintWriter writer, Iterable<Func> macros, Map<String,String> sourceFiles) throws Err {
-        MinA4SolutionWriter.writeInstance(rep, this, writer, macros, sourceFiles);
+        A4SolutionWriter.writeInstance(rep, this, writer, macros, sourceFiles);
         if (writer.checkError()) throw new ErrorFatal("Error writing the solution XML file.");
     }
 }

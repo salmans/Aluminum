@@ -80,7 +80,7 @@ public final class ExecutionTimeRecorder {
     		System.err.println("No input file is provided!");
     		System.exit(0);
     	}
-    	if(optInput.value == null){
+    	if(optOutput.value == null){
     		System.err.println("No output file is provided!");
     		System.exit(0);
     	}
