@@ -43,7 +43,6 @@ public class SolutionComparator {
 		
 		result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
 		
-		
 		//TODO this is not the best way of comparing the two instances but it is working for now:
 		if(result == 0)
 			result = compareTuples(theInstance, otherInstance, theBounds); //compare the tuples in the relations.

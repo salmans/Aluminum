@@ -151,13 +151,21 @@ public class IsomorphicSolutionBuilder {
 		
 		int[][] result = new int[totalSolutionPermutations][bounds.universe().size()];
 		
+		int offset = 1;
 		for(Permutations perm: symmetryPermutations){
 			for(int i = 0; i < result.length; i++){
 				for(int j = 0; j < perm.atoms.length; j++){
-					result[i][perm.atoms[j]] = perm.permutations[i % perm.permutations.length][j]; 
+					result[i][perm.atoms[j]] = perm.permutations[(i/offset) % perm.permutations.length][j]; 
 				}
 			}
+			
+			offset = offset * Permutations.factorial(perm.atoms.length);
 		}
+		
+		//Print permutations:
+		/*for(int i = 0; i < result.length; i++){
+			System.out.println(Arrays.toString(result[i]));
+		}*/
 		
 		return result;
 	}
@@ -170,6 +178,17 @@ public class IsomorphicSolutionBuilder {
 		Set<Permutations> result = new HashSet<Permutations>();
 		
 		Set<IntSet> symmetries = MinSymmetryDetectorDelegate.partition(bounds);
+		
+		//Print the partitions:
+		/*for(IntSet set: symmetries){
+			IntIterator iterator = set.iterator();
+			while(iterator.hasNext())
+				System.out.println(iterator.next());
+				//System.out.println(bounds.universe().atom(iterator.next()));
+
+			System.out.println("-------------------------");
+		}*/
+		
 		for(IntSet set: symmetries){result.add(new Permutations(set));}
 		
 		return result;

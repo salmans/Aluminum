@@ -50,6 +50,8 @@ public final class AluminumTester {
     	//Symmetry Breaking (off by default)
     	IntOption optSymmetryBreaking = new IntOption("-sb", 20);
     	//Symmetry Breaking (off by default)
+    	IntOption optSkolemDepth = new IntOption("-sk", 0);    	
+    	//Symmetry Breaking (off by default)
     	BooleanOption optIsomorphicSolutions = new BooleanOption("-iso");
     	
     	
@@ -58,6 +60,7 @@ public final class AluminumTester {
     	optParser.addOption(optOutput);
     	optParser.addOption(optSymmetryBreaking);
     	optParser.addOption(optIsomorphicSolutions);
+    	optParser.addOption(optSkolemDepth);
     	
     	try{
     		optParser.parse(args);
@@ -81,13 +84,13 @@ public final class AluminumTester {
     	System.out.println("-sb = " + optSymmetryBreaking.value);
     	System.out.println("-iso = " + optIsomorphicSolutions.value);
     	
-    	test(optInput, optOutput, optSymmetryBreaking, optIsomorphicSolutions);
+    	test(optInput, optOutput, optSymmetryBreaking, optSkolemDepth, optIsomorphicSolutions);
     }
 	
 	/**
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
-	private static void test(FileOption optInput, FileOption optOutput, IntOption optSymmetryBreaking, BooleanOption optIsomorphicSolutions) throws Err{
+	private static void test(FileOption optInput, FileOption optOutput, IntOption optSymmetryBreaking, IntOption optSkolemDepth, BooleanOption optIsomorphicSolutions) throws Err{
 		long startTime = System.currentTimeMillis();
 		
 		Set<String> uniqueSolutions = new LinkedHashSet<String>();
@@ -107,13 +110,17 @@ public final class AluminumTester {
         MinA4Options aluminumOptions = new MinA4Options();
         A4Options alloyOptions = new A4Options();
         aluminumOptions.symmetry = optSymmetryBreaking.value;
+        aluminumOptions.skolemDepth = optSkolemDepth.value;
         alloyOptions.symmetry = optSymmetryBreaking.value;
+        alloyOptions.skolemDepth = optSkolemDepth.value;
 
 		boolean foundError = false;
 		int totalErrors = 0;
+		int minimalSolutions = 0;
+		int isomorphicMinimalSolutions = 0;
 		
-		String solutions = "";
-		String isomorphics = "";
+		//String solutions = "";
+		//String isomorphics = "";
     	String data = "";
         for(Command command: world.getAllCommands()){
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
@@ -124,40 +131,39 @@ public final class AluminumTester {
         	while(aluminum.satisfiable()){
         		if(uniqueSolutions.add(aluminum.toString())){
         			aluminumSolutions.add(aluminum.getCurrentSolution());
-        			solutions += aluminum.getCurrentSolution() + "\n\n";
+        			//solutions += aluminum.getCurrentSolution() + "\n\n";
         		}
         		aluminum = aluminum.next();
         		
         		System.out.print(".");
         	}
 
-        	try{
+        	minimalSolutions = aluminumSolutions.size();
+        	
+        	/*try{
         		writeData(new File("/Users/Salman/Desktop/solutions.txt"), solutions);
         	}
         	catch(Exception e){
         		System.err.println(e.getMessage());
-        	}
+        	}*/
         	
         	System.out.println("Done!");
 
-        	
-        	System.out.println(aluminumSolutions.size());
-        	System.exit(0);
         	
         	if(optIsomorphicSolutions.value){
         		System.out.print("Building isomorphic solutions for the minimal solutions ....");
         		aluminumSolutions = getIsomorphicSolutions(aluminumSolutions, aluminum.getBounds());
             	System.out.println("Done!");
-            	
-            	for(MinSolution sol: aluminumSolutions) isomorphics += sol + "\n\n";
+            	isomorphicMinimalSolutions = aluminumSolutions.size();
+            	//for(MinSolution sol: aluminumSolutions) isomorphics += sol + "\n\n";
         	}
         	
-        	try{
+        	/*try{
         		writeData(new File("/Users/Salman/Desktop/solutions-with-isomorphisms.txt"), isomorphics);
         	}
         	catch(Exception e){
         		System.err.println(e.getMessage());
-        	}
+        	}*/
         	
             System.out.print("Running Alloy for command: " + command + ": ");
         	int counter = 0;
@@ -192,10 +198,16 @@ public final class AluminumTester {
         			data += "Couldn't find a minimal solution for: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
         					"-------------------------------------\n";
         			foundError = true;
-        			totalErrors++;        			
+        			totalErrors++;    
+        			
+        			//Stops after visiting the first inconsistency:
+        			break;
         		}
-        		else
+        		else{
+        			data += "This is fine: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
+        					"-------------------------------------\n";        			
             		System.out.println("OK!");
+        		}
         			
         		
         		alloy = alloy.next();
@@ -224,6 +236,10 @@ public final class AluminumTester {
     	}
     	
     	System.out.println("Total Execution Time: " + (System.currentTimeMillis() - startTime));
+    	System.out.println("Inconsistencies: " + totalErrors);
+    	System.out.println("Minimal Solutions: " + minimalSolutions);
+    	if(optIsomorphicSolutions.value)
+    		System.out.println("Isomorphic Minimal Solutions: " + isomorphicMinimalSolutions);    	
 	}
 	
 	private static void writeData(File file, String data) throws IOException{
