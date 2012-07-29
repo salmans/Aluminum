@@ -417,7 +417,6 @@ public final class MinA4Solution {
     
     /** Returns the current solution in this object */
     public MinSolution getCurrentSolution(){ return currentSolution; }
-
     //===================================================================================================//
 
     /** Returns the original Alloy file name that generated this solution; can be "" if unknown. */
@@ -442,8 +441,8 @@ public final class MinA4Solution {
     TupleFactory getFactory() { return factory; }
 
     /** Returns a modifiable copy of the Kodkod Bounds object. */
-    Bounds getBounds() { return bounds.clone(); }
-
+    public Bounds getBounds() { return bounds.clone(); }
+    
     /** Add a new relation with the given label and the given lower and upper bound.
      * @param label - the label for the new relation; need not be unique
      * @param lower - the lowerbound; can be null if you want it to be the empty set
@@ -957,6 +956,7 @@ public final class MinA4Solution {
 
         rep.debug("Begin solveAll()\n");
         Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
+        
         kEnumerator = new Peeker<MinSolution>(solution);
         if (sol==null) sol = kEnumerator.next();
         rep.debug("End solveAll()\n");

@@ -460,6 +460,13 @@ public final class MinSolver {
 	}
 	
 	/**
+	 * Returns the bounds after skolemization.
+	 */
+	public Bounds getSkolemBounds(){
+		return ((MyReporter)options.reporter()).skolemBounds;
+	}
+	
+	/**
 	 * {@inheritDoc}
 	 * @see java.lang.Object#toString()
 	 */
