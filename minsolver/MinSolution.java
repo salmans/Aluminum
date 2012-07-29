@@ -21,14 +21,7 @@ package minsolver;
  * THE SOFTWARE.
  */
 
-import java.util.HashSet;
-import java.util.Set;
-
-import kodkod.ast.Relation;
-import kodkod.engine.Solution;
 import kodkod.instance.Instance;
-import kodkod.instance.Tuple;
-import kodkod.instance.TupleSet;
 
 /**
  * Represents the full solution to a formula:  an
@@ -39,10 +32,7 @@ import kodkod.instance.TupleSet;
  * @specfield bounds: Bounds // the bounds on the formula
  * @author Emina Torlak
  */
-public final class MinSolution implements Comparable<Object>{
-	public static final int INCOMPARABLE_TYPE = 3;
-	public static final int INCOMPARABLE = 2;
-	
+public final class MinSolution{
 	private final Outcome outcome;
 	private final MinStatistics stats;
 	private final Instance instance;
@@ -202,184 +192,5 @@ public final class MinSolution implements Comparable<Object>{
 		 * a series of simple transformations reduces the formula to the constant FALSE.  
 		 */
 		TRIVIALLY_UNSATISFIABLE
-	}
-
-	/**
-	 * Compares two solutions based on the following standard:
-	 * if the current object contains something that the other doesn't returns 1.
-	 * if the other object contains something that the current object doesn't returns -1.
-	 * if they are equal returns 0.
-	 * if they both contains something that the other doesn't returns INCOMPARABLE.
-	 * finally, if the input is not a MinSolution or Solution, returns INCOMPARABLE_TYPE
-	 */
-	public int compareTo(Object object) {
-		int result = 0;
-		
-		if(object instanceof MinSolution)
-			result = compareInstances(instance, ((MinSolution)object).instance());
-		else if(object instanceof Solution)
-			result = compareInstances(instance, ((Solution)object).instance());
-		else
-			result = INCOMPARABLE_TYPE;
-		
-		return result;
-	}
-	
-	/**
-	 * Compares two sets of instances. We use theInstance for the instance in this MinSolution object and
-	 * otherInstance for the instance in a comparable object that is being compared with this.
-	 * @param theInstance the first instance.
-	 * @param otherInstance the second instance.
-	 * @return a value between -1 and 2 based on the contract defined by this.compareTo().
-	 */
-	private int compareInstances(Instance theInstance, Instance otherInstance){
-		int result = 0;
-		Set<Relation> theRelations = theInstance.relations();
-		Set<Relation> otherRelations = otherInstance.relations();
-		
-		result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
-		
-		
-		//TODO this is not the best way of comparing the two instances but it is working for now:
-		if(result == 0)
-			result = compareTuples(theInstance, otherInstance); //compare the tuples in the relations.
-		else if(result == 1){
-			result = hasOtherTuples(otherInstance, theInstance) ? INCOMPARABLE : 1;
-		}
-		else if(result == -1)
-			result = hasOtherTuples(theInstance, otherInstance) ? INCOMPARABLE : -1;		
-
-		return result;
-	}
-	
-	/**
-	 * Compares two sets of relations.
-	 * @param theRelations the first set of relations.
-	 * @param otherRelations the second set of relations.
-	 * @return a value between -1 and 2 based on the contract defined by this.compareTo()
-	 */
-	private int compareRelations(Set<Relation> theRelations, Set<Relation> otherRelations){
-		int result = 0;
-		
-		// We are comparing the names of the relations because Kodkod does not provide
-		//a way to compare relations.
-		Set<String> theRelationNames = new HashSet<String>();
-		Set<String> otherRelationNames = new HashSet<String>();
-
-		for(Relation relation: theRelations)
-			theRelationNames.add(relation.name());
-		for(Relation relation: otherRelations)
-			otherRelationNames.add(relation.name());
-		
-		boolean firstContainsSecond = theRelationNames.containsAll(otherRelationNames);
-		boolean secondContainsFirst = otherRelationNames.containsAll(theRelationNames);
-
-		
-		if(firstContainsSecond && secondContainsFirst)
-			result = 0;		
-		else if(firstContainsSecond && !secondContainsFirst)
-			result = 1;
-		else if(!firstContainsSecond && secondContainsFirst)
-			result = -1;
-		else if(!firstContainsSecond && !secondContainsFirst)
-			result = INCOMPARABLE;
-		
-		return result;
-	}
-
-	/**
-	 * Compares two instances that have equal set of relations.
-	 * @param theInstance the first instance.
-	 * @param otherInstance the second instance.
-	 * @return a number between -1 and 2 based on the contract defined by this.compareTo().
-	 */
-	private int compareTuples(Instance theInstance, Instance otherInstance){
-		int result = 0;
-		Set<Relation> theRelations = theInstance.relations();
-		
-		boolean firstContainsSecond = true;
-		boolean secondContainsFirst = true;
-		
-		for(Relation relation: theRelations){
-			TupleSet theTuples = theInstance.tuples(relation);
-			TupleSet otherTuples = otherInstance.tuples(getRelationByRelationName(otherInstance, relation.name()));
-			
-			// We compare tuples by their string representations. The original Tuple.equals() method forces the two tuples to be drawn
-			//from the same universe but this is not always what we want.
-			Set<String> theTupleNames = new HashSet<String>();
-			Set<String> otherTupleNames = new HashSet<String>();
-						
-			for(Tuple tuple: theTuples) theTupleNames.add(tuple.toString());
-			for(Tuple tuple: otherTuples) otherTupleNames.add(tuple.toString());
-
-			if(firstContainsSecond) firstContainsSecond = theTupleNames.containsAll(otherTupleNames);
-			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);
-			
-			if(!firstContainsSecond && !secondContainsFirst)
-				break;
-		}
-		
-		
-		if(firstContainsSecond && secondContainsFirst)
-			result = 0;
-		else if (!firstContainsSecond && secondContainsFirst)
-			result = -1;
-		else if (firstContainsSecond && !secondContainsFirst)
-			result = 1;
-		else if(!firstContainsSecond && !secondContainsFirst)
-			result = INCOMPARABLE;
-		
-		return result;
-	}
-
-	/**
-	 * Returns true if firstInstance contains tuples that secondInstance doesn't. Otherwise, returns false.
-	 * This method assumes that secondInstance has all the relations in firstInstance.
-	 * @param theInstance the first instance.
-	 * @param otherInstance the second instance.
-	 */
-	private boolean hasOtherTuples(Instance firstInstance, Instance secondInstance){
-		Set<Relation> firstRelations = firstInstance.relations();
-		
-		boolean tuplesFound = false;
-		
-		for(Relation relation: firstRelations){
-			TupleSet firstTuples = firstInstance.tuples(relation);
-			TupleSet secondTuples = secondInstance.tuples(getRelationByRelationName(secondInstance, relation.name()));
-			
-			// We compare tuples by their string representations. The original Tuple.equals() method forces the two tuples to be drawn
-			//from the same universe but this is not always what we want.
-			Set<String> firstTupleNames = new HashSet<String>();
-			Set<String> secondTupleNames = new HashSet<String>();
-						
-			for(Tuple tuple: firstTuples) firstTupleNames.add(tuple.toString());
-			for(Tuple tuple: secondTuples) secondTupleNames.add(tuple.toString());
-
-			if(!secondTupleNames.containsAll(firstTupleNames)){
-				tuplesFound = true;
-				break;
-			}
-		}
-		
-		return tuplesFound;
-	}	
-	
-	/**
-	 * Returns a relation in a given instance by the relation's name.
-	 * @param instance the instance containing the relation.
-	 * @param relationName the relation name
-	 * @return the relation with the given name. It returns "null" if the relation does not exist.
-	 */
-	private Relation getRelationByRelationName(Instance instance, String relationName){
-		Relation result = null;
-		
-		for(Relation relation: instance.relations()){
-			if(relation.name().equals(relationName)){
-				result = relation;
-				break;
-			}
-		}
-		
-		return result;
 	}
 }

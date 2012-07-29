@@ -403,7 +403,7 @@ public final class A4Solution {
     TupleFactory getFactory() { return factory; }
 
     /** Returns a modifiable copy of the Kodkod Bounds object. */
-    Bounds getBounds() { return bounds.clone(); }
+    public Bounds getBounds() { return bounds.clone(); }
 
     /** Add a new relation with the given label and the given lower and upper bound.
      * @param label - the label for the new relation; need not be unique

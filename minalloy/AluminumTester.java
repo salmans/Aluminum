@@ -88,6 +88,8 @@ public final class AluminumTester {
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
 	private static void test(FileOption optInput, FileOption optOutput, IntOption optSymmetryBreaking, BooleanOption optIsomorphicSolutions) throws Err{
+		long startTime = System.currentTimeMillis();
+		
 		Set<String> uniqueSolutions = new LinkedHashSet<String>();
 		
 		
@@ -110,6 +112,8 @@ public final class AluminumTester {
 		boolean foundError = false;
 		int totalErrors = 0;
 		
+		String solutions = "";
+		String isomorphics = "";
     	String data = "";
         for(Command command: world.getAllCommands()){
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
@@ -120,22 +124,40 @@ public final class AluminumTester {
         	while(aluminum.satisfiable()){
         		if(uniqueSolutions.add(aluminum.toString())){
         			aluminumSolutions.add(aluminum.getCurrentSolution());
-        			//data += aluminum.getCurrentSolution() + "\n\n";
+        			solutions += aluminum.getCurrentSolution() + "\n\n";
         		}
         		aluminum = aluminum.next();
         		
         		System.out.print(".");
         	}
-        	//data += "\n\n\n\n\n";
+
+        	try{
+        		writeData(new File("/Users/Salman/Desktop/solutions.txt"), solutions);
+        	}
+        	catch(Exception e){
+        		System.err.println(e.getMessage());
+        	}
+        	
         	System.out.println("Done!");
 
+        	
+        	System.out.println(aluminumSolutions.size());
+        	System.exit(0);
         	
         	if(optIsomorphicSolutions.value){
         		System.out.print("Building isomorphic solutions for the minimal solutions ....");
         		aluminumSolutions = getIsomorphicSolutions(aluminumSolutions, aluminum.getBounds());
             	System.out.println("Done!");
+            	
+            	for(MinSolution sol: aluminumSolutions) isomorphics += sol + "\n\n";
         	}
         	
+        	try{
+        		writeData(new File("/Users/Salman/Desktop/solutions-with-isomorphisms.txt"), isomorphics);
+        	}
+        	catch(Exception e){
+        		System.err.println(e.getMessage());
+        	}
         	
             System.out.print("Running Alloy for command: " + command + ": ");
         	int counter = 0;
@@ -149,7 +171,8 @@ public final class AluminumTester {
         		
         		for(MinSolution minimalSolution: aluminumSolutions){
         			System.out.print(".");
-        			int comparison = minimalSolution.compareTo(alloy.getCurrentSolution());
+        			//int comparison = minimalSolution.compareTo(alloy.getCurrentSolution());
+        			int comparison = SolutionComparator.compare(minimalSolution, alloy.getCurrentSolution(), aluminum.getBounds(), alloy.getBounds());
         			
         			if(!foundMinimal)
         				foundMinimal = (comparison == -1 || comparison == 0);
@@ -199,6 +222,8 @@ public final class AluminumTester {
             	System.exit(0);
             }        		        		
     	}
+    	
+    	System.out.println("Total Execution Time: " + (System.currentTimeMillis() - startTime));
 	}
 	
 	private static void writeData(File file, String data) throws IOException{
