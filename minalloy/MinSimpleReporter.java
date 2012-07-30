@@ -401,9 +401,9 @@ final class MinSimpleReporter extends A4Reporter {
             while(true) {
                 sol=sol.next();                
                 if (!sol.satisfiable())
-                   {cb("pop", "There are no more satisfying instances.\n\n" +
+            	{cb("pop", "There are no more minimal instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
-                   "some equivalent solutions may have been omitted."); return;}
+                   "some equivalent minimal solutions may have been omitted."); return;}
                 String toString = sol.toString();
                 synchronized(MinSimpleReporter.class) {
                 	//TODO what should we do with this code:
@@ -463,9 +463,9 @@ final class MinSimpleReporter extends A4Reporter {
             		return;
             	
                 if (!sol.satisfiable())
-                   {cb("pop", "There are no more satisfying instances.\n\n" +
+            	{cb("pop", "There are no more minimal instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
-                   "some equivalent solutions may have been omitted."); return;}
+                   "some equivalent minimal solutions may have been omitted."); return;}
                 String toString = sol.toString();
                 
                 synchronized(MinSimpleReporter.class) {
@@ -517,9 +517,9 @@ final class MinSimpleReporter extends A4Reporter {
             	}
             	
                 if (!sol.satisfiable())
-                   {cb("pop", "There are no more satisfying instances.\n\n" +
+            	{cb("pop", "There are no more minimal instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
-                   "some equivalent solutions may have been omitted."); return;}
+                   "some equivalent minimal solutions may have been omitted."); return;}
                 String toString = sol.toString();
                 
                 synchronized(MinSimpleReporter.class) {
