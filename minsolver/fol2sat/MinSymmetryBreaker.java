@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -82,6 +83,29 @@ final class MinSymmetryBreaker {
 		this.symmetries = MinSymmetryDetector.partition(bounds);
 		reporter.detectedSymmetries(symmetries);
 //		System.out.println(symmetries);
+	}
+	
+	/**
+	 * Returns a deep copy of the symmetries (avoid cross-contamination between
+	 * cone-restriction and the symmetry-breaking predicate.
+	 * @return
+	 */
+	Set<IntSet> getSymmetries()
+	{
+		Set<IntSet> results = new HashSet<IntSet>();
+		try
+		{
+			for(IntSet s : symmetries)
+			{
+				results.add(s.clone());
+			}
+		}
+		catch(CloneNotSupportedException e)
+		{
+			// Should be unreachable (both implementors of IntSet implement clone())
+			throw new InternalError();
+		}
+		return results;
 	}
 	
 	/**

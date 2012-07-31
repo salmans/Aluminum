@@ -142,6 +142,8 @@ public final class MinTranslator {
 	
 	private MinTranslationLog log;
 	
+	Set<IntSet> symmetries = null;
+	
 	/**
 	 * Constructs a Translator for the given formula, bounds and options.
 	 * @effects this.formula' = formula and 
@@ -172,6 +174,8 @@ public final class MinTranslator {
 	private MinTranslation translate() throws MinTrivialFormulaException  {
 		final AnnotatedNode<Formula> annotated = options.logTranslation()>0 ? annotateRoots(formula) : annotate(formula);
 		final MinSymmetryBreaker breaker = optimizeBounds(annotated);
+		// Store the symmetries for use in cone-restriction
+		this.symmetries = breaker.getSymmetries(); 		
 		return toBoolean(optimizeFormula(annotated, breaker), breaker);
 	}
 	
