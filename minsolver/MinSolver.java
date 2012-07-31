@@ -943,6 +943,8 @@ public final class MinSolver {
 			// All the unit clauses being passed to the solver as assumptions.
 			Set<Integer> unitClauses = toSet(lifters);
 			
+			//JOptionPane.showMessageDialog(null, translation.symmetries);
+			
 			// Add all coneRestrictionUnits
 			for(Integer value: coneRestrictionUnits)
 				unitClauses.add(value);

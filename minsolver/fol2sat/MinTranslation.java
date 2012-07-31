@@ -22,6 +22,7 @@
 package minsolver.fol2sat;
 
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JOptionPane;
 
@@ -55,6 +56,8 @@ public final class MinTranslation {
 	private final MinTranslationLog log;
 	private final int maxPrimaryLit;
 	
+	public final Set<IntSet> symmetries;
+	
 	/**
 	 * Constructs a new Translation object for the given solver, bounds,  mapping
 	 * from Relations to literals, and TranslationLog.
@@ -62,12 +65,13 @@ public final class MinTranslation {
 	 * @requires bounds.relations = varUsage.IntSet
 	 * @effects this.solver' = solver && this.bounds' = bounds
 	 */
-	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log) {			
+	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log, Set<IntSet> symmetries) {			
 		this.solver = solver;				
 		this.bounds = bounds;
 		this.primaryVarUsage = varUsage;
 		this.maxPrimaryLit = maxPrimaryLit;
 		this.log = log;
+		this.symmetries = symmetries;
 	}
 
 	/**
