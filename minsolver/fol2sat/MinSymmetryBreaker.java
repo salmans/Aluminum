@@ -28,12 +28,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.swing.JOptionPane;
 
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
@@ -44,6 +47,7 @@ import kodkod.engine.bool.BooleanConstant;
 import kodkod.engine.bool.BooleanFactory;
 import kodkod.engine.bool.BooleanMatrix;
 import kodkod.engine.bool.BooleanValue;
+import kodkod.engine.bool.BooleanVariable;
 import kodkod.engine.bool.Operator;
 import kodkod.engine.config.Reporter;
 import kodkod.instance.Bounds;
@@ -67,6 +71,8 @@ final class MinSymmetryBreaker {
 	private final Bounds bounds;
 	private final Set<IntSet> symmetries;
 	private final int usize;
+	
+	Set<Map<Integer, Integer>> brokenPermutations = new HashSet<Map<Integer, Integer>>();
 	
 	/**
 	 * Constructs a new symmetry breaker for the given Bounds.
@@ -106,6 +112,11 @@ final class MinSymmetryBreaker {
 			throw new InternalError();
 		}
 		return results;
+	}
+	
+	Set<Map<Integer, Integer>> getBrokenPermutations()
+	{
+		return brokenPermutations;
 	}
 	
 	/**
@@ -171,6 +182,9 @@ final class MinSymmetryBreaker {
 		return broken;
 	}
 		
+	
+	
+	
 	/**
 	 * Generates a lex leader symmetry breaking predicate for this.symmetries 
 	 * (if any), using the specified leaf interpreter and the specified predicate length.
@@ -210,6 +224,13 @@ final class MinSymmetryBreaker {
 					}
 				}
 								
+				///////////////////
+				// Original -> Permuted is the *propositional* permutation that matches the 
+				// F.O. permutation (prevIndex curIndex).
+				// Store the broken permutations:
+				brokenPermutations.add(makeIntegerPermutation(original, permuted));				
+				///////////////////
+				
 				sbp.add(leq(factory, original, permuted));
 				original.clear();
 				permuted.clear();
@@ -218,6 +239,23 @@ final class MinSymmetryBreaker {
 		}
 		
 		return factory.accumulate(sbp);
+	}
+	
+	Map<Integer, Integer> makeIntegerPermutation(List<BooleanValue> original, List<BooleanValue> permuted)
+	{
+		Map<Integer, Integer> aPerm = new HashMap<Integer, Integer>();
+		
+		assert(original.size() == permuted.size());
+		for(int ii=0;ii<original.size();ii++)
+		{			
+			BooleanValue src = original.get(ii);
+			BooleanValue dest = permuted.get(ii);
+			
+			// Both should be BooleanVariable instances.
+			aPerm.put(src.label(), dest.label());									
+		}
+		
+		return aPerm;
 	}
 	
 	/**

@@ -21,6 +21,8 @@
  */
 package minsolver.fol2sat;
 
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,11 +31,14 @@ import javax.swing.JOptionPane;
 import minsolver.MinSATSolver;
 
 import kodkod.ast.Relation;
+import kodkod.engine.bool.BooleanMatrix;
+import kodkod.engine.bool.BooleanValue;
 import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
+import kodkod.util.ints.IndexedEntry;
 import kodkod.util.ints.IntIterator;
 import kodkod.util.ints.IntSet;
 import kodkod.util.ints.Ints;
@@ -57,6 +62,7 @@ public final class MinTranslation {
 	private final int maxPrimaryLit;
 	
 	public final Set<IntSet> symmetries;
+	public final Set<Map<Integer, Integer>> permutations;
 	
 	/**
 	 * Constructs a new Translation object for the given solver, bounds,  mapping
@@ -65,13 +71,16 @@ public final class MinTranslation {
 	 * @requires bounds.relations = varUsage.IntSet
 	 * @effects this.solver' = solver && this.bounds' = bounds
 	 */
-	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage, int maxPrimaryLit, MinTranslationLog log, Set<IntSet> symmetries) {			
+	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage,
+			int maxPrimaryLit, MinTranslationLog log, Set<IntSet> symmetries,
+			Set<Map<Integer, Integer>> permutations) {			
 		this.solver = solver;				
 		this.bounds = bounds;
 		this.primaryVarUsage = varUsage;
 		this.maxPrimaryLit = maxPrimaryLit;
 		this.log = log;
 		this.symmetries = symmetries;
+		this.permutations = permutations;
 	}
 
 	/**
@@ -156,5 +165,5 @@ public final class MinTranslation {
 	public MinTranslationLog log() {
 		return log;
 	}
-	
+			
 }

@@ -684,7 +684,7 @@ public final class MinSolver {
 		 */
 		private MinSolution nonTrivialSolution() {						
 			try {
-				final SATSolver cnf = translation.cnf();
+				final MinSATSolver internalSolver = translation.cnf();
 				
 				try{
 					// If all the previous constraints have been removed by another operation,
@@ -697,48 +697,45 @@ public final class MinSolver {
 					JOptionPane.showMessageDialog(null, "CONTRADICTION exception in nonTrivialSolution()");
 				}
 				
-				options.reporter().solvingCNF(translation.numPrimaryVariables(), cnf.numberOfVariables(), cnf.numberOfClauses());				
+				options.reporter().solvingCNF(translation.numPrimaryVariables(), internalSolver.numberOfVariables(), internalSolver.numberOfClauses());				
 				final long startSolve = System.currentTimeMillis();				
 				boolean isSat = false;
 				boolean gotNonMinimal;
 				do
 				{
 					gotNonMinimal = false;					
-					try
-					{
+					//try
+					//{
 						isSat = solve();
-					} catch(NotMinimalModelException e)
-					{
-						isSat = true; // Must have gotten SOME model; need to cone restrict.
-						gotNonMinimal = true;
-					}
+					//} catch(NotMinimalModelException e)
+					//{
+					//	isSat = true; // Must have gotten SOME model; need to cone restrict.
+					//	gotNonMinimal = true;
+					//}
 					
 					//JOptionPane.showMessageDialog(null, "Solve() got:"+isSat+";"+gotNonMinimal);
 					
 					// If a model found, add constraints to forbid its cone.
 					if(isSat)
-					{
+					{												
 						final int primary = translation.numPrimaryVariables();					
-						final ArrayList<Integer> notModel = new ArrayList<Integer>();					
-						//Do not return any other model in the cone of the new model.
+						final ArrayList<Integer> notModel = new ArrayList<Integer>();		
+						
+						// Negate this model's positive diagram. 
+						// We will use this disjunctively for "cone-restriction": preventing models 
+						// (or any of their supermodels) from occuring again.
 						for(int i = 1; i <= primary; i++){
-							if(cnf.valueOf(i)){
+							if(internalSolver.valueOf(i)){
 								notModel.add(-i);
 							}
 						}
 						
-						try{
-							//JOptionPane.showMessageDialog(null, "notModel="+notModel);
-							if(notModel.size() == 1)
-							{
-								coneRestrictionUnits.add(notModel.get(0));
-							}
-							else
-							{
-								// This will be called if notModel.size() ==0, triggering the exception:
-								coneRestrictionClauses.add(notModel);
-								coneRestrictionConstraints.add(((MinSATSolver)cnf).addConstraint(toIntCollection(notModel)));
-							}						
+						try{	
+							//JOptionPane.showMessageDialog(null, translation.permutations);
+							// Add the cone restriction for this model:
+							addConeRestriction(notModel, internalSolver);
+							// Add the cone restriction for all broken permutations of this model:
+							addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
 							// This iterator is now out of models. Either we just gave the empty model,
@@ -780,6 +777,86 @@ public final class MinSolver {
 			}
 		}
 		
+		/**
+		 * Add a clause for this negated positive-diagram.
+		 * 
+		 * @param notModel
+		 * @param internalSolver
+		 * @throws ContradictionException
+		 */
+		private void addConeRestriction(List<Integer> notModel, MinSATSolver internalSolver)
+				throws ContradictionException
+		{						
+			if(notModel.size() == 1)
+			{
+				coneRestrictionUnits.add(notModel.get(0));
+			}
+			else
+			{
+				// This will be called if notModel.size() ==0, triggering the exception:
+				coneRestrictionClauses.add(notModel);
+				coneRestrictionConstraints.add(internalSolver.addConstraint(toIntCollection(notModel)));
+			}			
+		}
+		
+		/**
+		 * Add cone-restriction clauses for the broken symmetries (i.e., the symmetries for which
+		 * Kodkod produces a symmetry-breaking predicate) of this negated positive-diagram.
+		 * 
+		 * @param notModel
+		 * @param internalSolver
+		 * @throws ContradictionException
+		 */
+		@SuppressWarnings("unused")
+		private void addPermConeRestrictions(ArrayList<Integer> notModel, MinSATSolver internalSolver) 
+				throws ContradictionException
+		{			
+			// the CALLER is responsible for adding the original restriction clause:
+			//addConeRestriction(notModel, internalSolver);
+			
+			int permCounter = 0;
+			for(Map<Integer, Integer> aPerm : translation.permutations)
+			{
+				// For safety. Note that this is a *completely different use*
+				// of the symmetry-breaking option. Here it means the number of
+				// permuted cone-restriction clauses. In the SBP, it limits
+				// the *length* of each sub-formula.
+				if(permCounter >= options.symmetryBreaking())
+					break;
+				
+				List<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);				
+				addConeRestriction(permNotModel, internalSolver);
+				permCounter++;
+				
+				//JOptionPane.showMessageDialog(null, permCounter+" Added restriction. notModel="+notModel+"\naPerm="+aPerm+"\npermNotModel="+permNotModel);
+			}
+			
+		}
+
+		/**
+		 * Given a negated positive diagram, apply a permutation to it.
+		 * 
+		 * @param notModel
+		 * @param aPerm
+		 * @return
+		 */
+		private List<Integer> permuteNegatedPositiveDiagram(ArrayList<Integer> notModel,
+				Map<Integer, Integer> aPerm) 
+		{
+			List<Integer> result = new ArrayList<Integer>(notModel.size());
+			for(Integer aLiteral : notModel)
+			{
+				if(aLiteral > 0 && aPerm.containsKey(aLiteral))
+					result.add(aPerm.get(aLiteral));
+				else if(aLiteral < 0 && aPerm.containsKey(aLiteral*-1))
+					result.add(aPerm.get(aLiteral*-1)*-1);
+				else
+					result.add(aLiteral);					
+			}
+			
+			return result;
+		}
+
 		/**
 		 * Packages the information from the given trivial formula exception
 		 * into a solution and returns it.  If the formula is satisfiable, 
@@ -892,7 +969,7 @@ public final class MinSolver {
 		 * @return true if there is a next solution; otherwise, false.
 		 * @throws NotMinimalModelException 
 		 */
-		private boolean solve() throws NotMinimalModelException {
+		private boolean solve() {
 			// In case this iterator should never return a model again:
 			if(!hasNext()) return false;
 			
@@ -911,7 +988,6 @@ public final class MinSolver {
 				if(sat)
 				{	
 					try{
-						//minimizeWithDiscard();
 						minimize();
 					}
 					catch(ContradictionException e)
@@ -932,7 +1008,8 @@ public final class MinSolver {
 		 * @throws ContradictionException
 		 * @throws NotMinimalModelException 
 		 */
-		private void minimize() throws TimeoutException, ContradictionException, NotMinimalModelException{
+		private void minimize() throws TimeoutException, ContradictionException
+		{
 			
 			// Assumption: Have already found a model at this point!							
 			
@@ -941,9 +1018,7 @@ public final class MinSolver {
 			Set<IConstr> constraints = new HashSet<IConstr>();
 			
 			// All the unit clauses being passed to the solver as assumptions.
-			Set<Integer> unitClauses = toSet(lifters);
-			
-			//JOptionPane.showMessageDialog(null, translation.symmetries);
+			Set<Integer> unitClauses = toSet(lifters);						
 			
 			// Add all coneRestrictionUnits
 			for(Integer value: coneRestrictionUnits)
@@ -1011,13 +1086,14 @@ public final class MinSolver {
 			// of landing in this cone again to support lifting/exporation!		
 		}
 
+		
 		/**
 		 * Minimizes the model in the SAT solver.
 		 * @throws TimeoutException
 		 * @throws ContradictionException
 		 * @throws NotMinimalModelException 
 		 */
-		private void minimizeWithDiscard() throws TimeoutException, ContradictionException, NotMinimalModelException{
+/*		private void minimizeWithDiscard() throws TimeoutException, ContradictionException, NotMinimalModelException{
 			
 			// Assumption: Have already found a model at this point!
 					
@@ -1123,10 +1199,10 @@ public final class MinSolver {
 			// Finally, if this isn't a real solution, throw an exception to warn the caller.
 			if(badSolution)
 				throw new NotMinimalModelException();
-		}
+		}*/
 
 		
-		class NotMinimalModelException extends Exception
+		/*class NotMinimalModelException extends Exception
 		{			
 			private static final long serialVersionUID = 1L;
 
@@ -1134,7 +1210,7 @@ public final class MinSolver {
 			{
 				
 			}
-		}
+		}*/
 		
 		
 		/**
