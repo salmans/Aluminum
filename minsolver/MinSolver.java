@@ -38,6 +38,8 @@ import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.TimeoutException;
 
+import com.sun.codemodel.internal.JOp;
+
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.config.Options;
@@ -326,7 +328,7 @@ public final class MinSolver {
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 				
 		if(theIterator.trivial)
-		{		
+		{
 			// No translation available to lift. Get the upper bounds - the lower bounds:
 			Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;			
 			Instance results = new Instance(skBounds.universe());			
@@ -388,6 +390,7 @@ public final class MinSolver {
 		//This can be a method!
 		for(Relation r : lifterTuples.keySet()){
 			TupleSet tuples = lifterTuples.get(r);
+	        String lastFact = null;
 			for(Tuple t: tuples){
 				if(!miniterator.trivial)
 				{
@@ -403,17 +406,21 @@ public final class MinSolver {
 			        if(label != null)
 			        	ret.append(label);
 			        else
-			        	ret.append(t.atom(0));
+			        	ret.append("NEW-INSTANCE");
 			        for (int i = 1; i < t.arity(); i++) {
 			            ret.append(", ");
 			            label = dictionary.get(t.atom(i));
 			            if(label != null)
 			            	ret.append(label);
 			            else
-			            	ret.append(t.atom(i));
+			            	ret.append("NEW-INSTANCE");
 			        }
 			        ret.append("]");
-			        retVal += r.toString() + ret.toString() + "\n";
+			        String nextFact = r.toString() + ret.toString() + "\n";
+			        if(!nextFact.equals(lastFact)){
+			        	retVal += nextFact;
+			        	lastFact = nextFact;
+			        } 
 				} else{
 					retVal += r.toString() + t.toString() + "\n";
 				}
@@ -487,13 +494,13 @@ public final class MinSolver {
 			for(int i = 0; i < t.arity(); i++){
 				if(dictionary != null){
 					String label = dictionary.get(constants.get(i));
-					if(label != null){
+					if(label != null){ //if the name is in the dictionary
 						if(!t.atom(i).toString().equals(label)){
 							found = false;
 							break;
 						}
 					}else{
-						if(!t.atom(i).toString().equals(constants.get(i))){
+						if(dictionary.values().contains(t.atom(i))){ //if the current atom is not in the dictionary (e.g. NEW-INSTANCE) then augment with this atom (since it is a new atom)
 							found = false;
 							break;
 						}
@@ -508,6 +515,7 @@ public final class MinSolver {
 			}
 			if(found == true){
 				tuple = t;
+				break;
 			}
 		}
 		
