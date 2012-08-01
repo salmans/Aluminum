@@ -38,7 +38,7 @@ import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.TimeoutException;
 
-import com.sun.codemodel.internal.JOp;
+//import com.sun.codemodel.internal.JOp;
 
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
@@ -797,6 +797,10 @@ public final class MinSolver {
 								notModel.add(-i);
 							}
 						}
+																		
+						//JOptionPane.showMessageDialog(null, "Syms: "+translation.symmetries+
+						//		"\nPerms: "+translation.permutations+
+						//		"\nnotModel="+notModel);
 						
 						try{	
 							//JOptionPane.showMessageDialog(null, translation.permutations);
@@ -902,11 +906,14 @@ public final class MinSolver {
 				if(permCounter >= options.symmetryBreaking())
 					break;
 				
+				// Apply this permutation and add the permuted C.R. clause. The permutation
+				// is assumed to be complete. I.e., if 2->3, then 3->x for some x. In our
+				// case, the permutations are actually length 2 (2->3 then 3->2). 
 				List<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);				
-				addConeRestriction(permNotModel, internalSolver);
+				addConeRestriction(permNotModel, internalSolver);								
 				permCounter++;
-				
-				//JOptionPane.showMessageDialog(null, permCounter+" Added restriction. notModel="+notModel+"\naPerm="+aPerm+"\npermNotModel="+permNotModel);
+
+				//JOptionPane.showMessageDialog(null, permCounter+" Added restriction. notModel="+notModel+"\naPerm="+aPerm+"\npermNotModel="+permNotModel);				
 			}
 			
 		}
@@ -1510,7 +1517,9 @@ public final class MinSolver {
 				Tuple myTuple = getTupleForPropVariable(
 							aBounds, translation, s, myRelation, theVar);
 									
-				outs += (theVar+": "+myTuple+" "+myRelation+"\n");				
+				outs += (theVar+": "+myTuple+" "+myRelation+" | ");
+				if(theVar % 4 == 0)
+					outs += "\n";
 			}
 			
 			return outs;				

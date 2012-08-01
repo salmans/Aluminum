@@ -252,7 +252,12 @@ final class MinSymmetryBreaker {
 			BooleanValue dest = permuted.get(ii);
 			
 			// Both should be BooleanVariable instances.
-			aPerm.put(src.label(), dest.label());									
+			aPerm.put(src.label(), dest.label());		
+			
+			// This is a permutation that swaps two elements. The symmetry-breaking code
+			// only cares about the "forward" swap, but we need the full permutation.
+			// E.g. If we have 2->3, we also need to permute 3->2.
+			aPerm.put(dest.label(), src.label());
 		}
 		
 		return aPerm;
