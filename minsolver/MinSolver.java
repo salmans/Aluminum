@@ -37,9 +37,6 @@ import javax.swing.JOptionPane;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.TimeoutException;
-
-//import com.sun.codemodel.internal.JOp;
-
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.config.Options;
@@ -406,18 +403,18 @@ public final class MinSolver {
 			        if(label != null)
 			        	ret.append(label);
 			        else
-			        	ret.append("NEW-INSTANCE");
+			        	ret.append("NEW-INSTANCE(" + t.atom(0) + ")");
 			        for (int i = 1; i < t.arity(); i++) {
 			            ret.append(", ");
 			            label = dictionary.get(t.atom(i));
 			            if(label != null)
 			            	ret.append(label);
 			            else
-			            	ret.append("NEW-INSTANCE");
+			            	ret.append("NEW-INSTANCE(" + t.atom(i) + ")");
 			        }
 			        ret.append("]");
 			        String nextFact = r.toString() + ret.toString() + "\n";
-			        if(!nextFact.equals(lastFact)){
+			        if(!nextFact.equals(lastFact)){ //geting rid of duplicates
 			        	retVal += nextFact;
 			        	lastFact = nextFact;
 			        } 
@@ -500,10 +497,15 @@ public final class MinSolver {
 							break;
 						}
 					}else{
-						if(dictionary.values().contains(t.atom(i))){ //if the current atom is not in the dictionary (e.g. NEW-INSTANCE) then augment with this atom (since it is a new atom)
+						if(!("NEW-INSTANCE(" + t.atom(i) + ")").toString().equals(constants.get(i))){
 							found = false;
 							break;
 						}
+						
+						/*if(dictionary.values().contains(t.atom(i))){ //if the current atom is not in the dictionary (e.g. NEW-INSTANCE) then augment with this atom (since it is a new atom)
+							found = false;
+							break;
+						}*/
 					}
 				}
 				else {
@@ -524,6 +526,7 @@ public final class MinSolver {
 
 		Instance retVal = new Instance(bounds.universe());
 		retVal.add(relation, bounds.universe().factory().setOf(tuple));
+		
 		return retVal;
 	}
 	
@@ -807,7 +810,7 @@ public final class MinSolver {
 							// Add the cone restriction for this model:
 							addConeRestriction(notModel, internalSolver);
 							// Add the cone restriction for all broken permutations of this model:
-							addPermConeRestrictions(notModel, internalSolver);
+							//addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
 							// This iterator is now out of models. Either we just gave the empty model,
