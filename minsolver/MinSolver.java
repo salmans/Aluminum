@@ -801,6 +801,7 @@ public final class MinSolver {
 							// This iterator is now out of models. Either we just gave the empty model,
 							// or a cone restriction clause has resulted in a contradiction. So make sure
 							// that this iterator never yields a model again:
+							JOptionPane.showMessageDialog(null, "Contradiction; out of models. Augmentation will be disabled.");
 							final long endSolveU = System.currentTimeMillis();				
 							final MinStatistics statsU = new MinStatistics(translation, translTime, endSolveU - startSolve);
 							unsatSolution = unsat(translation, statsU);
@@ -849,13 +850,22 @@ public final class MinSolver {
 		{						
 			if(notModel.size() == 1)
 			{
+				// No risk of adding duplicates; it's just a set.
 				coneRestrictionUnits.add(notModel.get(0));
 			}
 			else
-			{
-				// This will be called if notModel.size() ==0, triggering the exception:
-				coneRestrictionClauses.add(notModel);
+			{				
+				// Avoid adding duplicate clauses to the *SAT SOLVER*. Adding duplicate 
+				// clauses ought to be idempotent, but it is not: the same IConstr
+				// is returned, and removeConstraint will only end up removing the 
+				// *FIRST* such clause, not all of them. So never add duplicates!
+				if(coneRestrictionClauses.contains(notModel))
+					return;								
+				
+				// (This will be called if notModel.size() ==0, triggering the exception.)							
 				coneRestrictionConstraints.add(internalSolver.addConstraint(toIntCollection(notModel)));
+				coneRestrictionClauses.add(notModel);
+								
 			}			
 		}
 		
