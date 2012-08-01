@@ -1607,16 +1607,19 @@ public final class SimpleGUI implements ComponentListener, Listener {
             return arg;
         }
     };
-    
-    /** This object performs solution exploration. */
-    private final Computer explorer = new Computer() {
+
+    public final class ExplorerComputer implements Computer{
+    	private Map<String, String> dictionary = null;
+    	public void setDictionary(Map<String, String> dictionary){
+    		this.dictionary = dictionary;
+    	}
         public String compute(Object input) {
             final String arg = (String)input;
             OurUtil.show(frame);
             if (WorkerEngine.isBusy())
                 throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
             SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, Verbosity.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
-            ExploreTask task = new ExploreTask();
+            ExploreTask task = new ExploreTask(dictionary);
             task.filename = arg;
             try {
                 WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
@@ -1638,8 +1641,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
             showbutton.setEnabled(false);
             stopbutton.setVisible(true);
             return arg;
-        }
-    };
+        }    	
+    }
+    
+    /** This object performs solution exploration. */
+    private final ExplorerComputer explorer = new ExplorerComputer();
 
     /** This object performs backtracking from exploration. */
     private final Computer backtracker = new Computer() {
@@ -1673,16 +1679,20 @@ public final class SimpleGUI implements ComponentListener, Listener {
             return arg;
         }
     };    
+
     
-    /** This object finds the consistent facts for a model. */
-    private final Computer consistentFactsFinder = new Computer() {
+    public final class ConsistentFactComputer implements Computer{
+    	private Map<String, String> dictionary = null;
+    	public void setDictionary(Map<String, String> dictionary){
+    		this.dictionary = dictionary;
+    	}
         public String compute(Object input) {
             final String arg = (String)input;
             OurUtil.show(frame);
             if (WorkerEngine.isBusy())
                 throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
             SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, Verbosity.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
-            FindConsistentFactsTask task = new FindConsistentFactsTask();
+            FindConsistentFactsTask task = new FindConsistentFactsTask(dictionary);
             task.filename = arg;
             try {
                 WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
@@ -1704,8 +1714,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
             showbutton.setEnabled(false);
             stopbutton.setVisible(true);
             return arg;
-        }
-    };     
+        }    	
+    }
+    
+    /** This object finds the consistent facts for a model. */
+    private final ConsistentFactComputer consistentFactsFinder = new ConsistentFactComputer();
     
     /** Converts an A4TupleSet into a SimTupleset object. */
     private static SimTupleset convert(Object object) throws Err {

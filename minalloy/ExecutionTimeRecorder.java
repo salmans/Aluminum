@@ -220,7 +220,7 @@ public final class ExecutionTimeRecorder {
         	}
         	
         	time = System.currentTimeMillis();
-        	ans = ans.lift(aug.augmentingFact);
+        	ans = ans.lift(aug.augmentingFact, null);
         	time = System.currentTimeMillis() - time;
         }
         

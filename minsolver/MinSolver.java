@@ -23,12 +23,10 @@ package minsolver;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -259,7 +257,6 @@ public final class MinSolver {
 	 */
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
-	
 	public Iterator<MinSolution> lift(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance lifters)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
@@ -360,6 +357,18 @@ public final class MinSolver {
 	 * it returns an empty string.
 	 */    
 	public String getLiftersList(Iterator<MinSolution> iterator){
+		return getLiftersList(iterator, null);
+	}	
+	
+	/**
+	 * Returns a list of lifters for the current model loaded in the given iterator as 
+	 * a line separated string.
+	 * @param iterator the iterator.
+	 * @param dictionary a renaming will be applied on the atoms according to the dictionary.
+	 * @return returns a list of line separated strings of lifters. If an exception occurs,
+	 * it returns an empty string.
+	 */    
+	public String getLiftersList(Iterator<MinSolution> iterator, Map<String, String> dictionary){
 		String retVal = "";
 		MinSolutionIterator miniterator = ((MinSolutionIterator)iterator);
 		MinTranslation translation = miniterator.translation;
@@ -387,16 +396,43 @@ public final class MinSolver {
 					if(index == -1)
 						continue;
 				}
-				
-				retVal += r.toString() + t.toString() + "\n";
+
+				if(dictionary != null){
+			        final StringBuilder ret = new StringBuilder("[");
+			        ret.append(dictionary.get(t.atom(0)));
+			        for (int i = 1; i < t.arity(); i++) {
+			            ret.append(", ");
+			            ret.append(dictionary.get(t.atom(i)));
+			        }
+			        ret.append("]");
+			        retVal += r.toString() + ret.toString() + "\n";
+				} else{
+					retVal += r.toString() + t.toString() + "\n";
+				}
 			}
 		}
 		
 		return retVal;
 	}
-	
-	
+
+	/**
+	 * Builds a consistent fact that can be used for lifting a model.
+	 * @param inputStr the input string
+	 * @param iterator the iterator to be lifted by this fact.
+	 * @return an object of type Instance containing the lifting fact.
+	 */	
 	public Instance parseString(String inputStr, Iterator<MinSolution> iterator){
+		return parseString(inputStr, iterator, null);
+	}	
+	
+	/**
+	 * Builds a consistent fact that can be used for lifting a model.
+	 * @param inputStr the input string
+	 * @param iterator the iterator to be lifted by this fact.
+	 * @param dictionary is used to translate the atoms to their names in Kodkod.
+	 * @return an object of type Instance containing the lifting fact.
+	 */
+	public Instance parseString(String inputStr, Iterator<MinSolution> iterator, Map<String, String> dictionary){
 		inputStr = inputStr.trim();
 		inputStr = inputStr.replaceAll(" ", "");
 		
@@ -441,9 +477,17 @@ public final class MinSolver {
 		for(Tuple t: tuples){
 			boolean found = true;
 			for(int i = 0; i < t.arity(); i++){
-				if(!t.atom(i).toString().equals(constants.get(i))){
-					found = false;
-					break;
+				if(dictionary != null){
+					if(!t.atom(i).toString().equals(dictionary.get(constants.get(i)))){
+						found = false;
+						break;
+					}					
+				}
+				else {
+					if(!t.atom(i).toString().equals(constants.get(i))){
+						found = false;
+						break;
+					}
 				}
 			}
 			if(found == true){

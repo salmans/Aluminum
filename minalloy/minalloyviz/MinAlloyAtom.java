@@ -62,6 +62,11 @@ public final class MinAlloyAtom implements Comparable<MinAlloyAtom> {
       if (index==Integer.MAX_VALUE || !numberAtoms) return type.getName(); else return type.getName()+index;
    }
 
+   /** Returns the originalName of this instance */
+   public String getOriginalName(){
+	   return originalName;
+   }
+   
    /** Return the type of the AlloyAtom. */
    public MinAlloyType getType() { return type; }
 

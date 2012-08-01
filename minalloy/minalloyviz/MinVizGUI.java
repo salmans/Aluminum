@@ -31,6 +31,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,9 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
+
+import minalloy.SimpleGUI.ConsistentFactComputer;
+import minalloy.SimpleGUI.ExplorerComputer;
 
 import edu.mit.csail.sdg.alloy4.Computer;
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -174,13 +178,13 @@ public final class MinVizGUI implements ComponentListener {
    private final Computer enumerator;
    
    /** If nonnull, you can pass in an XML file to find the next model consistent with an input fact. */
-   private final Computer explorer;   
+   private final ExplorerComputer explorer;   
 
    /** If nonnull, you can pass in an XML file to perform one level backtracking from exploration. */
    private final Computer backtracker;   
 
    /** If nonnull, you can pass in an XML file to perform one level backtracking from exploration. */
-   private final Computer consistentFactsFinder;   
+   private final ConsistentFactComputer consistentFactsFinder;   
    //==============================================================================================//
 
    /** The current theme file; "" if there is no theme file loaded. */
@@ -347,7 +351,7 @@ public final class MinVizGUI implements ComponentListener {
     * <p> Note: if standalone==false and xmlFileName.length()==0, then we will initially hide the window.
     */
    public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, 
-		   Computer evaluator, Computer explorer, Computer backtracker, Computer consistentFactsFinder) {
+		   Computer evaluator, ExplorerComputer explorer, Computer backtracker, ConsistentFactComputer consistentFactsFinder) {
       this(standalone, xmlFileName, windowmenu, enumerator, evaluator, explorer, backtracker, consistentFactsFinder, true);
    }
 
@@ -362,7 +366,7 @@ public final class MinVizGUI implements ComponentListener {
     * <p> Note: if standalone==false and xmlFileName.length()==0 and makeWindow==true, then we will initially hide the window.
     */
    public MinVizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, 
-		   Computer evaluator, Computer explorer, Computer backtracker, Computer consistentFactsFinder, boolean makeWindow) {
+		   Computer evaluator, ExplorerComputer explorer, Computer backtracker, ConsistentFactComputer consistentFactsFinder, boolean makeWindow) {
 
       this.enumerator = enumerator;
       this.explorer = explorer;
@@ -559,7 +563,6 @@ public final class MinVizGUI implements ComponentListener {
       enumerateButton.setVisible(!isMeta && settingsOpen==0 && enumerator!=null);
       exploreButton.setVisible(!isMeta && settingsOpen==0 && explorer!=null);
       consistentFactsButton.setVisible(!isMeta && settingsOpen==0 && consistentFactsFinder!=null);
-      //TODO enable backtrack button when there is something to backtrack.
       backtrackButton.setVisible(!isMeta && settingsOpen==0 && backtracker!=null);
       saveModelButton.setVisible(!isMeta && settingsOpen==0);
       toolbar.setVisible(true);
@@ -993,30 +996,47 @@ public final class MinVizGUI implements ComponentListener {
 
    /** This method attempts to explore models consistent with an input fact. */
    private Runner doExplore() {
-      if (wrap) return wrapMe();
-      if (settingsOpen!=0) return null;
-      if (xmlFileName.length()==0) {
-         OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
-      } else if (enumerator==null) {
-         OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
-      } else {
-         try { explorer.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
-      }
-      return null;
+	   if (wrap) return wrapMe();
+	   if (settingsOpen!=0) return null;
+	   if (xmlFileName.length()==0) {
+		   OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
+	   } else if (enumerator==null) {
+		   OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
+	   } else {
+		   try { 
+			   Map<String, String> dictionary = new HashMap<String, String>();
+			   for(MinAlloyAtom atom: myState.getOriginalInstance().getAllAtoms()){
+				   dictionary.put(atom.getVizName(myState, true), atom.getOriginalName());
+			   }
+			   explorer.setDictionary(dictionary);
+			   explorer.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
+	   }
+	   return null;
    }   
    
    /** This method attempts to explore models consistent with an input fact. */
-   private Runner doFindConsistentFacts() {
-      if (wrap) return wrapMe();
-      if (settingsOpen!=0) return null;
-      if (xmlFileName.length()==0) {
-         OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
-      } else if (enumerator==null) {
-         OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
-      } else {
-         try { consistentFactsFinder.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
-      }
-      return null;
+   private Runner doFindConsistentFacts() {	  
+	   if (wrap) return wrapMe();
+	   if (settingsOpen!=0) return null;
+	   if (xmlFileName.length()==0) {
+		   OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
+	   } else if (enumerator==null) {
+		   OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
+	   } else {
+		   try {
+			   Map<String, String> dictionary = new HashMap<String, String>();
+			   for(MinAlloyAtom atom: myState.getOriginalInstance().getAllAtoms()){
+				   dictionary.put(atom.getOriginalName(), atom.getVizName(myState, true));
+			   }
+
+			   consistentFactsFinder.setDictionary(dictionary);
+			   consistentFactsFinder.compute(xmlFileName); 
+		   } 
+		   catch(Throwable ex) { 
+			   OurDialog.alert(ex.getMessage()); 
+		   }
+	   }
+	   return null;
    }    
    
    /** This method attempts to perform one level of backtracking from exploration. */
