@@ -904,8 +904,7 @@ public final class MinSolver {
 				// permuted cone-restriction clauses. In the SBP, it limits
 				// the *length* of each sub-formula.
 				if(permCounter >= options.symmetryBreaking())
-					break;
-				
+					break;				
 				// Apply this permutation and add the permuted C.R. clause. The permutation
 				// is assumed to be complete. I.e., if 2->3, then 3->x for some x. In our
 				// case, the permutations are actually length 2 (2->3 then 3->2). 
@@ -914,8 +913,7 @@ public final class MinSolver {
 				permCounter++;
 
 				//JOptionPane.showMessageDialog(null, permCounter+" Added restriction. notModel="+notModel+"\naPerm="+aPerm+"\npermNotModel="+permNotModel);				
-			}
-			
+			}			
 		}
 
 		/**

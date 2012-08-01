@@ -1833,7 +1833,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private SimpleGUI (final String[] args) {
 
         // Register an exception handler for uncaught exceptions
-        MailBug.setup();
+        MinMailBug.setup();
 
         // Enable better look-and-feel
         if (Util.onMac() || Util.onWindows()) {

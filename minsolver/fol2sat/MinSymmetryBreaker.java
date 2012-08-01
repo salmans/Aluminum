@@ -238,6 +238,8 @@ final class MinSymmetryBreaker {
 			}
 		}
 		
+		JOptionPane.showMessageDialog(null, sbp);
+		
 		return factory.accumulate(sbp);
 	}
 	

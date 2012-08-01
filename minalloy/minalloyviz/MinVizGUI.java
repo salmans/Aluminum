@@ -1066,7 +1066,7 @@ public final class MinVizGUI implements ComponentListener {
    }
 
    /** This method closes the theme customization panel if open. */
-   private Runner doCloseThemePanel() {
+   private Runner doCloseThemePanel() {	   
       if (!wrap) { settingsOpen=0; updateDisplay(); }
       return wrapMe();
    }
