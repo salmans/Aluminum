@@ -37,12 +37,6 @@ import javax.swing.JOptionPane;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.TimeoutException;
-
-<<<<<<< HEAD
-//import com.sun.codemodel.internal.JOp;
-
-=======
->>>>>>> NEW-INSTANCE bug fixes
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.config.Options;
@@ -816,7 +810,7 @@ public final class MinSolver {
 							// Add the cone restriction for this model:
 							addConeRestriction(notModel, internalSolver);
 							// Add the cone restriction for all broken permutations of this model:
-							addPermConeRestrictions(notModel, internalSolver);
+							//addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
 							// This iterator is now out of models. Either we just gave the empty model,
