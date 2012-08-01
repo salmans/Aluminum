@@ -399,10 +399,18 @@ public final class MinSolver {
 
 				if(dictionary != null){
 			        final StringBuilder ret = new StringBuilder("[");
-			        ret.append(dictionary.get(t.atom(0)));
+			        String label = dictionary.get(t.atom(0));
+			        if(label != null)
+			        	ret.append(label);
+			        else
+			        	ret.append(t.atom(0));
 			        for (int i = 1; i < t.arity(); i++) {
 			            ret.append(", ");
-			            ret.append(dictionary.get(t.atom(i)));
+			            label = dictionary.get(t.atom(i));
+			            if(label != null)
+			            	ret.append(label);
+			            else
+			            	ret.append(t.atom(i));
 			        }
 			        ret.append("]");
 			        retVal += r.toString() + ret.toString() + "\n";
@@ -478,10 +486,18 @@ public final class MinSolver {
 			boolean found = true;
 			for(int i = 0; i < t.arity(); i++){
 				if(dictionary != null){
-					if(!t.atom(i).toString().equals(dictionary.get(constants.get(i)))){
-						found = false;
-						break;
-					}					
+					String label = dictionary.get(constants.get(i));
+					if(label != null){
+						if(!t.atom(i).toString().equals(label)){
+							found = false;
+							break;
+						}
+					}else{
+						if(!t.atom(i).toString().equals(constants.get(i))){
+							found = false;
+							break;
+						}
+					}
 				}
 				else {
 					if(!t.atom(i).toString().equals(constants.get(i))){
