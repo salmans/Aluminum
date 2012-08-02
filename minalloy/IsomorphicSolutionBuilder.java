@@ -84,10 +84,15 @@ public class IsomorphicSolutionBuilder {
 	 * and returns them as a set of MinSolution. 
 	 */
 	public static Set<MinSolution> getIsomorphicSolutions(Set<MinSolution> input, Bounds bounds){
-		Set<MinSolution> results = new HashSet<MinSolution>();
 		
+		// Do not build permutations if there are no results. 
+		// (Avoid long delay + possible out-of-memory if there are large bounds.)
+		if(input.size() < 1)
+			return input;
+		
+		Set<MinSolution> results = new HashSet<MinSolution>();		
 		int[][] solutionPermutations = getSolutionPermutations(bounds);
-		final TupleFactory factory = bounds.universe().factory();
+		final TupleFactory factory = bounds.universe().factory();	
 		
 		for(MinSolution sol: input){
 			for(int i = 0; i < solutionPermutations.length; i++){

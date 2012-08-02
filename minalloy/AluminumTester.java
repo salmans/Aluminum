@@ -120,8 +120,12 @@ public final class AluminumTester {
 		
 		//String solutions = "";
 		//String isomorphics = "";
-    	String data = "";
-        for(Command command: world.getAllCommands()){
+		
+		// Lots of concatenation to a long string. Best to use a buffer.
+		StringBuffer data = new StringBuffer();
+        
+    	for(Command command: world.getAllCommands())
+        {
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
 
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
@@ -146,7 +150,8 @@ public final class AluminumTester {
         		System.err.println(e.getMessage());
         	}*/
         	
-        	System.out.println("Done!");
+        	// Print the number here and later on (in case it takes a long time to run)
+        	System.out.println("\n  Got "+minimalSolutions+" minimal solutions from Aluminum.");
 
         	
         	if(optIsomorphicSolutions.value){
@@ -154,8 +159,10 @@ public final class AluminumTester {
         		aluminumSolutions = getIsomorphicSolutions(aluminumSolutions, aluminum.getBounds());
             	System.out.println("Done!");
             	isomorphicMinimalSolutions = aluminumSolutions.size();
-            	//for(MinSolution sol: aluminumSolutions) isomorphics += sol + "\n\n";
+            	//for(MinSolution sol: aluminumSolutions) isomorphics += sol + "\n\n";  
+            	System.out.println("  Got "+isomorphicMinimalSolutions+" ismorphic+original minimal solutions.");
         	}
+        	
         	
         	/*try{
         		writeData(new File("/Users/Salman/Desktop/solutions-with-isomorphisms.txt"), isomorphics);
@@ -169,13 +176,24 @@ public final class AluminumTester {
         	A4Solution alloy = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, alloyOptions);
         	
         	System.out.println("Done!");
-        	        	
+        	    
+    		// Reduce output spam. Also, writing to the screen is expensive. 
+        	int nEveryFewChecks = 100;
+        	int nEveryFewDots = 10;
+        	
         	while(alloy.satisfiable()){
         		boolean foundMinimal = false;
-                System.out.print("Checking solution " + (++counter) + ": ");
+        		counter++;
         		
+        		if(counter % nEveryFewChecks == 0)
+        			System.out.print("Checking solution " + counter + ": ");
+        		
+        		int dotCounter = 1;
         		for(MinSolution minimalSolution: aluminumSolutions){
-        			System.out.print(".");
+        			if(counter % nEveryFewChecks == 0 && dotCounter % nEveryFewDots == 0)
+        				System.out.print(".");
+        			dotCounter++;
+        			
         			//int comparison = minimalSolution.compareTo(alloy.getCurrentSolution());
         			int comparison = SolutionComparator.compare(minimalSolution, alloy.getCurrentSolution(), aluminum.getBounds(), alloy.getBounds());
         			
@@ -185,17 +203,17 @@ public final class AluminumTester {
     				if(comparison == 1){
     					foundError = true;
     					totalErrors++;
-            			data += "The following solution is not minimal: \n\n" + minimalSolution.toString() + "\n\n" +
+            			data.append( "The following solution is not minimal: \n\n" + minimalSolution.toString() + "\n\n" +
             					"because of \n\n" + alloy.getCurrentSolution().toString() + "\n\n" +
-            					"-------------------------------------\n";
+            					"-------------------------------------\n");
     				}
         		}
         		
         		
         		if(!foundMinimal){
         			System.out.println("Error!");
-        			data += "Couldn't find a minimal solution for: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
-        					"-------------------------------------\n";
+        			data.append("Couldn't find a minimal solution for: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
+        					"-------------------------------------\n");
         			foundError = true;
         			totalErrors++;    
         			
@@ -203,20 +221,24 @@ public final class AluminumTester {
         			break;
         		}
         		else{
-        			data += "This is fine: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
-        					"-------------------------------------\n";        			
-            		System.out.println("OK!");
+        			data.append("This is fine: \n\n" + alloy.getCurrentSolution().toString() + "\n" + 
+        					"-------------------------------------\n");   
+        			if(counter % nEveryFewChecks == 0)
+        				System.out.println("OK!");
         		}
         			
         		
         		alloy = alloy.next();
-        	}
-        }
+        	} // end for each Alloy model
+        	
+        	// Separator to help find break between command results 
+        	System.out.println("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+        } // end for each command
         
     	if(foundError){
     		System.out.println(totalErrors + " inconsistencies were found! Please read the output file for details.");
             try{
-        		writeData(optOutput.value, data);
+        		writeData(optOutput.value, data.toString());
             }
             catch(IOException e){
             	System.err.println(e.getMessage());
@@ -256,3 +278,6 @@ public final class AluminumTester {
 	}
 	
 }
+
+// -i "c:\Users\Tim\research\wpi-brown\projects\aluminum\examples\misc\addressbook\addressBook2a.als" -o testout.txt -iso
+// -i "c:\Users\Tim\research\wpi-brown\projects\aluminum\examples\change-impact\continue-small1.als" -o testout.txt -iso

@@ -819,7 +819,7 @@ public final class MinSolver {
 							//JOptionPane.showMessageDialog(null, translation.permutations);
 							// Add the cone restriction for this model:
 							addConeRestriction(notModel, internalSolver);
-							// Add the cone restriction for all broken permutations of this model:
+							// Add the cone restriction for all (safe) adjacent transpositions: 
 							//addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
@@ -919,6 +919,7 @@ public final class MinSolver {
 				// the *length* of each sub-formula.
 				if(permCounter >= options.symmetryBreaking())
 					break;				
+				
 				// Apply this permutation and add the permuted C.R. clause. The permutation
 				// is assumed to be complete. I.e., if 2->3, then 3->x for some x. In our
 				// case, the permutations are actually length 2 (2->3 then 3->2). 
