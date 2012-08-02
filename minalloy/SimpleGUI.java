@@ -380,7 +380,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         if (text==null) return null; // If this was called prior to the "text" being fully initialized
         OurSyntaxWidget t = text.get();
         if (Util.onMac()) frame.getRootPane().putClientProperty("windowModified", Boolean.valueOf(t.modified()));
-        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle("Aluminum Analyzer (based on Alloy Analyzer "+Version.version() + ")");
+        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version() + ")");
         toolbar.setBorder(new OurBorder(false, false, text.count()<=1, false));
         int c = t.getCaret();
         int y = t.getLineOfOffset(c)+1;
@@ -1384,10 +1384,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** This method displays the about Aluminum box. */
     private Runner doAboutAluminum() {
        if (wrap) return wrapMe();
-       OurDialog.showmsg("About Aluminum Analyzer (based on Alloy Analyzer" + Version.version() + ")",
+       OurDialog.showmsg("About Aluminum Analyzer " + AluminumVersion.version() +  " (based on Alloy Analyzer" + Version.version() + ")",
              OurUtil.loadIcon("resources/wpi_logo.png"),
              "Aluminum Analyzer ",
-             "Bith date: July 2012",
+             "Birth date: July 2012",
              " ",
              "Dan Dougherty",
              "Kathi Fisler",
@@ -1873,7 +1873,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         frame.setSize(width,height);
         frame.setLocation(x,y);
         frame.setVisible(true);
-        frame.setTitle("Aluminum Analyzer (based on Alloy Analyzer "+Version.version()+") loading... please wait...");
+        frame.setTitle("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+") loading... please wait...");
         final int windowWidth = width;
         // We intentionally call setVisible(true) first before settings the "please wait" title,
         // since we want the minimized window title on Linux/FreeBSD to just say Alloy Analyzer
@@ -2014,7 +2014,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         all.add(status, BorderLayout.SOUTH);
 
         // Generate some informative log messages
-        log.logBold("Aluminum Analyzer(based on Alloy Analyzer "+Version.version()+") (build date: "+Version.buildDate()+")\n\n");
+        log.logBold("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+") (build date: "+Version.buildDate()+")\n\n");
 
         // If on Mac, then register an application listener
         try {
@@ -2101,7 +2101,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
            JCheckBox again = new JCheckBox("Show this message every time you start the Alloy Analyzer");
            again.setSelected(true);
            OurDialog.showmsg("Welcome",
-                 "Thank you for using the Aluminum Analyzer (based on Alloy Analyzer "+Version.version() + ")",
+                 "Thank you for using the Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version() + ")",
                  " ",
                  "Version 4 of the Alloy Analyzer is a complete rewrite,",
                  "offering improvements in robustness, performance and usability.",
