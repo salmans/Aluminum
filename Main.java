@@ -888,9 +888,9 @@ public class Main {
 		//Generating minimal models:
 		while(minModels.hasNext()){
 			currTime = System.currentTimeMillis();
-			minModels.next();
+			MinSolution sol = minModels.next();
 			minimalModelTimes.add(System.currentTimeMillis() - currTime);
-			minimalModelIterations.add(rep.getIterations());
+			minimalModelIterations.add(sol.getSATSolverInvocations());
 			
 			if(numberOfModels != 0){
 				if(minimalModelTimes.size() == numberOfModels)

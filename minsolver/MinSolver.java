@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -373,6 +374,11 @@ public final class MinSolver {
 		MinTranslation translation = miniterator.translation;
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
+		
+		//Keeps the pattern of the output when a NEW-INSTANCE is involved. The outputs that have
+		//repetitive patterns will be discarded.
+		Set<String> uniqeOutputPattern = new LinkedHashSet<String>();
+		
 		Instance lifters = null;
 		
 		try{
@@ -387,7 +393,6 @@ public final class MinSolver {
 		//This can be a method!
 		for(Relation r : lifterTuples.keySet()){
 			TupleSet tuples = lifterTuples.get(r);
-	        String lastFact = null;
 			for(Tuple t: tuples){
 				if(!miniterator.trivial)
 				{
@@ -398,26 +403,35 @@ public final class MinSolver {
 				}
 
 				if(dictionary != null){
-			        final StringBuilder ret = new StringBuilder("[");
+			        final StringBuilder ret = new StringBuilder("["); //This section of the code produces t.toString manually:
+			        StringBuilder pattern = new StringBuilder("["); //keeps the pattern of the next output.
+			        
 			        String label = dictionary.get(t.atom(0));
-			        if(label != null)
+			        if(label != null){
 			        	ret.append(label);
-			        else
+				        pattern.append(label);
+			        }
+			        else{
 			        	ret.append("NEW-INSTANCE(" + t.atom(0) + ")");
+			        	pattern.append("NEW-INSTANCE"); //For new instances, do not keep the name of the atom
+			        }
 			        for (int i = 1; i < t.arity(); i++) {
 			            ret.append(", ");
+			            pattern.append(",");
 			            label = dictionary.get(t.atom(i));
-			            if(label != null)
+			            if(label != null){
 			            	ret.append(label);
-			            else
+			            	pattern.append(label);
+			            }
+			            else{
 			            	ret.append("NEW-INSTANCE(" + t.atom(i) + ")");
+			            	pattern.append("NEW=INSTANCE");
+			            }
 			        }
 			        ret.append("]");
-			        String nextFact = r.toString() + ret.toString() + "\n";
-			        if(!nextFact.equals(lastFact)){ //geting rid of duplicates
-			        	retVal += nextFact;
-			        	lastFact = nextFact;
-			        } 
+			        pattern.append("]");
+			        if(uniqeOutputPattern.add(r.toString()+ pattern.toString())) //if the pattern is not repetitive
+			        	retVal += r.toString() + ret.toString() + "\n";
 				} else{
 					retVal += r.toString() + t.toString() + "\n";
 				}
@@ -498,14 +512,10 @@ public final class MinSolver {
 						}
 					}else{
 						if(!("NEW-INSTANCE(" + t.atom(i) + ")").toString().equals(constants.get(i))){
+								//|| !t.atom(i).toString().equals(constants.get(i))){
 							found = false;
 							break;
 						}
-						
-						/*if(dictionary.values().contains(t.atom(i))){ //if the current atom is not in the dictionary (e.g. NEW-INSTANCE) then augment with this atom (since it is a new atom)
-							found = false;
-							break;
-						}*/
 					}
 				}
 				else {
@@ -553,7 +563,7 @@ public final class MinSolver {
 	 * @return the result of solving a sat formula.
 	 */
 	private static MinSolution sat(Bounds bounds, MinTranslation translation, MinStatistics stats) {
-		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), null);
+		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), 0, null);
 		translation.cnf().free();
 		return sol;
 	}
@@ -568,9 +578,9 @@ public final class MinSolver {
 		final SATSolver cnf = translation.cnf();
 		final MinTranslationLog log = translation.log();
 		if (cnf instanceof SATProver && log != null) {
-			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null);
+			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), 0, null);
 		} else { // can free memory
-			final MinSolution sol = MinSolution.unsatisfiable(stats, null, null);
+			final MinSolution sol = MinSolution.unsatisfiable(stats, null, 0, null);
 			cnf.free();
 			return sol;
 		}
@@ -597,9 +607,9 @@ public final class MinSolver {
 	private static MinSolution trivial(Bounds bounds, MinTrivialFormulaException desc, long translTime) {
 		final MinStatistics stats = new MinStatistics(trivialPrimaries(desc.bounds()), 0, 0, translTime, 0);
 		if (desc.value().booleanValue()) {
-			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), null);
+			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), 0, null);
 		} else {
-			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()), null);
+			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()), 0, null);
 		}
 	}
 	
@@ -837,7 +847,8 @@ public final class MinSolver {
 				if (isSat) {
 					int[] propositionalModel = translation.cnf().getLastModel().clone();
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), propositionalModel);
+					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), 
+							((MyReporter)options.reporter()).getIterations(), propositionalModel);
 					if(unsatSolution != null)
 					{
 						formula = null; origBounds = null;
@@ -966,15 +977,15 @@ public final class MinSolver {
 			if (tfe.value().booleanValue()) {				
 				final Bounds translBounds = tfe.bounds();
 				final Instance trivialInstance = padInstance(toInstance(translBounds), origBounds);
-				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, null);
+				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, 0, null);
 				
 				// Disallow future solving via this iterator.
 				formula = null; origBounds = null;
-				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, null);
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, 0, null);
 				return sol;
 			} else {
 				formula = null; origBounds = null;
-				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null);
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), 0, null);
 				return unsatSolution;
 			}
 		}

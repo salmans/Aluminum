@@ -110,7 +110,7 @@ public class IsomorphicSolutionBuilder {
 					if(tupleSet.size() > 0)
 						instance.add(r, factory.setOf(tupleSet));
 				}
-				MinSolution solution  = MinSolutionFactory.satisfiable(sol.stats(), instance, sol.getPropositionalModel());
+				MinSolution solution  = MinSolutionFactory.satisfiable(sol.stats(), instance, sol.getSATSolverInvocations(), sol.getPropositionalModel());
 				results.add(solution);
 			}
 		}

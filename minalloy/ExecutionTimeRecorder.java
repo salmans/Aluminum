@@ -52,12 +52,14 @@ public final class ExecutionTimeRecorder {
     	BooleanOption optMinimal = new BooleanOption("-m", false);
     	//Number of models to produce
     	IntOption optNumberOfModels = new IntOption("-n", 10);
-    	//Symmetry Breaking (off by default)
-    	IntOption optSymmetryBreaking = new IntOption("-sb", 0);
+    	//Symmetry Breaking (Equal to Aluminum's SB by default)
+    	IntOption optSymmetryBreaking = new IntOption("-sb", 20);
     	//Augmentation information
     	FileOption optAugmentation = new FileOption("-a");
     	//Number of trials
     	IntOption optNumberOfTrials = new IntOption("-t", 1);
+    	//Number of SATSolverInvocations
+    	BooleanOption optSATSolverInvocations = new BooleanOption("-ssi", false);
 
     	
     	CmdLineParser optParser = new CmdLineParser();
@@ -68,6 +70,7 @@ public final class ExecutionTimeRecorder {
     	optParser.addOption(optSymmetryBreaking);
     	optParser.addOption(optAugmentation);
     	optParser.addOption(optNumberOfTrials);
+    	optParser.addOption(optSATSolverInvocations);
     	
     	try{
     		optParser.parse(args);
@@ -84,6 +87,10 @@ public final class ExecutionTimeRecorder {
     		System.err.println("No output file is provided!");
     		System.exit(0);
     	}
+    	if(optSATSolverInvocations.value){	//If -ssi is active, then run it only for one trial for only minimal solutions
+    		optMinimal.value = true;
+    		optNumberOfTrials.value = 1;
+    	}
     	if(!optMinimal.value && optAugmentation.value != null){
     		System.err.println("Augmentation is only applicable on minimal model finding.");
     		System.exit(0);
@@ -92,7 +99,7 @@ public final class ExecutionTimeRecorder {
     	
     	//TODO this is the worst code ever! Consider revision:
     	if(optMinimal.value)
-    		solveMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials);
+    		solveMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials, optSATSolverInvocations);
     	else
     		solveNonMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optNumberOfTrials);
     }
@@ -103,7 +110,7 @@ public final class ExecutionTimeRecorder {
 	private static void solveMinimal(FileOption optInput, FileOption optOutput, 
 			BooleanOption optMinimal, IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, FileOption optAugmentation, 
-			IntOption optNumberOfTrials) throws Err {
+			IntOption optNumberOfTrials, BooleanOption optSATSolverInvocations) throws Err {
 		
 		//Loads a dummy model in order to load Kodkod classes.
 		try{
@@ -133,8 +140,10 @@ public final class ExecutionTimeRecorder {
         output.add("-m = " + optMinimal.value);
         System.out.println("-sb = " + optSymmetryBreaking.value);
         output.add("-sb = " + optSymmetryBreaking.value);
-        System.out.println("-n = " + optNumberOfModels.value + "\n");
-        output.add("-n = " + optNumberOfModels.value + "\n");
+        System.out.println("-n = " + optNumberOfModels.value);
+        output.add("-n = " + optNumberOfModels.value);
+        System.out.println("-ssi = " + optSATSolverInvocations.value + "\n");
+        output.add("-ssi = " + optSATSolverInvocations.value + "\n");
         
         Module world = CompUtil.parseEverything_fromFile(rep, null, optInput.value.getPath());
 
@@ -167,7 +176,7 @@ public final class ExecutionTimeRecorder {
         		
         		MinA4Solution ans = null;
         		try{
-        			ans = getFirstSolution(rep, world, command, options, output, stack, i, lineNumber);
+        			ans = getFirstSolution(rep, world, command, options, output, stack, optSATSolverInvocations.value, i, lineNumber);
         		}
         		catch(ExplorationException e){
         			System.err.println(e.getMessage());
@@ -185,11 +194,18 @@ public final class ExecutionTimeRecorder {
         			ans = ans.next();
         			time = System.currentTimeMillis() - time;
 
-        			System.out.println(++counter + ": " + time);
-        			if(i == 0)
-        				output.add(new Long(time).toString());
+        			String info = null;
+        			if(!optSATSolverInvocations.value)
+        				info = new Long(time).toString();
         			else
-        				output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + time); 
+        				info = new Integer(ans.getCurrentSolution().getSATSolverInvocations()).toString();
+        			
+
+        			System.out.println(++counter + ": " + info);
+        			if(i == 0)
+            			output.add(info);
+        			else
+        				output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + info);
         		}
         	}
 	        
@@ -203,7 +219,7 @@ public final class ExecutionTimeRecorder {
 	}
 	
 	private static MinA4Solution getFirstSolution(A4Reporter rep, Module world, Command command, 
-			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, int trial, int lineNumber) 
+			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, boolean logSSI, int trial, int lineNumber) 
 					throws Err, ExplorationException{
         long time = 0;
         time = System.currentTimeMillis();
@@ -224,12 +240,18 @@ public final class ExecutionTimeRecorder {
         	time = System.currentTimeMillis() - time;
         }
         
-        //TODO separate translation and execution times.
-        System.out.println("1: " + time);
-        if(trial == 0)
-        	output.add(new Long(time).toString());
+        String info = null;
+        if(!logSSI)
+        	info = new Long(time).toString();
         else
-        	output.set(lineNumber + 1, output.get(lineNumber + 1) + "\t" + time);
+        	info = new Integer(ans.getCurrentSolution().getSATSolverInvocations()).toString(); 
+        
+        //TODO separate translation and execution times.
+        System.out.println("1: " + info);
+        if(trial == 0)
+        	output.add(info);
+        else
+        	output.set(lineNumber + 1, output.get(lineNumber + 1) + "\t" + info);
 		
 		return ans;
 	}

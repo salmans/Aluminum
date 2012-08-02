@@ -52,8 +52,7 @@ public final class AluminumTester {
     	//Symmetry Breaking (off by default)
     	IntOption optSkolemDepth = new IntOption("-sk", 0);    	
     	//Symmetry Breaking (off by default)
-    	BooleanOption optIsomorphicSolutions = new BooleanOption("-iso");
-    	
+    	BooleanOption optIsomorphicSolutions = new BooleanOption("-iso");    	
     	
     	CmdLineParser optParser = new CmdLineParser();
     	optParser.addOption(optInput);

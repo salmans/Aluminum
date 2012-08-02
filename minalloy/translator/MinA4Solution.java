@@ -415,7 +415,7 @@ public final class MinA4Solution {
     public int unrolls() { return unrolls; }
     
     /** Returns the current solution in this object */
-    public MinSolution getCurrentSolution(){ return currentSolution; }
+    public MinSolution getCurrentSolution(){ return currentSolution; }    
     //===================================================================================================//
 
     /** Returns the original Alloy file name that generated this solution; can be "" if unknown. */
