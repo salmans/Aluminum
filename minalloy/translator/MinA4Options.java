@@ -94,26 +94,40 @@ public final class MinA4Options implements Serializable {
             synchronized(SatSolver.class) { for(SatSolver x:values) if (x.id.equals(id)) return x; }
             return SAT4J;
         }
-        /** Saves this value into the Java preference object. */
-        public void set() { Preferences.userNodeForPackage(Util.class).put("SatSolver2",id); }
-        /** Reads the current value of the Java preference object (if it's not set, then return SAT4J). */
-        public static SatSolver get() { return parse(Preferences.userNodeForPackage(Util.class).get("SatSolver2","")); }
+        /** Saves this value into the Java preference object. 
+         * Modified for Aluminum: Do nothing. Don't cause confusion for an Alloy user (ALWAYS saving
+         * sat4j here would cause his/her preferred Alloy solver to be reset every time he/she used
+         * Aluminum.) 
+         * 
+         * */
+        public void set() {
+        	//Preferences.userNodeForPackage(Util.class).put("SatSolver2",id);
+        	}
+        
+        /** Reads the current value of the Java preference object (if it's not set, then return SAT4J). 
+         *  Modified for Aluminum: ALWAYS use SAT4J in Aluminum. (Without this change, sharing options with
+         *  Alloy could potentially carry over a non-SAT4J solver option.)
+         * */
+        
+        //public static SatSolver get() { return parse(Preferences.userNodeForPackage(Util.class).get("SatSolver2","")); }
+        public static SatSolver get() { return SAT4J; }
+   
         /** BerkMin via pipe */
-        public static final SatSolver BerkMinPIPE = new SatSolver("berkmin", "BerkMin", "berkmin", null, true);
+       // public static final SatSolver BerkMinPIPE = new SatSolver("berkmin", "BerkMin", "berkmin", null, true);
         /** Spear via pipe */
-        public static final SatSolver SpearPIPE = new SatSolver("spear", "Spear", "spear", new String[]{"--model", "--dimacs"}, true);
+        //public static final SatSolver SpearPIPE = new SatSolver("spear", "Spear", "spear", new String[]{"--model", "--dimacs"}, true);
         /** MiniSat1 via JNI */
-        public static final SatSolver MiniSatJNI = new SatSolver("minisat(jni)", "MiniSat", null, null, true);
+        //public static final SatSolver MiniSatJNI = new SatSolver("minisat(jni)", "MiniSat", null, null, true);
         /** MiniSatProver1 via JNI */
-        public static final SatSolver MiniSatProverJNI = new SatSolver("minisatprover(jni)", "MiniSat with Unsat Core", null, null, true);
+        //public static final SatSolver MiniSatProverJNI = new SatSolver("minisatprover(jni)", "MiniSat with Unsat Core", null, null, true);
         /** ZChaff via JNI */
-        public static final SatSolver ZChaffJNI = new SatSolver("zchaff(jni)", "ZChaff", null, null, true);
+        //public static final SatSolver ZChaffJNI = new SatSolver("zchaff(jni)", "ZChaff", null, null, true);
         /** SAT4J using native Java */
         public static final SatSolver SAT4J = new SatSolver("sat4j", "SAT4J", null, null, true);
         /** Outputs the raw CNF file only */
-        public static final SatSolver CNF = new SatSolver("cnf", "Output CNF to file", null, null, true);
+        //public static final SatSolver CNF = new SatSolver("cnf", "Output CNF to file", null, null, true);
         /** Outputs the raw Kodkod file only */
-        public static final SatSolver KK = new SatSolver("kodkod", "Output Kodkod to file", null, null, true);
+        //public static final SatSolver KK = new SatSolver("kodkod", "Output Kodkod to file", null, null, true);
     }
 
     /** This ensures the class can be serialized reliably. */

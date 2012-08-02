@@ -2036,36 +2036,37 @@ public final class SimpleGUI implements ComponentListener, Listener {
         } catch (Throwable ex) { }
 
         // Testing the SAT solvers
-        if (1==1) {
-            satChoices = SatSolver.values().makeCopy();
-            String test1 = Subprocess.exec(20000, new String[]{binary+fs+"berkmin", binary+fs+"tmp.cnf"});
-            if (!isSat(test1)) satChoices.remove(SatSolver.BerkMinPIPE);
-            String test2 = Subprocess.exec(20000, new String[]{binary+fs+"spear", "--model", "--dimacs", binary+fs+"tmp.cnf"});
-            if (!isSat(test2)) satChoices.remove(SatSolver.SpearPIPE);
-            if (!loadLibrary("minisat")) {
-                log.logBold("Warning: JNI-based SAT solver does not work on this platform.\n");
-                log.log("This is okay, since you can still use SAT4J as the solver.\n"+
-                "For more information, please visit http://alloy.mit.edu/alloy4/\n");
-                log.logDivider();
-                log.flush();
-                satChoices.remove(SatSolver.MiniSatJNI);
-            }
-            if (!loadLibrary("minisatprover")) satChoices.remove(SatSolver.MiniSatProverJNI);
-            if (!loadLibrary("zchaff"))        satChoices.remove(SatSolver.ZChaffJNI);
-            SatSolver now = SatSolver.get();
-            if (!satChoices.contains(now)) {
-                now=SatSolver.ZChaffJNI;
-                if (!satChoices.contains(now)) now=SatSolver.SAT4J;
-                now.set();
-            }
-            if (now==SatSolver.SAT4J && satChoices.size()>3 && satChoices.contains(SatSolver.CNF) && satChoices.contains(SatSolver.KK)) {
-                log.logBold("Warning: Alloy4 defaults to SAT4J since it is pure Java and very reliable.\n");
-                log.log("For faster performance, go to Options menu and try another solver like MiniSat.\n");
-                log.log("If these native solvers fail on your computer, remember to change back to SAT4J.\n");
-                log.logDivider();
-                log.flush();
-            }
-        }
+        // TN: Do not try to load a solver other than SAT4j.
+        //if (1==1) {
+          //  satChoices = SatSolver.values().makeCopy();
+            //String test1 = Subprocess.exec(20000, new String[]{binary+fs+"berkmin", binary+fs+"tmp.cnf"});
+            //if (!isSat(test1)) satChoices.remove(SatSolver.BerkMinPIPE);
+            //String test2 = Subprocess.exec(20000, new String[]{binary+fs+"spear", "--model", "--dimacs", binary+fs+"tmp.cnf"});
+            //if (!isSat(test2)) satChoices.remove(SatSolver.SpearPIPE);
+            //if (!loadLibrary("minisat")) {
+            //    log.logBold("Warning: JNI-based SAT solver does not work on this platform.\n");
+            //    log.log("This is okay, since you can still use SAT4J as the solver.\n"+
+            //    "For more information, please visit http://alloy.mit.edu/alloy4/\n");
+            //    log.logDivider();
+            //    log.flush();
+            //    satChoices.remove(SatSolver.MiniSatJNI);
+            //}
+            //if (!loadLibrary("minisatprover")) satChoices.remove(SatSolver.MiniSatProverJNI);
+            //if (!loadLibrary("zchaff"))        satChoices.remove(SatSolver.ZChaffJNI);
+            //SatSolver now = SatSolver.get();
+            //if (!satChoices.contains(now)) {
+            //    now=SatSolver.ZChaffJNI;
+            //    if (!satChoices.contains(now)) now=SatSolver.SAT4J;
+            //    now.set();
+           // }
+            //if (now==SatSolver.SAT4J && satChoices.size()>3 && satChoices.contains(SatSolver.CNF) && satChoices.contains(SatSolver.KK)) {
+            //    log.logBold("Warning: Alloy4 defaults to SAT4J since it is pure Java and very reliable.\n");
+            //    log.log("For faster performance, go to Options menu and try another solver like MiniSat.\n");
+            //    log.log("If these native solvers fail on your computer, remember to change back to SAT4J.\n");
+            //    log.logDivider();
+            //    log.flush();
+           // }
+        //}
 
         // If the temporary directory has become too big, then tell the user they can "clear temporary directory".
         long space = computeTemporarySpaceUsed();
