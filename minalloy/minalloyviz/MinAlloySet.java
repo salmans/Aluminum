@@ -15,7 +15,7 @@
 
 package minalloy.minalloyviz;
 
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 
 /** Immutable; represents an Alloy set in an instance.
  *

@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 import edu.mit.csail.sdg.alloy4graph.DotColor;
 
 /** This class implements the automatic visualization inference.

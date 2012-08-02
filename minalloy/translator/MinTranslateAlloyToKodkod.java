@@ -67,7 +67,7 @@ import kodkod.instance.Tuple;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
 import kodkod.util.ints.IntVector;
-import static edu.mit.csail.sdg.alloy4.Util.tail;
+import static minalloy.Util.tail;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.UNIV;
 
 /** Translate an Alloy AST into Kodkod AST then attempt to solve it using Kodkod. */

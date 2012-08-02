@@ -19,7 +19,7 @@ import java.io.Serializable;
 import java.util.prefs.Preferences;
 import edu.mit.csail.sdg.alloy4.ErrorAPI;
 import edu.mit.csail.sdg.alloy4.SafeList;
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 
 /** Mutable; this class encapsulates the customizable options of the Alloy-to-Kodkod translator. */
 

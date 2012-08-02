@@ -48,7 +48,7 @@ import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.OurBorder;
 import edu.mit.csail.sdg.alloy4.OurCombobox;
 import edu.mit.csail.sdg.alloy4.OurUtil;
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 import edu.mit.csail.sdg.alloy4graph.GraphViewer;
 
 /** GUI panel that houses the actual graph, as well as any projection comboboxes.

@@ -115,13 +115,12 @@ import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.alloy4.Runner;
 import edu.mit.csail.sdg.alloy4.Subprocess;
-import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4.WorkerEngine;
 import edu.mit.csail.sdg.alloy4.XMLNode;
-import edu.mit.csail.sdg.alloy4.Util.BooleanPref;
-import edu.mit.csail.sdg.alloy4.Util.IntPref;
-import edu.mit.csail.sdg.alloy4.Util.StringPref;
+import minalloy.Util.BooleanPref;
+import minalloy.Util.IntPref;
+import minalloy.Util.StringPref;
 import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
 import minalloy.MinSimpleReporter.BacktrackTask;
 import minalloy.MinSimpleReporter.FindConsistentFactsTask;
@@ -2099,25 +2098,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
         // Launch the welcome screen if needed
         if (!"yes".equals(System.getProperty("debug")) && Welcome.get() < welcomeLevel) {
-           JCheckBox again = new JCheckBox("Show this message every time you start the Alloy Analyzer");
+           JCheckBox again = new JCheckBox("Show this message every time you start Aluminum");
            again.setSelected(true);
            OurDialog.showmsg("Welcome",
                  "Thank you for using the Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version() + ")",
-                 " ",
-                 "Version 4 of the Alloy Analyzer is a complete rewrite,",
-                 "offering improvements in robustness, performance and usability.",
-                 "Models written in Alloy 3 will require some small alterations to run in Alloy 4.",
-                 " ",
-                 "Here are some quick tips:",
-                 " ",
-                 "* Function calls now use [ ] instead of ( )",
-                 "  For more details, please see http://alloy.mit.edu/alloy4/quickguide/",
-                 " ",
-                 "* The Execute button always executes the latest command.",
-                 "  To choose which command to execute, go to the Execute menu.",
-                 " ",
-                 "* The Alloy Analyzer comes with a variety of sample models.",
-                 "  To see them, go to the File menu and click Open Sample Models.",
+                 " ",    
+                 "Contact email: Tim Nelson (tn@cs.wpi.edu)",
                  " ",
                  again
            );

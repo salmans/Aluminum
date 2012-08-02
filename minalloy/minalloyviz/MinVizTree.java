@@ -33,8 +33,8 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.OurTree;
 import edu.mit.csail.sdg.alloy4.Pair;
-import edu.mit.csail.sdg.alloy4.Util;
-import static edu.mit.csail.sdg.alloy4.Util.encode;
+import minalloy.Util;
+import static minalloy.Util.encode;
 
 /** GUI tree that displays an instance as a tree.
  *

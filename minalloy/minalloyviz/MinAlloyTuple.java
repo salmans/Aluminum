@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.ArrayList;
 import java.util.List;
 import edu.mit.csail.sdg.alloy4.ConstList;
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 import edu.mit.csail.sdg.alloy4.ConstList.TempList;
 
 /** Immutable; represents an Alloy tuple.

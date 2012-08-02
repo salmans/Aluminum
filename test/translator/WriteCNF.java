@@ -17,7 +17,7 @@ package test.translator;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import edu.mit.csail.sdg.alloy4.Util;
+import minalloy.Util;
 import kodkod.engine.satlab.SATFactory;
 import kodkod.engine.satlab.SATSolver;
 
