@@ -820,7 +820,7 @@ public final class MinSolver {
 							// Add the cone restriction for this model:
 							addConeRestriction(notModel, internalSolver);
 							// Add the cone restriction for all (safe) adjacent transpositions: 
-							//addPermConeRestrictions(notModel, internalSolver);
+							addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
 							// This iterator is now out of models. Either we just gave the empty model,
