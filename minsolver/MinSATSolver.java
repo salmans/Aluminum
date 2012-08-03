@@ -268,6 +268,12 @@ public final class MinSATSolver implements SATSolver {
 			}
 			else
 			{
+				// Don't try to add a clause we already have. 
+				// TODO: This is order-dependent (since passed as array). 
+				// Caller needs to make sure there are no identical (up to ordering) clauses...
+				if(sbpClauses.contains(lits))					
+					return true;
+				
 				IConstr toRemove = solver.addClause(wrapper.wrap(lits));
 			
 				// DO NOT store wrapper.wrap(lits); it's in a read only field that is re-used. 
@@ -279,16 +285,7 @@ public final class MinSATSolver implements SATSolver {
 					toRemoveSBP.add(toRemove);
 				}			
 			}
-			
-			/*String cls = "{";
-			for(int[] arr : sbpClauses)
-			{
-				cls+=" "+Arrays.toString(arr)+" ";
-			}
-			cls+="}";
-			JOptionPane.showMessageDialog(null, "Added SBP: "+Arrays.toString(lits)+"; old="+foo+"; new="+solver.nConstraints()+
-					"\n"+sbpClauses.size()+cls);
-			*/
+						
 			return true;			
 		} catch (ContradictionException e) {
 			sat = Boolean.FALSE;
@@ -663,4 +660,15 @@ public final class MinSATSolver implements SATSolver {
 			throw new UnsupportedOperationException();
 		}		
 	}	
+	
+	public String printConstraints()
+	{
+		// For debug: print out the clauses...
+		org.sat4j.minisat.core.Solver aSolver = (org.sat4j.minisat.core.Solver) this.solver;
+		
+		String s = "";
+		for(int ii=0;ii<aSolver.nConstraints();ii++)
+			s += aSolver.getIthConstr(ii)+",    "+((ii%4 ==0)?"\n":"");
+		return s;
+	}
 }

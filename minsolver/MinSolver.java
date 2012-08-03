@@ -314,6 +314,8 @@ public final class MinSolver {
 				}
 		}
 		
+		// We want the same MinSolver, because MinSolver governs
+		// the active iterator and allows the iterators to share the SAT solver.
 		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, msiterator);
 				
 		return iterator;
@@ -704,7 +706,7 @@ public final class MinSolver {
 		 * Keeps cone restriction clauses such that the next model from the SATsolver
 		 * is not in any of the previous cones.
 		 */
-		private Set<List<Integer>> coneRestrictionClauses = new HashSet<List<Integer>>();
+		private Set<Set<Integer>> coneRestrictionClauses = new HashSet<Set<Integer>>();
 		/**
 		 * Keeps a list of all the constraints that are being taken into account.
 		 * Some operations such as getLifters() has to eliminate all the constraints.
@@ -831,7 +833,7 @@ public final class MinSolver {
 					if(isSat)
 					{												
 						final int primary = translation.numPrimaryVariables();					
-						final ArrayList<Integer> notModel = new ArrayList<Integer>();		
+						final Set<Integer> notModel = new HashSet<Integer>();		
 						
 						// Negate this model's positive diagram. 
 						// We will use this disjunctively for "cone-restriction": preventing models 
@@ -894,13 +896,16 @@ public final class MinSolver {
 		 * @param internalSolver
 		 * @throws ContradictionException
 		 */
-		private void addConeRestriction(List<Integer> notModel, MinSATSolver internalSolver)
+		private void addConeRestriction(Set<Integer> notModel, MinSATSolver internalSolver)
 				throws ContradictionException
 		{						
+			// It is vital that notModel be a SET, not a LIST (the literals can be transposed).
+			
 			if(notModel.size() == 1)
 			{
 				// No risk of adding duplicates; it's just a set.
-				coneRestrictionUnits.add(notModel.get(0));
+				for(int unit : notModel)
+					coneRestrictionUnits.add(unit);
 			}
 			else
 			{				
@@ -927,7 +932,7 @@ public final class MinSolver {
 		 * @throws ContradictionException
 		 */
 		@SuppressWarnings("unused")
-		private void addPermConeRestrictions(ArrayList<Integer> notModel, MinSATSolver internalSolver) 
+		private void addPermConeRestrictions(Set<Integer> notModel, MinSATSolver internalSolver) 
 				throws ContradictionException
 		{			
 			// the CALLER is responsible for adding the original restriction clause:
@@ -946,7 +951,7 @@ public final class MinSolver {
 				// Apply this permutation and add the permuted C.R. clause. The permutation
 				// is assumed to be complete. I.e., if 2->3, then 3->x for some x. In our
 				// case, the permutations are actually length 2 (2->3 then 3->2). 
-				List<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);				
+				Set<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);				
 				addConeRestriction(permNotModel, internalSolver);								
 				permCounter++;
 
@@ -956,15 +961,15 @@ public final class MinSolver {
 
 		/**
 		 * Given a negated positive diagram, apply a permutation to it.
-		 * 
+		 * We do NOT need an ordering on the diagram.
 		 * @param notModel
 		 * @param aPerm
 		 * @return
 		 */
-		private List<Integer> permuteNegatedPositiveDiagram(ArrayList<Integer> notModel,
+		private Set<Integer> permuteNegatedPositiveDiagram(Set<Integer> notModel,
 				Map<Integer, Integer> aPerm) 
 		{
-			List<Integer> result = new ArrayList<Integer>(notModel.size());
+			Set<Integer> result = new HashSet<Integer>(notModel.size());
 			for(Integer aLiteral : notModel)
 			{
 				if(aLiteral > 0 && aPerm.containsKey(aLiteral))
@@ -1052,7 +1057,13 @@ public final class MinSolver {
 		 * Prepares the solver to be used by the current iterator.
 		 */
 		private void claimSATSolver() {
-			if(minSolver.activeIterator != null && minSolver.activeIterator != this){
+			
+//			if(translation != null)
+				//JOptionPane.showMessageDialog(null, "before claim: "+((MinSATSolver)translation.cnf()).printConstraints());
+
+			
+			if(minSolver.activeIterator != null && minSolver.activeIterator != this)
+			{
 				//Remove all the constraints of the previous active iterator.
 				minSolver.activeIterator.removeAllConstraints();
 				//Add the constraints of the current iterator.
@@ -1064,6 +1075,9 @@ public final class MinSolver {
 					JOptionPane.showMessageDialog(null, "CONTRADICTION exception in claimSATSolver()");
 				}
 			}
+			//if(translation != null)
+			//	JOptionPane.showMessageDialog(null, "after claim: "+((MinSATSolver)translation.cnf()).printConstraints());
+			
 			//Set the activeIterator
 			minSolver.activeIterator = this;
 			
@@ -1344,16 +1358,17 @@ public final class MinSolver {
 			
 			MinSATSolver solver = (MinSATSolver)translation.cnf();								
 			Set<Integer> wantToAdd = new HashSet<Integer>();
-			ArrayList<Integer> retVal = new ArrayList<Integer>();
-			List<Integer> preservedFacts = new ArrayList<Integer>();
-			
+			Set<Integer> retVal = new HashSet<Integer>();
+			Set<Integer> preservedFacts = new HashSet<Integer>();						
+						
 			//TODO claimSATSolver does not have to fill all the clauses in here.
 			claimSATSolver();
-			removeAllConstraints();		
+			removeAllConstraints();								
+			
 			
 			// Always deactivate SBP before searching for augmentations
-			solver.deactivateSBP();
-						
+			solver.deactivateSBP();			
+			
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
 
@@ -1471,9 +1486,11 @@ public final class MinSolver {
 		 * Considers all the constraints.
 		 * @throws ContradictionException
 		 */
-		private void addAllClauses() throws ContradictionException{
-			for(List<Integer> list: coneRestrictionClauses){
-				coneRestrictionConstraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(list)));					
+		private void addAllClauses() throws ContradictionException
+		{
+			for(Set<Integer> aClause: coneRestrictionClauses)
+			{
+				coneRestrictionConstraints.add(((MinSATSolver)translation.cnf()).addConstraint(toIntCollection(aClause)));					
 			}
 		}
 		
