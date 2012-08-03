@@ -2013,7 +2013,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         all.add(status, BorderLayout.SOUTH);
 
         // Generate some informative log messages
-        log.logBold("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+") (build date: "+Version.buildDate()+")\n\n");
+        log.logBold("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+")\n(Aluminum build date: "+AluminumVersion.buildDate()+")\n\n");
 
         // If on Mac, then register an application listener
         try {
