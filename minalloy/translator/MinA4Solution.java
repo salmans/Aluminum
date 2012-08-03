@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import javax.swing.JOptionPane;
+
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.Expression;
@@ -1010,17 +1012,26 @@ public final class MinA4Solution {
 
         //if the fact does not exists in the given bounds:
         if(inst == null)
-        	throw new ExplorationException("The input fact is not valid!");
+        	throw new ExplorationException("The input fact is not valid!");       
         
-        Iterator<MinSolution> solution = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
-
+        // Get an augmented iterator
+        Iterator<MinSolution> augmentedIterator = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
+                
+        // Push the current solution and iterator onto the stack, so we can backtrack.
         solutionStack.push(new SolutionStackElement(kEnumerator, currentSolution));
 
-        kEnumerator = new Peeker<MinSolution>(solution);
-    	
-        if (!solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
+        // Open a new peeker for the augmented iterator
+        kEnumerator = new Peeker<MinSolution>(augmentedIterator);
+    	        
+        //JOptionPane.showMessageDialog(null, "nextCache="+nextCache+" "+kEnumerator.hasNext()+" "+augmentedIterator.hasNext()+" "+((Peeker<MinSolution>)kEnumerator).iterator.hasNext());
+        
+        //if (!solved) throw new ErrorAPI("This solution is not yet solved, so next() is not allowed.");
         //if (eval==null) return this;
-        if (nextCache==null) nextCache=new MinA4Solution(this);
+        
+        // Make sure the new solution is properly loaded into the cache. 
+        // If we've augmented from the end of an iterator, need to force-load a new solution
+        // since we will have an unsatisfiable solution in nextCache.
+        if (nextCache==null || !nextCache.satisfiable()) nextCache=new MinA4Solution(this);
         return nextCache;
     }
 

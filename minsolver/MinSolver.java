@@ -23,6 +23,7 @@ package minsolver;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -257,7 +258,7 @@ public final class MinSolver {
 	 */
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
-	public Iterator<MinSolution> lift(final Formula formula, Iterator<MinSolution> prevIterator, 
+	public MinSolutionIterator lift(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance lifters)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
 		
@@ -272,14 +273,17 @@ public final class MinSolver {
 			JOptionPane.showMessageDialog(null, "The spec given was trivially satisfiable, and so it had only one minimal model (shown),\n"+
 			"to which any relational fact in the set of consistent facts may be added without consequence.\n\n"+
 					"Explicit exploration is unavailable.");
-			return prevIterator;
+			return msiterator;
 		}
 		
 		//Lifting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
 		
 		ArrayList<Integer> allLifters = new ArrayList<Integer>();
-		Map<Relation, TupleSet> solutionTuples = msiterator.getLastSolution().instance().relationTuples();
+		
+		// Do not use getLastSolution() here: it may be the iterator is empty, in which case it would contain no
+		// propositional model, being the UNSAT soln. Instead, use the last *instance* found:
+		Map<Relation, TupleSet> solutionTuples = msiterator.lastSatSolutionFound.instance().relationTuples();
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
 
 		//This can be a method!
@@ -311,7 +315,7 @@ public final class MinSolver {
 		}
 		
 		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, msiterator);
-		
+				
 		return iterator;
 	}	
 	
@@ -682,7 +686,6 @@ public final class MinSolver {
 		private Map<Integer, Relation> mapVarToRelation;
 		private long translTime;
 		private MinSolution lastSolution;
-		//private long internalMinimalCandidatesFoundCounter = 0;
 		
 		//the MinSolver instance that creates the iterator.
 		private final MinSolver minSolver;
@@ -690,6 +693,12 @@ public final class MinSolver {
 		//Modifications for minimal models
 		private Boolean sat = null;
 		private MinSolution unsatSolution = null;
+		
+		/** 
+		 * Augmentation requires we keep a handle on the last instance found
+		 * even if the iterator is now empty (i.e., lastSolution = an unsatisfiable result).
+		 */
+		MinSolution lastSatSolutionFound = null;
 		
 		/**
 		 * Keeps cone restriction clauses such that the next model from the SATsolver
@@ -723,6 +732,11 @@ public final class MinSolver {
 		}
 
 		/**
+		 * For debugging
+		 */
+		long parentHash = 0;
+		
+		/**
 		 * Constructs a solution iterator for the given formula, bounds, options and lifters.
 		 * @param formula
 		 * @param origBounds
@@ -737,12 +751,30 @@ public final class MinSolver {
 			this.origBounds = origBounds;
 			this.options = options;
 			this.translation = null;
-			this.lifters = (lifters == null) ? null : toIntCollection(lifters);
+			this.lifters = (lifters == null) ? null : toIntCollection(lifters);					
 			
 			if(prevIterator != null){  //if lifting on a previous iterator
 				this.translation = prevIterator.getTranslation();
 				this.mapVarToRelation = prevIterator.mapVarToRelation;		
+				this.parentHash = prevIterator.hashCode();
 			}
+		}
+		
+		/**
+		 * Debugging string.
+		 */
+		public String toString()
+		{
+			StringBuffer result = new StringBuffer();
+			result.append("Iterator hash code:"+hashCode()+"\n");
+			result.append("Iterator parent's hash code:"+parentHash+"\n");
+			result.append("Iterator formula:"+formula+"\n");
+			result.append("Iterator origBounds:"+origBounds+"\n");
+			result.append("Iterator lifters:"+Arrays.toString(lifters)+"\n");
+			result.append("Iterator translation's num pri vars:"+translation.numPrimaryVariables()+"\n");
+			result.append("Iterator solver's hash code:"+minSolver.hashCode()+"\n");
+			result.append("Iterator mapVarToRelation:"+mapVarToRelation+"\n");
+			return result.toString();
 		}
 		
 		/**
@@ -750,9 +782,8 @@ public final class MinSolver {
 		 * @see java.util.Iterator#hasNext()
 		 */
 		public boolean hasNext() {
-			// This works because nonTrivialSolution() sets formula = null when
-			// the solver returns unsat.
-			return (formula != null);
+			// Can no longer set formula=null; instead use unsatSolution (reversed)
+			return (unsatSolution == null);
 		}
 		
 		/**
@@ -829,10 +860,7 @@ public final class MinSolver {
 							JOptionPane.showMessageDialog(null, "Contradiction; out of models. Augmentation will be disabled.");
 							final long endSolveU = System.currentTimeMillis();				
 							final MinStatistics statsU = new MinStatistics(translation, translTime, endSolveU - startSolve);
-							unsatSolution = unsat(translation, statsU);
-							
-							// Cannot free bounds yet, because we have one more model to process below.
-							//formula = null; bounds = null;
+							unsatSolution = unsat(translation, statsU);							
 						}
 					} // end constraints to forbid current cone									
 					
@@ -849,14 +877,9 @@ public final class MinSolver {
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
 					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), 
 							((MyReporter)options.reporter()).getIterations(), propositionalModel);
-					if(unsatSolution != null)
-					{
-						formula = null; origBounds = null;
-					}
 					return sol;
 				} else {
 					unsatSolution = unsat(translation, stats); 
-					formula = null; origBounds = null; // unsat, no more solutions, free up some space
 					return unsatSolution;
 				}
 			} catch (SATAbortedException sae) {
@@ -981,11 +1004,9 @@ public final class MinSolver {
 				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, 0, null);
 				
 				// Disallow future solving via this iterator.
-				formula = null; origBounds = null;
 				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, 0, null);
 				return sol;
 			} else {
-				formula = null; origBounds = null;
 				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), 0, null);
 				return unsatSolution;
 			}
@@ -1015,16 +1036,16 @@ public final class MinSolver {
 					//		mapVarToRelation);
 					//JOptionPane.showMessageDialog(null, transStr);
 					
-					lastSolution = nonTrivialSolution();
+					setLastSolution(nonTrivialSolution());
 				} catch (MinTrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
-					lastSolution = trivialSolution(tfe);
+					setLastSolution(trivialSolution(tfe));
 				} 
 			} else {
-				lastSolution = nonTrivialSolution();
+				setLastSolution(nonTrivialSolution());
 			}						
 			
-			return lastSolution;
+			return getLastSolution();
 		}
 
 		/**
@@ -1318,7 +1339,7 @@ public final class MinSolver {
 		 * @throws ContradictionException
 		 */
 		public int[] getLifters() throws TimeoutException, ContradictionException
-		{
+		{			
 			assert(!trivial);
 			
 			MinSATSolver solver = (MinSATSolver)translation.cnf();								
@@ -1328,27 +1349,33 @@ public final class MinSolver {
 			
 			//TODO claimSATSolver does not have to fill all the clauses in here.
 			claimSATSolver();
-			removeAllConstraints();
+			removeAllConstraints();		
 			
 			// Always deactivate SBP before searching for augmentations
 			solver.deactivateSBP();
-			
+						
 			// preservedFacts are the positive literals that define the "cone" we are in.
 			// wantToAdd are the negative (turned positive) literals we want to check for in the cone.
-			
+
 			int numPrimaryVariables = translation.numPrimaryVariables();
-			int[] propositionalModel = lastSolution.getPropositionalModel();
+			
+			// Do not reference lastSolution here. lastSolution will hold an unsatisfiable
+			// Solution result if the iterator is empty. Instead, keep the last instance found:					
+			int[] lastPropositionalModelReturned = lastSatSolutionFound.getPropositionalModel();
+			
 			
 			for(int i = 1; i <= numPrimaryVariables; i++){
-				if(propositionalModel[i - 1] > 0)
+				if(lastPropositionalModelReturned[i - 1] > 0)
 					preservedFacts.add(i);
 				else
 					wantToAdd.add(i);
-			}
-			
+			}					
 			
 			boolean wasSatisfiable = false;
 			List<Integer> unitClauses = new ArrayList<Integer>(preservedFacts);
+								
+			//JOptionPane.showMessageDialog(null, wantToAdd+"\n"+preservedFacts);
+			
 			// Loop while (a) there are facts left to find and (b) still satisfiable.
 			do
 			{
@@ -1366,6 +1393,9 @@ public final class MinSolver {
 				}
 				
 				wasSatisfiable = solver.solve(toIntCollection(unitClauses));		
+				
+				//JOptionPane.showMessageDialog(null, "sat="+wasSatisfiable+"; unitClauses="+unitClauses);
+
 				
 				if(wasSatisfiable)
 				{
@@ -1386,7 +1416,7 @@ public final class MinSolver {
 					wantToAdd.removeAll(foundLifters);
 				}	
 				
-				// Remove the targets for this iteration (may not be needed?)
+				// Remove the targets for this iteration (needed to keep the shared solver clean)
 				if(removeWTA != null)
 					solver.removeConstraint(removeWTA);
 				
@@ -1396,7 +1426,7 @@ public final class MinSolver {
 			// If this is an un-augmented iterator, re-activate symmetry-breaking
 			// (Or else the next models would not benefit from SB.)
 			if(!isAugmented())
-				solver.activateSBP();
+				solver.activateSBP();						
 			
 			return toIntCollection(retVal);
 		}
@@ -1415,6 +1445,18 @@ public final class MinSolver {
 		 */
 		private MinSolution getLastSolution(){
 			return lastSolution;
+		}
+		
+		/**
+		 * Always use this function to update lastSolution.
+		 * Otherwise the last prop. model will not be saved.
+		 */
+		private void setLastSolution(MinSolution last) {			
+			this.lastSolution = last;
+			if(last.instance() != null)
+			{
+				this.lastSatSolutionFound = last;
+			}
 		}
 		
 		/**
