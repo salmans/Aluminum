@@ -2112,7 +2112,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
 
         // Periodically ask the MailBug thread to see if there is a newer version or not
-        final long now = System.currentTimeMillis();
+        // Aluminum: no reason to do this
+      /*  final long now = System.currentTimeMillis();
         final Timer t = new Timer(800, null);
         t.addActionListener(new ActionListener() {
            public void actionPerformed(ActionEvent e) {
@@ -2128,7 +2129,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
               t.stop();
           }
         });
-        t.start();
+        t.start();*/
     }
 
     /** {@inheritDoc} */
