@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.JOptionPane;
+
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinA4SolutionReader;
 import minalloy.translator.MinA4Tuple;
@@ -175,7 +177,7 @@ public final class MinStaticInstanceReader {
          try { i = Integer.parseInt(dollar>=0 ? atom.substring(dollar+1) : atom); } catch(NumberFormatException ex) { i = Integer.MAX_VALUE; }
          MinAlloyAtom at = new MinAlloyAtom(sig(s), ts.size()==1 ? Integer.MAX_VALUE : i, atom);
          atom2sets.put(at, new LinkedHashSet<MinAlloySet>());
-         string2atom.put(atom, at);
+         string2atom.put(atom, at);         
       }
    }
 

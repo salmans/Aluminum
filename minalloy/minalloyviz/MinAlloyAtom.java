@@ -40,7 +40,7 @@ public final class MinAlloyAtom implements Comparable<MinAlloyAtom> {
 
    /** Create a new AlloyAtom with the given type, index, and label. */
    public MinAlloyAtom(MinAlloyType type, int index, String originalName) {
-      this.type=type; this.index=index; this.originalName=originalName;
+      this.type=type; this.index=index; this.originalName=originalName; 
    }
 
    /** Return a label for this atom as recommended by a theme (theme can be null if there's no theme to consult). */

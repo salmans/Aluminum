@@ -238,6 +238,7 @@ public final class MinA4Solution {
      */
     MinA4Solution(String originalCommand, int bitwidth, int maxseq, Set<String> stringAtoms, Collection<String> atoms, final A4Reporter rep, MinA4Options opt, int expected) throws Err {
         opt = opt.dup();
+                
         this.solutionStack = new Stack<SolutionStackElement>();
         this.currentSolution = null;
         this.unrolls = opt.unrolls;
@@ -255,7 +256,7 @@ public final class MinA4Solution {
         if (maxseq < 0)     throw new ErrorSyntax("The maximum sequence length cannot be negative.");
         if (maxseq > max()) throw new ErrorSyntax("With integer bitwidth of "+bitwidth+", you cannot have sequence length longer than "+max());
         kAtoms = ConstList.make(atoms);
-        bounds = new Bounds(new Universe(kAtoms));
+        bounds = new Bounds(new Universe(kAtoms));                
         factory = bounds.universe().factory();
         TupleSet sigintBounds = factory.noneOf(1);
         TupleSet seqidxBounds = factory.noneOf(1);
@@ -396,7 +397,7 @@ public final class MinA4Solution {
         k2pos = ConstMap.make(k2pos);
         rel2type = ConstMap.make(rel2type);
         decl2type = ConstMap.make(decl2type);
-        solved = true;
+        solved = true;        
     }
 
     //===================================================================================================//
@@ -1037,7 +1038,7 @@ public final class MinA4Solution {
 
     /** Returns a list of facts consistent to the current loaded solution. */
     public String findConsistentFacts(Map<String, String> dictionary) throws Err, IOException {
-    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary);
+    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
     }  
     
     /** Performs one level of backtracking to the current state in the exploration. */

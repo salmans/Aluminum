@@ -351,8 +351,7 @@ public final class MinSolver {
 		return MinTwoWayTranslator.translatePropositions(
 				theIterator.translation, ((MyReporter)theIterator.options.reporter()).skolemBounds,
 				theIterator.mapVarToRelation,
-				theIterator.getLifters());
-		
+				theIterator.getLifters()); 
 	}
 	
 	/**
@@ -363,27 +362,34 @@ public final class MinSolver {
 	 * it returns an empty string.
 	 */    
 	public String getLiftersList(Iterator<MinSolution> iterator){
-		return getLiftersList(iterator, null);
+		return getLiftersList(iterator, null, null);
 	}	
 	
 	/**
 	 * Returns a list of lifters for the current model loaded in the given iterator as 
 	 * a line separated string.
+	 * 
+	 * Alloy can actually rename an atom *twice* -- e.g., Kodkod may have an atom Object$2 that
+	 *   gets renamed as Conference$2 before being renamed for _display_ as Conference1. Hence
+	 *   why we pass two dictionaries. The first maps from Alloy original name to display name;
+	 *   the second maps from Kodkod name to Alloy original name.
+	 * 
 	 * @param iterator the iterator.
-	 * @param dictionary a renaming will be applied on the atoms according to the dictionary.
+	 * @param dictionary Alloy original names mapped to Alloy display names
+	 * @param atom2name Kodkod names mapped to Alloy original names
 	 * @return returns a list of line separated strings of lifters. If an exception occurs,
 	 * it returns an empty string.
 	 */    
-	public String getLiftersList(Iterator<MinSolution> iterator, Map<String, String> dictionary){
+	public String getLiftersList(Iterator<MinSolution> iterator, Map<String, String> dictionary, Map<Object, String> atom2name){
 		String retVal = "";
 		MinSolutionIterator miniterator = ((MinSolutionIterator)iterator);
-		MinTranslation translation = miniterator.translation;
+		MinTranslation translation = miniterator.translation;	
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		
-		//Keeps the pattern of the output when a NEW-INSTANCE is involved. The outputs that have
-		//repetitive patterns will be discarded.
-		Set<String> uniqeOutputPattern = new LinkedHashSet<String>();
+		// Keeps the pattern of the output when a NEW-INSTANCE is involved. The outputs that have
+		// repetitive patterns will be discarded.
+		Set<String> uniqueOutputPattern = new LinkedHashSet<String>();
 		
 		Instance lifters = null;
 		
@@ -395,56 +401,96 @@ public final class MinSolver {
 		}
 		
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
-		
-		//This can be a method!
+
+		// For each relational fact in the lifter set, construct a descriptive string.
 		for(Relation r : lifterTuples.keySet()){
 			TupleSet tuples = lifterTuples.get(r);
 			for(Tuple t: tuples){
 				if(!miniterator.trivial)
 				{
 					int index = MinTwoWayTranslator.getPropVariableForTuple(bounds, translation, r, t);
-					//if there is no primary variables assigned to this relation, continue.
+					// if there are no primary variables assigned to this relation, continue.
 					if(index == -1)
 						continue;
 				}
-
-				if(dictionary != null){
-			        final StringBuilder ret = new StringBuilder("["); //This section of the code produces t.toString manually:
-			        StringBuilder pattern = new StringBuilder("["); //keeps the pattern of the next output.
-			        
-			        String label = dictionary.get(t.atom(0));
-			        if(label != null){
-			        	ret.append(label);
-				        pattern.append(label);
-			        }
-			        else{
-			        	ret.append("NEW-INSTANCE(" + t.atom(0) + ")");
-			        	pattern.append("NEW-INSTANCE"); //For new instances, do not keep the name of the atom
-			        }
-			        for (int i = 1; i < t.arity(); i++) {
-			            ret.append(", ");
-			            pattern.append(",");
-			            label = dictionary.get(t.atom(i));
-			            if(label != null){
-			            	ret.append(label);
-			            	pattern.append(label);
-			            }
-			            else{
-			            	ret.append("NEW-INSTANCE(" + t.atom(i) + ")");
-			            	pattern.append("NEW=INSTANCE");
-			            }
-			        }
-			        ret.append("]");
-			        pattern.append("]");
-			        if(uniqeOutputPattern.add(r.toString()+ pattern.toString())) //if the pattern is not repetitive
-			        	retVal += r.toString() + ret.toString() + "\n";
-				} else{
-					retVal += r.toString() + t.toString() + "\n";
-				}
-			}
-		}
+				
+				retVal += lifterTupleToString(r, t, dictionary, atom2name, uniqueOutputPattern);
+				
+			} // end each tuple for this relation in lifters
+		} // end for each relation in lifters
 		
 		return retVal;
+	}
+
+	private String lifterTupleToString(Relation r, Tuple t,
+			Map<String, String> dictionary, Map<Object, String> atom2name,
+			Set<String> uniqueOutputPattern)
+	{
+		if(dictionary != null && atom2name != null)
+		{
+			// Construct a more sensible list than just the raw tuples.
+			
+	        final StringBuilder ret = new StringBuilder("["); //This section of the code produces t.toString manually:
+	        StringBuilder pattern = new StringBuilder("["); //keeps the pattern of the next output.
+	        	        
+	        //////////////////////////////////////////////////
+	        // Construct the list of Alloy original names for the Kodkod atom names:
+	        List<String> alloyOrig = new ArrayList<String>(t.arity());
+	        for(int ii=0;ii<t.arity();ii++)
+	        {
+	        	Object kodkodAtom = t.atom(ii);
+	        	if(atom2name.containsKey(kodkodAtom))
+	        		alloyOrig.add(atom2name.get(kodkodAtom));
+	        	else
+	        		alloyOrig.add(kodkodAtom.toString());
+	        }
+	        	        
+	        ////////////////////////////////////////////////// 
+	        
+	        // To make sure no repeats of identical (up to choice of new atom) lifters,
+	        // pattern removes the labels from ret.	        
+	        
+	        // For each atom in the tuple:	        	        
+	        String label = "";	        
+	        boolean first = true;
+	        for (int i = 0; i < t.arity(); i++) {
+	        	if(!first) 
+	        	{
+	        		ret.append(", ");
+	        		pattern.append(",");
+	        	}
+        		first = false;
+
+	            label = dictionary.get(alloyOrig.get(i));
+	            if(label != null){
+	            	ret.append(label);
+	            	pattern.append(label);
+	            }
+	            else{
+	            	// If the labeling failed, use the raw atom name:
+	            	ret.append("NEW-INSTANCE(" + t.atom(i) + ")");
+	            	pattern.append("NEW-INSTANCE");
+	            }
+	        }
+	        
+	        ret.append("]");
+	        pattern.append("]");
+	        
+	        /*JOptionPane.showMessageDialog(null, "Tuple: "+t+
+	        		"\natom2name: "+atom2name+
+	        		"\nAlloy orig: "+alloyOrig+
+	        		"\nDictionary: "+dictionary+
+	        		"\nRet: "+ret+
+	        		"\nPattern: "+pattern);*/
+	        
+	        if(uniqueOutputPattern.add(r.toString()+ pattern.toString())) //if the pattern is not repetitive
+	        	return r.toString() + ret.toString() + "\n";
+	        else
+	        	return "";
+		} 
+		
+		// No dictionary/dictionaries, so default to the raw tuple:
+		return r.toString() + t.toString() + "\n";		
 	}
 
 	/**
@@ -1049,7 +1095,7 @@ public final class MinSolver {
 			} else {
 				setLastSolution(nonTrivialSolution());
 			}						
-			
+						
 			return getLastSolution();
 		}
 
@@ -1441,7 +1487,7 @@ public final class MinSolver {
 			// If this is an un-augmented iterator, re-activate symmetry-breaking
 			// (Or else the next models would not benefit from SB.)
 			if(!isAugmented())
-				solver.activateSBP();						
+				solver.activateSBP();												
 			
 			return toIntCollection(retVal);
 		}
