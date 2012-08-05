@@ -1,9 +1,11 @@
 package minalloy;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import minsolver.MinSolution;
 import minsolver.MinSolutionFactory;
@@ -19,7 +21,9 @@ import kodkod.util.ints.IntSet;
 
 public class IsomorphicSolutionBuilder {
 	private static class Permutations{
+		/** keeps the index of atoms in this partition in the universe. */
 		final int[] atoms;
+		/** stores the permutations of the atoms in this partition. */
 		final int[][] permutations;
 		
 		Permutations(IntSet intSet){
@@ -83,44 +87,51 @@ public class IsomorphicSolutionBuilder {
 	 * Builds all the isomorphic solutions for a given set of MinSolution  and a given Bounds
 	 * and returns them as a set of MinSolution. 
 	 */
-	public static Set<MinSolution> getIsomorphicSolutions(Set<MinSolution> input, Bounds bounds){
-		
-		// Do not build permutations if there are no results. 
-		// (Avoid long delay + possible out-of-memory if there are large bounds.)
-		if(input.size() < 1)
-			return input;
-		
+	public static Set<MinSolution> getIsomorphicSolutions(MinSolution input, final Bounds bounds){
 		Set<MinSolution> results = new HashSet<MinSolution>();		
-		int[][] solutionPermutations = getSolutionPermutations(bounds);
-		final TupleFactory factory = bounds.universe().factory();	
+		int[][] solutionPermutations = getSolutionPermutations(bounds); //get all of the possible permutations
 		
-		for(MinSolution sol: input){
-			for(int i = 0; i < solutionPermutations.length; i++){
-				Instance instance = new Instance(bounds.universe());
-				instance = padInstance(instance, bounds);
-				
-				for(Relation r: sol.instance().relations()){
-					TupleSet tuples = sol.instance().tuples(r);
+		final TupleFactory factory = bounds.universe().factory();
+		
+		//loop through all of the permutations:
+		for(int i = 0; i < solutionPermutations.length; i++){
+			Instance instance = new Instance(bounds.universe()); //The new isomorphic instance
+			instance = padInstance(instance, bounds);
+			
+			//loop through all relations of the current instance
+			for(Relation r: input.instance().relations()){
+				TupleSet tuples = input.instance().tuples(r);
 
-					Set<Tuple> tupleSet = new HashSet<Tuple>();
-					for(Tuple tuple: tuples){
-						List<Object> atoms = new ArrayList<Object>();
-						for(int j = 0; j < tuple.arity(); j++){
-							int atomIndex = tuple.atomIndex(j);
-							int newAtomIndex = solutionPermutations[i][atomIndex];
-							atoms.add(bounds.universe().atom(newAtomIndex));
-						}
-						tupleSet.add(factory.tuple(atoms));
+				//replace the atoms in the tuples of this relation with the atoms defined by this permutation.
+				Set<Tuple> tupleSet = new HashSet<Tuple>();
+				for(Tuple tuple: tuples){
+					List<Object> atoms = new ArrayList<Object>();
+					for(int j = 0; j < tuple.arity(); j++){
+						int atomIndex = tuple.atomIndex(j);
+						int newAtomIndex = solutionPermutations[i][atomIndex];
+						atoms.add(bounds.universe().atom(newAtomIndex));
 					}
-					if(tupleSet.size() > 0)
-						instance.add(r, factory.setOf(tupleSet));
+					tupleSet.add(factory.tuple(atoms)); //build a new tuple set
 				}
-				MinSolution solution  = MinSolutionFactory.satisfiable(sol.stats(), instance, sol.getSATSolverInvocations(), sol.getPropositionalModel());
-				results.add(solution);
+				if(tupleSet.size() > 0)
+					instance.add(r, factory.setOf(tupleSet)); //add the new tuple set to the this relation
 			}
+			MinSolution solution  = MinSolutionFactory.satisfiable(input.stats(), instance, input.getSATSolverInvocations(), input.getPropositionalModel());
+			
+			results.add(solution);
 		}
 		
-		return results;
+		//Removing duplicate entries (if a solution uses a subset of atoms in the universe, we may end up building duplicate isomorphic solutions for it):
+		Set<MinSolution> noDuplicates = new TreeSet<MinSolution>(new Comparator<MinSolution>() {
+	        @Override
+	        public int compare(MinSolution sol1, MinSolution sol2) {
+	            return SolutionComparator.compare(sol1, sol2, bounds, bounds);
+	        }
+	    });
+	    
+		noDuplicates.addAll(results);
+		
+		return noDuplicates;
 	}
 	
 	/**
@@ -149,13 +160,17 @@ public class IsomorphicSolutionBuilder {
 	 * as an array of integer arrays. 
 	 */
 	private static int[][] getSolutionPermutations(Bounds bounds){
+		//Get the permutations of the partitions:
 		Set<Permutations> symmetryPermutations = getSymmetryPermutations(bounds);
 		
+		//Building the number of all the possible permutations:
 		int totalSolutionPermutations = 1;
 		for(Permutations perm: symmetryPermutations){totalSolutionPermutations *= perm.permutations.length;}
 		
+		//Initializing the result (size = # of permutations * size of the universe)
 		int[][] result = new int[totalSolutionPermutations][bounds.universe().size()];
 		
+		//Fill the result as the product of permutations of the partitions:
 		int offset = 1;
 		for(Permutations perm: symmetryPermutations){
 			for(int i = 0; i < result.length; i++){
@@ -167,11 +182,6 @@ public class IsomorphicSolutionBuilder {
 			offset = offset * Permutations.factorial(perm.atoms.length);
 		}
 		
-		//Print permutations:
-		/*for(int i = 0; i < result.length; i++){
-			System.out.println(Arrays.toString(result[i]));
-		}*/
-		
 		return result;
 	}
 	
@@ -182,18 +192,10 @@ public class IsomorphicSolutionBuilder {
 	private static Set<Permutations> getSymmetryPermutations(Bounds bounds){
 		Set<Permutations> result = new HashSet<Permutations>();
 		
+		//Get the symmetry partitions from Kodkod:
 		Set<IntSet> symmetries = MinSymmetryDetectorDelegate.partition(bounds);
 		
-		//Print the partitions:
-		/*for(IntSet set: symmetries){
-			IntIterator iterator = set.iterator();
-			while(iterator.hasNext())
-				System.out.println(iterator.next());
-				//System.out.println(bounds.universe().atom(iterator.next()));
-
-			System.out.println("-------------------------");
-		}*/
-		
+		//Create a data structure containing the permutations of atoms in each partition:
 		for(IntSet set: symmetries){result.add(new Permutations(set));}
 		
 		return result;

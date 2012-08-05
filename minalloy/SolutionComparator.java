@@ -28,6 +28,17 @@ public class SolutionComparator {
 		
 		return result;
 	}
+
+	/**
+	 * Overloads compare to support comparing to MinSolution instances.
+	 */
+	public static int compare(MinSolution theSolution, MinSolution otherSolution, Bounds theBounds, Bounds otherBounds) {
+		int result = 0;
+		
+		result = compareInstances(theSolution.instance(), otherSolution.instance(), theBounds, otherBounds);
+		
+		return result;
+	}	
 	
 	/**
 	 * Compares two sets of instances. We use theInstance for the instance in this MinSolution object and
