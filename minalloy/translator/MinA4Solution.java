@@ -1009,8 +1009,8 @@ public final class MinA4Solution {
     public MinA4Solution lift(String inputFact, Map<String, String> dictionary) throws Err, ExplorationException {
         Formula fgoal = Formula.and(formulas);
         
-        Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator, dictionary);
-
+        Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
+        
         //if the fact does not exists in the given bounds:
         if(inst == null)
         	throw new ExplorationException("The input fact is not valid!");       

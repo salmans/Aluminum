@@ -1008,7 +1008,7 @@ public final class MinVizGUI implements ComponentListener {
 			   for(MinAlloyAtom atom: myState.getOriginalInstance().getAllAtoms()){
 				   dictionary.put(atom.getVizName(myState, true), atom.getOriginalName());
 			   }
-			   explorer.setDictionary(dictionary);
+			   explorer.setDictionary(dictionary);			   
 			   explorer.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
 	   }
 	   return null;

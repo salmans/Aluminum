@@ -498,39 +498,40 @@ public final class MinSolver {
 	 * @param inputStr the input string
 	 * @param iterator the iterator to be lifted by this fact.
 	 * @return an object of type Instance containing the lifting fact.
+	 * @throws LifterFailureException 
 	 */	
-	public Instance parseString(String inputStr, Iterator<MinSolution> iterator){
-		return parseString(inputStr, iterator, null);
+	public Instance parseString(String inputStr, Iterator<MinSolution> iterator) throws ExplorationException{
+		return parseString(inputStr, iterator, null, null);
 	}	
 	
 	/**
 	 * Builds a consistent fact that can be used for lifting a model.
 	 * @param inputStr the input string
 	 * @param iterator the iterator to be lifted by this fact.
-	 * @param dictionary is used to translate the atoms to their names in Kodkod.
-	 * @return an object of type Instance containing the lifting fact.
+	 * @param display2orig is used to translate the atoms to their names in Kodkod.
+	 * @return an object of type Instance containing the lifting fact. 
+	 * @throws ExplorationException 
 	 */
-	public Instance parseString(String inputStr, Iterator<MinSolution> iterator, Map<String, String> dictionary){
+	public Instance parseString(String inputStr, Iterator<MinSolution> iterator, Map<String, String> display2orig, Map<Object, String> atom2name) throws ExplorationException {
 		inputStr = inputStr.trim();
-		inputStr = inputStr.replaceAll(" ", "");
+		inputStr = inputStr.replaceAll(" ", "");				
 		
 		String relationName = null;
 		int index1 = inputStr.indexOf('[');
 		if(index1 == -1)
-			return null;
+			throw new ExplorationException("Augmentation string did not contain a `[`"+relationName);
 		
 		relationName = inputStr.substring(0, index1);
 
 		int index2 = inputStr.indexOf(']');
 		if(index2 == -1)
-			return null;
+			throw new ExplorationException("Augmentation string must end with `]`"+relationName);
 		
-		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(index1 + 1, index2), ",");
-		
-		ArrayList<String> constants = new ArrayList<String>();
-		
+		// Extract a string for each component of the tuple
+		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(index1 + 1, index2), ",");		
+		ArrayList<String> stringComponentsGiven = new ArrayList<String>();		
 		while(tokenizer.hasMoreTokens()){
-			constants.add(tokenizer.nextToken());
+			stringComponentsGiven.add(tokenizer.nextToken());
 		}
 
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
@@ -544,53 +545,102 @@ public final class MinSolver {
 			}
 		}
 		
-		if(relation == null) //Relation does not exist.
-			return null;
+		// If no relation found for this name		
+		if(relation == null) 
+			throw new ExplorationException("No relation found with name "+relationName);
 		
 		TupleSet tuples = bounds.upperBound(relation);
+		// If no tuples found (bound doesn't exist)
 		if(tuples == null)
-			return null;
+			throw new ExplorationException("No upper bound given for "+relationName);
 
+		//String debug = "dictionary: "+display2orig+"\natom2name:"+atom2name+"\n"+
+		//"components given: "+stringComponentsGiven+"\n";
+		
+		// Find the tuple in R's upper bound that matches the string
+		// Check for *each* tuple in the upper bound: is it a match?
 		Tuple tuple = null;
-		for(Tuple t: tuples){
+		for(Tuple t: tuples)
+		{
 			boolean found = true;
-			for(int i = 0; i < t.arity(); i++){
-				if(dictionary != null){
-					String label = dictionary.get(constants.get(i));
-					if(label != null){ //if the name is in the dictionary
-						if(!t.atom(i).toString().equals(label)){
+			
+			//debug += "  checking: "+t+"\n";
+			
+			// Find a match for each component of the tuple
+			for(int i = 0; i < t.arity(); i++)
+			{
+				String stringComponentToMatch = stringComponentsGiven.get(i); 
+				
+				if(display2orig != null && atom2name != null)
+				{		
+					// atom2name maps Kodkod atoms to their "original" Alloy strings.
+					// display2orig maps Alloy display strings to their "original" strings.
+					
+					// Get the original name for this candidate atom
+					Object kodkodAtom = t.atom(i);
+					String alloyOrigName;
+					if(atom2name.containsKey(kodkodAtom))
+						alloyOrigName = atom2name.get(kodkodAtom);
+					else
+						alloyOrigName = kodkodAtom.toString();
+					
+					// Get the original name for the desired atom
+					String desiredOrigName = "";					
+					if(display2orig.containsKey(stringComponentToMatch))
+						desiredOrigName = display2orig.get(stringComponentToMatch);
+					else
+						desiredOrigName = ""; // flag for case 2
+							
+					//debug += "desiredOrigName="+desiredOrigName+"\n";
+					//debug += "alloyOrigName="+alloyOrigName+"\n";
+					//debug += "eq: "+desiredOrigName.equals(alloyOrigName)+"\n";
+					
+					// Case 1: we had a (reverse) display mapping for this desired atom
+					if(desiredOrigName.length() > 0)
+					{ 
+						if(!desiredOrigName.equals(alloyOrigName))
+						{
 							found = false;
 							break;
 						}
-					}else{
-						if(!("NEW-INSTANCE(" + t.atom(i) + ")").toString().equals(constants.get(i))){
+					}
+					// Case 2: must be a new instance
+					else
+					{
+						if(!("NEW-INSTANCE(" + t.atom(i) + ")").toString().equals(stringComponentToMatch)){
 								//|| !t.atom(i).toString().equals(constants.get(i))){
 							found = false;
 							break;
 						}
 					}
 				}
-				else {
-					if(!t.atom(i).toString().equals(constants.get(i))){
+				// No mapping of names given: need to match exactly
+				else 
+				{
+					if(!t.atom(i).toString().equals(stringComponentToMatch)){
 						found = false;
 						break;
 					}
 				}
-			}
+			} // end for each element of the tuple
+			
 			if(found == true){
 				tuple = t;
 				break;
 			}
 		}
 		
+		//JOptionPane.showMessageDialog(null, debug);
+		
 		if(tuple == null) //There is no such tuple
-			return null;
+			throw new ExplorationException("No matching tuple found for the given augmentation string: "+inputStr);
 
 		Instance retVal = new Instance(bounds.universe());
-		retVal.add(relation, bounds.universe().factory().setOf(tuple));
+		retVal.add(relation, bounds.universe().factory().setOf(tuple));				
 		
 		return retVal;
 	}
+	
 	
 	/**
 	 * Returns the bounds after skolemization.
