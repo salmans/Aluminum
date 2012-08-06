@@ -567,7 +567,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /**
      * Do not use the same temporary folder as Alloy.
      */
-    private static final String tempDirString = "aluminum-tmp40-";
+    private static final String tempDirString = "aluminum-tmp-";
     
     /** Find a temporary directory to store Alloy files; it's guaranteed to be a canonical absolute path. */
     private static synchronized String alloyHome() {
