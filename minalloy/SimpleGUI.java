@@ -59,6 +59,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -563,6 +564,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** This variable caches the result of alloyHome() function call. */
     private static String alloyHome = null;
 
+    /**
+     * Do not use the same temporary folder as Alloy.
+     */
+    private static final String tempDirString = "aluminum-tmp40-";
+    
     /** Find a temporary directory to store Alloy files; it's guaranteed to be a canonical absolute path. */
     private static synchronized String alloyHome() {
         if (alloyHome!=null) return alloyHome;
@@ -570,7 +576,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         if (temp==null || temp.length()==0)
             OurDialog.fatal("Error. JVM need to specify a temporary directory using java.io.tmpdir property.");
         String username=System.getProperty("user.name");
-        File tempfile=new File(temp+File.separatorChar+"alloy4tmp40-"+(username==null?"":username));
+        File tempfile=new File(temp+File.separatorChar+tempDirString+(username==null?"":username));
         tempfile.mkdirs();
         String ans=Util.canon(tempfile.getPath());
         if (!tempfile.isDirectory()) {
