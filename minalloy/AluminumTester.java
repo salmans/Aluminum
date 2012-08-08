@@ -47,6 +47,11 @@ public final class AluminumTester {
 			this.solution = solution;
 			this.groupIndex = groupIndex;
 		}
+		
+		public String toString()
+		{
+			return solution.toString()+"\ngroupIndex:"+groupIndex;
+		}
 	}
     /*
      * Execute every command in every file.
@@ -220,8 +225,10 @@ public final class AluminumTester {
     				if(comparison == 1){
     					foundError = true;
     					totalErrors++;
-            			data.append( "The following solution is not minimal: \n\n" + aluminumSolutions.get(i).toString() + "\n\n" +
-            					"because of \n\n" + alloy.getCurrentSolution().toString() + "\n\n" +
+            			data.append( "The following Aluminum solution is not minimal:\n\n" + 
+    					aluminumSolutions.get(i).toString() + "\n\n" +
+            					"because Alloy gave something smaller:\n\n" + 
+    					alloy.getCurrentSolution().toString() + "\n\n" +
             					"-------------------------------------\n");
     				}
     				

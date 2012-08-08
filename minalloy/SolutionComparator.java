@@ -53,7 +53,7 @@ public class SolutionComparator {
 		Set<Relation> otherRelations = otherBounds.relations();
 		
 		result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
-		
+				
 		//TODO this is not the best way of comparing the two instances but it is working for now:
 		if(result == 0)
 			result = compareTuples(theInstance, otherInstance, theBounds); //compare the tuples in the relations.
@@ -109,17 +109,24 @@ public class SolutionComparator {
 	 */
 	private static int compareTuples(Instance theInstance, Instance otherInstance, Bounds theBounds){
 		int result = 0;
-		Set<Relation> theRelations = theBounds.relations();
+				
+		// Only reach this point if the two instances have the same relations.
+		// The instances will contain any Skolem relations; a Bounds object
+		// received from Aluminum or Alloy will NOT (since Skolemization is performed
+		// by Kodkod). So use the instances' relations, not the bounds':
+		Set<Relation> theRelations = theInstance.relations();					
 		
 		boolean firstContainsSecond = true;
-		boolean secondContainsFirst = true;
+		boolean secondContainsFirst = true;		
 		
-		for(Relation relation: theRelations){
+		for(Relation relation: theRelations)
+		{
 			TupleSet theTuples = theInstance.tuples(relation);
 			TupleSet otherTuples = otherInstance.tuples(getRelationByRelationName(otherInstance, relation.name()));
-			
-			// We compare tuples by their string representations. The original Tuple.equals() method forces the two tuples to be drawn
-			//from the same universe but this is not always what we want.
+					
+			// We compare tuples by their string representations. 
+			// The original Tuple.equals() method forces the two tuples to be drawn
+			// from the same universe but this is not always what we want.
 			Set<String> theTupleNames = new HashSet<String>();
 			Set<String> otherTupleNames = new HashSet<String>();
 						
@@ -127,8 +134,9 @@ public class SolutionComparator {
 			for(Tuple tuple: otherTuples) otherTupleNames.add(tuple.toString());
 
 			if(firstContainsSecond) firstContainsSecond = theTupleNames.containsAll(otherTupleNames);
-			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);
+			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);						
 			
+			// Incomparable because of this relation. No need to check any more relations.
 			if(!firstContainsSecond && !secondContainsFirst)
 				break;
 		}
