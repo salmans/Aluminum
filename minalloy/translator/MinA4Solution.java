@@ -886,6 +886,11 @@ public final class MinA4Solution {
         List<Tuple> order = nexts.get(s);
         if (order!=null && order.size()==list.size() && order.containsAll(list)) { list=order; }
         int i = 0;
+        
+        // TN note: this is where the "post-solving" Skolem relations are being added. They are used
+        // as tags for naming in Alloy. We need to be careful when comparing instances because not all
+        // instances of a spec will get the same relations from this block -- unlike everything else.
+        
         for(Tuple t: list) {
            if (frame.atom2sig.containsKey(t.atom(0))) continue; // This means one of the subsig has already claimed this atom.
            String x = signame + "$" + i;

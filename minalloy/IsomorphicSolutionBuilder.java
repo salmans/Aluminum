@@ -1,6 +1,7 @@
 package minalloy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -94,7 +95,7 @@ public class IsomorphicSolutionBuilder {
 		int[][] solutionPermutations = getSolutionPermutations(skolemBounds); //get all of the possible permutations										
 		
 		Universe theUniverse = input.instance().universe();
-		final TupleFactory factory = theUniverse.factory();				
+		final TupleFactory factory = theUniverse.factory();						
 		
 		//loop through all of the permutations:
 		for(int i = 0; i < solutionPermutations.length; i++){
@@ -105,6 +106,12 @@ public class IsomorphicSolutionBuilder {
 			
 			//loop through all relations of the current instance
 			for(Relation r: input.instance().relations()){
+				
+				// If this is not in the Skolem bounds, it is a "label" relation added
+				// after solving. (See A4Solution.rename()). Ignore.
+				if(!skolemBounds.relations().contains(r))
+					continue;
+				
 				TupleSet currentTuples = input.instance().tuples(r);
 				
 				// replace the atoms in the tuples of this relation with the
@@ -138,7 +145,7 @@ public class IsomorphicSolutionBuilder {
 	        }
 	    });
 	    
-		noDuplicates.addAll(results);
+		noDuplicates.addAll(results);					
 		
 		return noDuplicates;
 	}

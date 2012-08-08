@@ -193,8 +193,8 @@ public final class AluminumTester {
             	System.out.println("  Got "+isomorphicMinimalSolutions+" ismorphic+original minimal solutions.");
         	}else{
         		for(int i = 0; i < initialSolutions.size(); i++){ aluminumSolutions.add(new AluminumSolution(initialSolutions.get(i), i));}
-        	}
-        	
+        	}        	        	
+        	        	
             System.out.print("Running Alloy for command: " + command + ": ");
         	int counter = 0;
         	A4Solution alloy = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, alloyOptions);
@@ -204,11 +204,12 @@ public final class AluminumTester {
     		// Reduce output spam. Also, writing to the screen is expensive. 
         	int nEveryFewChecks = 100;
         	int nEveryFewDots = 10;
+        	        	
         	
         	while(alloy.satisfiable()){
         		boolean foundMinimal = false;
         		counter++;
-        		
+        	        		
         		if(counter % nEveryFewChecks == 0)
         			System.out.print("Checking solution " + counter + ": ");
         		
@@ -334,13 +335,13 @@ public final class AluminumTester {
 		
  		for(int i = 0; i < input.size(); i++){
  			Set<MinSolution> solutions = IsomorphicSolutionBuilder.getIsomorphicSolutions(input.get(i), skolemBounds);
- 			for(MinSolution sol: solutions){
+ 			for(MinSolution sol: solutions){ 				 				
  				//Now, we should avoid duplicate entries. (This is not the best way of doing this but it is fine for now)
  				if(SolutionComparator.compare(input.get(i), sol) != 0){
  					results.add(new AluminumSolution(sol, i));
  				}
  			}
-		}
+		} 		
  		
 		return results;
 	}	

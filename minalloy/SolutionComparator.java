@@ -49,15 +49,35 @@ public class SolutionComparator {
 	 */
 	private static int compareInstances(Instance theInstance, Instance otherInstance){
 		int result = 0;
-		Set<Relation> theRelations = theInstance.relations();
-		Set<Relation> otherRelations = otherInstance.relations();
+
+		//Set<Relation> theRelations = theInstance.relations();
+		//Set<Relation> otherRelations = otherInstance.relations();
 		
-		result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
+		// Alloy inserts new relations (that look like Skolem relations) *AFTER*
+		// the solver has produced an instance. See the end of A4Solution.rename().
+		// Unlike all other relations, 2 instances of the same spec may not share 
+		// the same set of these labelling relations. Thus, we need to compare 
+		// models on the intersection of their relations only.		
+		
+		Set<String> theRelationNames = new HashSet<String>();
+		Set<String> otherRelationNames = new HashSet<String>();
+		for(Relation relation: theInstance.relations())
+			theRelationNames.add(relation.name());
+		for(Relation relation: otherInstance.relations())
+			otherRelationNames.add(relation.name());
+		Set<String> relationsToTest = new HashSet<String>();
+		for(String relname : theRelationNames)
+			if(otherRelationNames.contains(relname))
+				relationsToTest.add(relname);
+		
+		result = compareTuplesOnRelations(theInstance, otherInstance, relationsToTest);
+		
+		//result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
 				
 		//TODO this is not the best way of comparing the two instances but it is working for now:
 		
 		// If both have the same relations, compare the tuples:
-		if(result == 0) {
+		/*if(result == 0) {
 			result = compareTuples(theInstance, otherInstance); //compare the tuples in the relations.
 		}
 		// If theInstance had more tuples than otherInstance (1):
@@ -67,8 +87,8 @@ public class SolutionComparator {
 		// If otherInstance had more tuples than otherInstance (-1):
 		else if(result == -1){
 			result = secondContainsFirst(theInstance, otherInstance) ? INCOMPARABLE : -1;		
-		}
-		
+		}*/
+				
 		return result;
 	}
 	
@@ -78,7 +98,7 @@ public class SolutionComparator {
 	 * @param otherRelations the second set of relations.
 	 * @return a value between -1 and 2 based on the contract defined by this.compareTo()
 	 */
-	private static int compareRelations(Set<Relation> theRelations, Set<Relation> otherRelations){
+/*	private static int compareRelations(Set<Relation> theRelations, Set<Relation> otherRelations){
 		int result = 0;
 		
 		// We are comparing the names of the relations because Kodkod does not provide
@@ -106,30 +126,28 @@ public class SolutionComparator {
 		
 		return result;
 	}
-
+*/
 	/**
 	 * Compares two instances that have equal set of relations.
 	 * @param theInstance the first instance.
 	 * @param otherInstance the second instance.
 	 * @return a number between -1 and 2 based on the contract defined by this.compareTo().
 	 */
-	private static int compareTuples(Instance theInstance, Instance otherInstance){
+	private static int compareTuplesOnRelations(Instance theInstance, Instance otherInstance, Set<String> relNamesToCompare)
+	{
 		int result = 0;
-				
-		// Only reach this point if the two instances have the same relations.
-		// The instances will contain any Skolem relations; a Bounds object
-		// received from Aluminum or Alloy will NOT (since Skolemization is performed
-		// by Kodkod). So use the instances' relations, not the bounds':
-		Set<Relation> theRelations = theInstance.relations();					
-		
+						
 		boolean firstContainsSecond = true;
-		boolean secondContainsFirst = true;		
-		
-		for(Relation relation: theRelations)
+		boolean secondContainsFirst = true;						
+				
+		for(String relname : relNamesToCompare)
 		{
-			TupleSet theTuples = theInstance.tuples(relation);
-			TupleSet otherTuples = otherInstance.tuples(getRelationByRelationName(otherInstance, relation.name()));
+			Relation theRelation = getRelationByRelationName(theInstance, relname);
+			Relation otherRelation = getRelationByRelationName(otherInstance, relname);
 					
+			TupleSet theTuples = theInstance.tuples(theRelation);
+			TupleSet otherTuples = otherInstance.tuples(otherRelation);
+								
 			// We compare tuples by their string representations. 
 			// The original Tuple.equals() method forces the two tuples to be drawn
 			// from the same universe but this is not always what we want.
@@ -140,8 +158,8 @@ public class SolutionComparator {
 			for(Tuple tuple: otherTuples) otherTupleNames.add(tuple.toString());
 
 			if(firstContainsSecond) firstContainsSecond = theTupleNames.containsAll(otherTupleNames);
-			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);										
-			
+			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);												
+						
 			// Incomparable because of this relation. No need to check any more relations.
 			if(!firstContainsSecond && !secondContainsFirst)
 				break;
@@ -166,6 +184,7 @@ public class SolutionComparator {
 	 * @param theInstance the first instance.
 	 * @param otherInstance the second instance.
 	 */
+	/*
 	private static boolean secondContainsFirst(Instance firstInstance, Instance secondInstance){
 		
 		Set<Relation> firstRelations = firstInstance.relations();
@@ -188,7 +207,7 @@ public class SolutionComparator {
 		}
 		
 		return true;
-	}	
+	}	*/
 	
 	/**
 	 * Returns a relation in a given instance by the relation's name.
