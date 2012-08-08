@@ -21,7 +21,11 @@ package minsolver;
  * THE SOFTWARE.
  */
 
+import minalloy.IsomorphicSolutionBuilder;
+import kodkod.ast.Relation;
+import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
+import kodkod.instance.TupleSet;
 
 /**
  * Represents the full solution to a formula:  an
@@ -35,7 +39,7 @@ import kodkod.instance.Instance;
 public final class MinSolution{
 	private final Outcome outcome;
 	private final MinStatistics stats;
-	private final Instance instance;
+	private Instance instance;
 	private final MinProof proof;
 	private final int SATSolverInvocations;
 	/** Stores the propositional model for this solution. 
@@ -201,5 +205,26 @@ public final class MinSolution{
 		 * a series of simple transformations reduces the formula to the constant FALSE.  
 		 */
 		TRIVIALLY_UNSATISFIABLE
+	}
+
+	/**
+	 * Used to remove labeling relations inserted by Alloy. The underlying instance is 
+	 * copied and replaced, including only those relations in the bounds given.
+	 * @param skolemBounds
+	 */
+	public void sanitizeToBounds(Bounds skolemBounds)
+	{
+		Instance newInstance = new Instance(instance.universe());		
+		newInstance = IsomorphicSolutionBuilder.padInstance(newInstance, skolemBounds);
+		
+		// Should not need to use names, since it is assumed that this bounds 
+		// generated this instance.
+		for(Relation r : skolemBounds.relations())
+		{
+			TupleSet currentTuples = instance.tuples(r);
+			newInstance.add(r, currentTuples);
+		}
+		
+		instance = newInstance;
 	}
 }

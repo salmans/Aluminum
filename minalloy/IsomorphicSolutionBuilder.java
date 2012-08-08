@@ -158,7 +158,7 @@ public class IsomorphicSolutionBuilder {
 	 *          instance.tuples' = bounds.lowerBound ++ instance.tuples
 	 * @return instance
 	 */	
-	private static Instance padInstance(Instance instance, Bounds bounds) {
+	public static Instance padInstance(Instance instance, Bounds bounds) {
 		for (Relation r : bounds.relations()) {
 			if (!instance.contains(r)) {
 				instance.add(r, bounds.lowerBound(r));

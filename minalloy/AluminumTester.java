@@ -164,9 +164,11 @@ public final class AluminumTester {
     		}
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
 
+            // Clear out the cache:
+            uniqueSolutions.clear();
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
         	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();        	        	
-        	
+        	        	
         	while(aluminum.satisfiable()){
         		if(uniqueSolutions.add(aluminum.toString())){
         			initialSolutions.add(aluminum.getCurrentSolution());
@@ -331,7 +333,12 @@ public final class AluminumTester {
 
 		//For reporting purposes, we want to keep the original minimal models produced by Aluminum in
 		//their current place in the list:
-		for(int i = 0; i < input.size(); i++){ results.add(new AluminumSolution(input.get(i), i));}
+		for(int i = 0; i < input.size(); i++) {
+			// sanitizeToBounds removes every relation not in the Skolem bounds.
+			// This effectively removes "labeling" relations inserted by Alloy.
+			input.get(i).sanitizeToBounds(skolemBounds);
+			results.add(new AluminumSolution(input.get(i), i));
+		}
 		
  		for(int i = 0; i < input.size(); i++){
  			Set<MinSolution> solutions = IsomorphicSolutionBuilder.getIsomorphicSolutions(input.get(i), skolemBounds);
