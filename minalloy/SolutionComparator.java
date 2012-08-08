@@ -21,10 +21,10 @@ public class SolutionComparator {
 	 * if they are equal returns 0.
 	 * if they both contains something that the other doesn't returns INCOMPARABLE.
 	 */
-	public static int compare(MinSolution theSolution, Solution otherSolution, Bounds theBounds, Bounds otherBounds) {
+	public static int compare(MinSolution theSolution, Solution otherSolution) {
 		int result = 0;
 		
-		result = compareInstances(theSolution.instance(), otherSolution.instance(), theBounds, otherBounds);
+		result = compareInstances(theSolution.instance(), otherSolution.instance());
 		
 		return result;
 	}
@@ -32,10 +32,10 @@ public class SolutionComparator {
 	/**
 	 * Overloads compare to support comparing to MinSolution instances.
 	 */
-	public static int compare(MinSolution theSolution, MinSolution otherSolution, Bounds theBounds, Bounds otherBounds) {
+	public static int compare(MinSolution theSolution, MinSolution otherSolution) {
 		int result = 0;
 		
-		result = compareInstances(theSolution.instance(), otherSolution.instance(), theBounds, otherBounds);
+		result = compareInstances(theSolution.instance(), otherSolution.instance());
 		
 		return result;
 	}	
@@ -47,22 +47,28 @@ public class SolutionComparator {
 	 * @param otherInstance the second instance.
 	 * @return a value between -1 and 2 based on the contract defined by this.compareTo().
 	 */
-	private static int compareInstances(Instance theInstance, Instance otherInstance, Bounds theBounds, Bounds otherBounds){
+	private static int compareInstances(Instance theInstance, Instance otherInstance){
 		int result = 0;
-		Set<Relation> theRelations = theBounds.relations();
-		Set<Relation> otherRelations = otherBounds.relations();
+		Set<Relation> theRelations = theInstance.relations();
+		Set<Relation> otherRelations = otherInstance.relations();
 		
 		result = compareRelations(theRelations, otherRelations); //If an instance contains a relation that the other one doesn't
 				
 		//TODO this is not the best way of comparing the two instances but it is working for now:
-		if(result == 0)
-			result = compareTuples(theInstance, otherInstance, theBounds); //compare the tuples in the relations.
-		else if(result == 1){
-			result = hasOtherTuples(otherInstance, theInstance, otherBounds) ? INCOMPARABLE : 1;
+		
+		// If both have the same relations, compare the tuples:
+		if(result == 0) {
+			result = compareTuples(theInstance, otherInstance); //compare the tuples in the relations.
 		}
-		else if(result == -1)
-			result = hasOtherTuples(theInstance, otherInstance, theBounds) ? INCOMPARABLE : -1;		
-
+		// If theInstance had more tuples than otherInstance (1):
+		else if(result == 1){
+			result = secondContainsFirst(otherInstance, theInstance) ? INCOMPARABLE : 1;
+		}
+		// If otherInstance had more tuples than otherInstance (-1):
+		else if(result == -1){
+			result = secondContainsFirst(theInstance, otherInstance) ? INCOMPARABLE : -1;		
+		}
+		
 		return result;
 	}
 	
@@ -107,7 +113,7 @@ public class SolutionComparator {
 	 * @param otherInstance the second instance.
 	 * @return a number between -1 and 2 based on the contract defined by this.compareTo().
 	 */
-	private static int compareTuples(Instance theInstance, Instance otherInstance, Bounds theBounds){
+	private static int compareTuples(Instance theInstance, Instance otherInstance){
 		int result = 0;
 				
 		// Only reach this point if the two instances have the same relations.
@@ -134,7 +140,7 @@ public class SolutionComparator {
 			for(Tuple tuple: otherTuples) otherTupleNames.add(tuple.toString());
 
 			if(firstContainsSecond) firstContainsSecond = theTupleNames.containsAll(otherTupleNames);
-			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);						
+			if(secondContainsFirst) secondContainsFirst = otherTupleNames.containsAll(theTupleNames);										
 			
 			// Incomparable because of this relation. No need to check any more relations.
 			if(!firstContainsSecond && !secondContainsFirst)
@@ -160,10 +166,9 @@ public class SolutionComparator {
 	 * @param theInstance the first instance.
 	 * @param otherInstance the second instance.
 	 */
-	private static boolean hasOtherTuples(Instance firstInstance, Instance secondInstance, Bounds firstBounds){
-		Set<Relation> firstRelations = firstBounds.relations();
+	private static boolean secondContainsFirst(Instance firstInstance, Instance secondInstance){
 		
-		boolean tuplesFound = false;
+		Set<Relation> firstRelations = firstInstance.relations();
 		
 		for(Relation relation: firstRelations){
 			TupleSet firstTuples = firstInstance.tuples(relation);
@@ -176,14 +181,13 @@ public class SolutionComparator {
 						
 			for(Tuple tuple: firstTuples) firstTupleNames.add(tuple.toString());
 			for(Tuple tuple: secondTuples) secondTupleNames.add(tuple.toString());
-
-			if(!secondTupleNames.containsAll(firstTupleNames)){
-				tuplesFound = true;
-				break;
-			}
+			
+			// If we do not have strict containment, the 2nd instance doesn't contain the first.
+			if(!secondTupleNames.containsAll(firstTupleNames))
+				return false;
 		}
 		
-		return tuplesFound;
+		return true;
 	}	
 	
 	/**

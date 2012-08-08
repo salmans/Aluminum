@@ -39,13 +39,13 @@ public final class MinSolution{
 	private final MinProof proof;
 	private final int SATSolverInvocations;
 	/** Stores the propositional model for this solution. 
-	 * This field is going to be used for lifting opratins.*/ 
+	 * This field is going to be used for lifting operations.*/ 
 	private final int[] propositionalModel;
 
 	/**
 	 * Returns the propositional model for this solution.
 	 */
-	public int[] getPropositionalModel() {
+	public int[] getPropositionalModel() {		
 		return propositionalModel;
 	}
 

@@ -165,7 +165,7 @@ public final class AluminumTester {
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
 
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
-        	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();
+        	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();        	        	
         	
         	while(aluminum.satisfiable()){
         		if(uniqueSolutions.add(aluminum.toString())){
@@ -185,8 +185,9 @@ public final class AluminumTester {
         	
         	if(optIsomorphicSolutions.value){
         		System.out.print("Building isomorphic solutions for the minimal solutions ....");
-        		aluminumSolutions = getIsomorphicSolutions(initialSolutions, aluminum.getBounds());
+        		aluminumSolutions = getIsomorphicSolutions(initialSolutions, aluminum.getSkolemBounds());
             	System.out.println("Done!");
+            	
             	isomorphicMinimalSolutions = aluminumSolutions.size();
 
             	System.out.println("  Got "+isomorphicMinimalSolutions+" ismorphic+original minimal solutions.");
@@ -217,7 +218,7 @@ public final class AluminumTester {
         				System.out.print(".");
         			dotCounter++;
         			
-        			int comparison = SolutionComparator.compare(aluminumSolutions.get(i).solution, alloy.getCurrentSolution(), aluminum.getBounds(), alloy.getBounds());
+        			int comparison = SolutionComparator.compare(aluminumSolutions.get(i).solution, alloy.getCurrentSolution());
         			
         			if(!foundMinimal)
         				foundMinimal = (comparison == -1 || comparison == 0);
@@ -320,7 +321,7 @@ public final class AluminumTester {
 	}
 	
 	
-	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> input, Bounds bounds){
+	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> input, Bounds skolemBounds){
 		// Do not build permutations if there are no results. 
 		// (Avoid long delay + possible out-of-memory if there are large bounds.)
 		List<AluminumSolution> results = new ArrayList<AluminumSolution>();
@@ -332,10 +333,10 @@ public final class AluminumTester {
 		for(int i = 0; i < input.size(); i++){ results.add(new AluminumSolution(input.get(i), i));}
 		
  		for(int i = 0; i < input.size(); i++){
- 			Set<MinSolution> solutions = IsomorphicSolutionBuilder.getIsomorphicSolutions(input.get(i), bounds);
+ 			Set<MinSolution> solutions = IsomorphicSolutionBuilder.getIsomorphicSolutions(input.get(i), skolemBounds);
  			for(MinSolution sol: solutions){
  				//Now, we should avoid duplicate entries. (This is not the best way of doing this but it is fine for now)
- 				if(SolutionComparator.compare(input.get(i), sol, bounds, bounds) != 0){
+ 				if(SolutionComparator.compare(input.get(i), sol) != 0){
  					results.add(new AluminumSolution(sol, i));
  				}
  			}

@@ -16,6 +16,7 @@ import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
+import kodkod.instance.Universe;
 import kodkod.util.ints.IntIterator;
 import kodkod.util.ints.IntSet;
 
@@ -87,36 +88,44 @@ public class IsomorphicSolutionBuilder {
 	 * Builds all the isomorphic solutions for a given set of MinSolution  and a given Bounds
 	 * and returns them as a set of MinSolution. 
 	 */
-	public static Set<MinSolution> getIsomorphicSolutions(MinSolution input, final Bounds bounds){
+	public static Set<MinSolution> getIsomorphicSolutions(MinSolution input, Bounds skolemBounds){
 		Set<MinSolution> results = new HashSet<MinSolution>();		
-		int[][] solutionPermutations = getSolutionPermutations(bounds); //get all of the possible permutations
+		 				
+		int[][] solutionPermutations = getSolutionPermutations(skolemBounds); //get all of the possible permutations										
 		
-		final TupleFactory factory = bounds.universe().factory();
+		Universe theUniverse = input.instance().universe();
+		final TupleFactory factory = theUniverse.factory();				
 		
 		//loop through all of the permutations:
 		for(int i = 0; i < solutionPermutations.length; i++){
-			Instance instance = new Instance(bounds.universe()); //The new isomorphic instance
-			instance = padInstance(instance, bounds);
+			Instance instance = new Instance(theUniverse); //The new isomorphic instance
+
+			// Insert lower-bounds
+			instance = padInstance(instance, skolemBounds);
 			
 			//loop through all relations of the current instance
 			for(Relation r: input.instance().relations()){
-				TupleSet tuples = input.instance().tuples(r);
-
-				//replace the atoms in the tuples of this relation with the atoms defined by this permutation.
-				Set<Tuple> tupleSet = new HashSet<Tuple>();
-				for(Tuple tuple: tuples){
+				TupleSet currentTuples = input.instance().tuples(r);
+				
+				// replace the atoms in the tuples of this relation with the
+				// atoms defined by this permutation.
+				Set<Tuple> newTupleSet = new HashSet<Tuple>();
+				
+				for(Tuple tuple: currentTuples)
+				{
 					List<Object> atoms = new ArrayList<Object>();
 					for(int j = 0; j < tuple.arity(); j++){
 						int atomIndex = tuple.atomIndex(j);
 						int newAtomIndex = solutionPermutations[i][atomIndex];
-						atoms.add(bounds.universe().atom(newAtomIndex));
+						atoms.add(skolemBounds.universe().atom(newAtomIndex));
 					}
-					tupleSet.add(factory.tuple(atoms)); //build a new tuple set
+
+					newTupleSet.add(factory.tuple(atoms)); //build a new tuple set
 				}
-				if(tupleSet.size() > 0)
-					instance.add(r, factory.setOf(tupleSet)); //add the new tuple set to the this relation
+				if(newTupleSet.size() > 0)
+					instance.add(r, factory.setOf(newTupleSet)); //add the new tuple set to the this relation
 			}
-			MinSolution solution  = MinSolutionFactory.satisfiable(input.stats(), instance, input.getSATSolverInvocations(), input.getPropositionalModel());
+			MinSolution solution = MinSolutionFactory.satisfiable(input.stats(), instance, input.getSATSolverInvocations(), input.getPropositionalModel());
 			
 			results.add(solution);
 		}
@@ -125,7 +134,7 @@ public class IsomorphicSolutionBuilder {
 		Set<MinSolution> noDuplicates = new TreeSet<MinSolution>(new Comparator<MinSolution>() {
 	        @Override
 	        public int compare(MinSolution sol1, MinSolution sol2) {
-	            return SolutionComparator.compare(sol1, sol2, bounds, bounds);
+	            return SolutionComparator.compare(sol1, sol2);
 	        }
 	    });
 	    

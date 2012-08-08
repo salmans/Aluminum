@@ -1203,4 +1203,15 @@ public final class MinA4Solution {
         MinA4SolutionWriter.writeInstance(rep, this, writer, macros, sourceFiles);
         if (writer.checkError()) throw new ErrorFatal("Error writing the solution XML file.");
     }
+
+    /**
+     * Allow the caller to get the Skolem bounds in use by the private
+     * MinSolver being used to produce solutions. This is used by 
+     * AluminumTester.
+     * @return
+     */
+	public Bounds getSkolemBounds()
+	{
+		return solver.getSkolemBounds();
+	}
 }
