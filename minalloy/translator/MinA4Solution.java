@@ -37,6 +37,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import org.sat4j.specs.ContradictionException;
+import org.sat4j.specs.TimeoutException;
+
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.Expression;
@@ -1042,8 +1045,21 @@ public final class MinA4Solution {
     }
 
     /** Returns a list of facts consistent to the current loaded solution. */
-    public String findConsistentFacts(Map<String, String> dictionary) throws Err, IOException {
+    public String listConsistentFacts(Map<String, String> dictionary) {
     	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
+    }  
+
+    /** Returns an instance containing the consistent facts. */
+    public Instance getConsistentFacts(Map<String, String> dictionary){
+    	try {
+			return solver.getLifters(((Peeker<MinSolution>)kEnumerator).iterator);
+		} catch (TimeoutException e) {
+			e.printStackTrace();
+			return null;
+		} catch (ContradictionException e) {
+			e.printStackTrace();
+			return null;
+		}
     }  
     
     /** Performs one level of backtracking to the current state in the exploration. */

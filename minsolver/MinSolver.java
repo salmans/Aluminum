@@ -416,7 +416,7 @@ public final class MinSolver {
 		
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
 		
-		// Keeps the pattern of the output when a NEW-INSTANCE is involved. The outputs that have
+		// Keeps the pattern of the output when a NEW is involved. The outputs that have
 		// repetitive patterns will be discarded.
 		Set<String> uniqueOutputPattern = new LinkedHashSet<String>();
 		
@@ -497,21 +497,14 @@ public final class MinSolver {
 	            }
 	            else{
 	            	// If the labeling failed, use the raw atom name:
-	            	ret.append("NEW-INSTANCE(" + t.atom(i) + ")");
-	            	pattern.append("NEW-INSTANCE");
+	            	ret.append("NEW(" + t.atom(i) + ")");
+	            	pattern.append("NEW");
 	            }
 	        }
 	        
 	        ret.append("]");
 	        pattern.append("]");
-	        
-	        /*JOptionPane.showMessageDialog(null, "Tuple: "+t+
-	        		"\natom2name: "+atom2name+
-	        		"\nAlloy orig: "+alloyOrig+
-	        		"\nDictionary: "+dictionary+
-	        		"\nRet: "+ret+
-	        		"\nPattern: "+pattern);*/
-	        
+	        	        
 	        if(uniqueOutputPattern.add(r.toString()+ pattern.toString())) //if the pattern is not repetitive
 	        	return r.toString() + ret.toString() + "\n";
 	        else
@@ -636,8 +629,7 @@ public final class MinSolver {
 					// Case 2: must be a new instance
 					else
 					{
-						if(!("NEW-INSTANCE(" + t.atom(i) + ")").toString().equals(stringComponentToMatch)){
-								//|| !t.atom(i).toString().equals(constants.get(i))){
+						if(!("NEW(" + t.atom(i) + ")").toString().equals(stringComponentToMatch)){
 							found = false;
 							break;
 						}

@@ -160,7 +160,7 @@ public final class AluminumTester {
         {
     		if(logDistribution){
     			distributionLog.append("Executing command: " + command + " -----\n");
-    			distributionLog.append("Alloy Solution\tMinimal Solution\tIsomorphism Group\n");
+    			distributionLog.append("Alloy Solution\tMinimal Solution\tIsomorphism Group\tComparison\n");
     		}
             System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
 
@@ -239,7 +239,7 @@ public final class AluminumTester {
     				//Log distribution
     				if(logDistribution){
     					if(comparison == -1 || comparison ==0){
-    						distributionLog.append(counter + "\t" + i + "\t" + aluminumSolutions.get(i).groupIndex + "\n");
+    						distributionLog.append(counter + "\t" + i + "\t" + aluminumSolutions.get(i).groupIndex + "\t" + comparison + "\n");
     					}
     				}
         		}

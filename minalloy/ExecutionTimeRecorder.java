@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
+import kodkod.ast.Relation;
+import kodkod.instance.Instance;
+
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.opts.BooleanOption;
@@ -55,12 +58,14 @@ public final class ExecutionTimeRecorder {
     	IntOption optNumberOfModels = new IntOption("-n", 10);
     	//Symmetry Breaking (Equal to Aluminum's SB by default)
     	IntOption optSymmetryBreaking = new IntOption("-sb", 20);
-    	//Augmentation information
+    	//Record augmentation time
     	FileOption optAugmentation = new FileOption("-a");
     	//Number of trials
     	IntOption optNumberOfTrials = new IntOption("-t", 1);
-    	//Number of SATSolverInvocations
-    	BooleanOption optlogMinimizationHistory = new BooleanOption("-hist", false);
+    	//Record minimization history as opposed to logging execution time
+    	BooleanOption optLogMinimizationHistory = new BooleanOption("-hist", false);
+    	//Record the execution time for getting consistent facts
+    	BooleanOption optLogConsistentFacts = new BooleanOption("-cf", false);    	
 
     	
     	CmdLineParser optParser = new CmdLineParser();
@@ -71,7 +76,8 @@ public final class ExecutionTimeRecorder {
     	optParser.addOption(optSymmetryBreaking);
     	optParser.addOption(optAugmentation);
     	optParser.addOption(optNumberOfTrials);
-    	optParser.addOption(optlogMinimizationHistory);
+    	optParser.addOption(optLogMinimizationHistory);
+    	optParser.addOption(optLogConsistentFacts);
     	
     	try{
     		optParser.parse(args);
@@ -88,19 +94,26 @@ public final class ExecutionTimeRecorder {
     		System.err.println("No output file is provided!");
     		System.exit(0);
     	}
-    	if(optlogMinimizationHistory.value){	//If -ssi is active, then run it only for one trial for only minimal solutions
+    	if(optLogMinimizationHistory.value){	//If -hist is active, then run it only for one trial for only minimal solutions
     		optMinimal.value = true;
     		optNumberOfTrials.value = 1;
     	}
+    	if(optLogConsistentFacts.value){	//If -cf is active, then run it for only minimal solutions
+    		optMinimal.value = true;
+    	}    	
     	if(!optMinimal.value && optAugmentation.value != null){
     		System.err.println("Augmentation is only applicable on minimal model finding.");
     		System.exit(0);
     	}
-    	
+    	if(optLogConsistentFacts.value && optLogMinimizationHistory.value){
+    		System.err.println("One one of -hist or -cf can be active.");
+    		System.exit(0);
+    	}
     	
     	//TODO this is the worst code ever! Consider revision:
     	if(optMinimal.value)
-    		solveMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials, optlogMinimizationHistory);
+    		solveMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials, 
+    				optLogMinimizationHistory, optLogConsistentFacts);
     	else
     		solveNonMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optNumberOfTrials);
     }
@@ -111,7 +124,8 @@ public final class ExecutionTimeRecorder {
 	private static void solveMinimal(FileOption optInput, FileOption optOutput, 
 			BooleanOption optMinimal, IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, FileOption optAugmentation, 
-			IntOption optNumberOfTrials, BooleanOption optlogMinimizationHistory) throws Err {
+			IntOption optNumberOfTrials, BooleanOption optLogMinimizationHistory,
+			BooleanOption optLogConsistentFacts) throws Err {
 		
 		//Loads a dummy model in order to load Kodkod classes.
 		try{
@@ -143,15 +157,17 @@ public final class ExecutionTimeRecorder {
         output.add("-sb = " + optSymmetryBreaking.value);
         System.out.println("-n = " + optNumberOfModels.value);
         output.add("-n = " + optNumberOfModels.value);
-        System.out.println("-hist = " + optlogMinimizationHistory.value + "\n");
-        output.add("-hist = " + optlogMinimizationHistory.value + "\n");
+        System.out.println("-hist = " + optLogMinimizationHistory.value);
+        output.add("-hist = " + optLogMinimizationHistory.value);
+        System.out.println("-cf = " + optLogConsistentFacts.value + "\n");
+        output.add("-cf = " + optLogConsistentFacts.value + "\n");        
         
         Module world = CompUtil.parseEverything_fromFile(rep, null, optInput.value.getPath());
 
         // Choose some default options for how you want to execute the commands
         MinA4Options options = new MinA4Options();
         options.symmetry = optSymmetryBreaking.value;
-        options.logMinimizationHistory = optlogMinimizationHistory.value;
+        options.logMinimizationHistory = optLogMinimizationHistory.value;
         
         Stack<AugmentationElement> stack = null;
         if(optAugmentation.value != null){
@@ -175,25 +191,31 @@ public final class ExecutionTimeRecorder {
         	for(int i = 0; i < optNumberOfTrials.value; i++){   
         		System.out.println("TRIAL " + (i + 1) + "------");
 
-        		if(optlogMinimizationHistory.value){
+        		if(optLogMinimizationHistory.value){
         			System.out.println("invocations\telements\tattributes\trelations");
         			output.add("invocations\telements\tattributes\trelations");
         		}
         		else{
-        			System.out.println("time");
-        			output.add("time");
+        			if(optLogConsistentFacts.value){
+            			System.out.println("time\t#facts");
+            			//output.add("time\t#facts");
+        			}else{
+	        			System.out.println("time");
+	        			//output.add("time");
+        			}
         		}
         		
         		MinA4Solution ans = null;
         		try{
-        			ans = getFirstSolution(rep, world, command, options, output, stack, optlogMinimizationHistory.value, i, lineNumber);
+        			ans = getFirstSolution(rep, world, command, options, output, stack, optLogMinimizationHistory.value, optLogConsistentFacts.value, i, lineNumber);
         		}
         		catch(ExplorationException e){
         			System.err.println(e.getMessage());
         			System.exit(0);
         		}
 
-        		long time = 0;            
+        		long time = 0;
+        		int consistentFacts = 0;
         		int counter = 1;
 
         		while(ans.satisfiable()){
@@ -204,16 +226,32 @@ public final class ExecutionTimeRecorder {
         			ans = ans.next();
         			time = System.currentTimeMillis() - time;
 
+        			if(optLogConsistentFacts.value){
+            			time = System.currentTimeMillis();                	
+            			Instance facts = ans.getConsistentFacts(null);
+            			time = System.currentTimeMillis() - time;
+            			
+                        consistentFacts = 0;
+                        for(Relation relation: facts.relations()){
+                        	consistentFacts += facts.tuples(relation).size();
+                        }            			
+        			}
+        			
         			String info = null;
-        			if(!optlogMinimizationHistory.value)
-        				info = new Long(time).toString();
-        			else{
+        			if(optLogMinimizationHistory.value){        				
         				MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
         				
         				if(history == null) //The last unsatisfiable solution comes back with a null history.
         					break;
         				
         				info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
+        			}else{
+        	        	if(optLogConsistentFacts.value){
+        	        		info = time + "\t" + consistentFacts;        		
+        	        	}
+        	        	else{
+        	        		info = new Long(time).toString();
+        	        	}        				
         			}
         			
         			System.out.println(++counter + ": " + info);
@@ -234,9 +272,12 @@ public final class ExecutionTimeRecorder {
 	}
 	
 	private static MinA4Solution getFirstSolution(A4Reporter rep, Module world, Command command, 
-			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, boolean logMinimizationHistory, int trial, int lineNumber) 
+			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, boolean logMinimizationHistory, 
+			boolean logConsistentFacts, int trial, int lineNumber)
 					throws Err, ExplorationException{
         long time = 0;
+        int consistentFacts = 0;
+        
         time = System.currentTimeMillis();
         MinA4Solution ans = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);
         time = System.currentTimeMillis() - time;
@@ -252,18 +293,34 @@ public final class ExecutionTimeRecorder {
         	
         	time = System.currentTimeMillis();
         	ans = ans.lift(aug.augmentingFact, null);
-        	time = System.currentTimeMillis() - time;
+        	time = System.currentTimeMillis() - time;	
+        }
+        
+        if(logConsistentFacts){ //When logging consistent facts, ignore the time to fetch the last model.
+        	time = System.currentTimeMillis();
+        	Instance facts = ans.getConsistentFacts(null);
+            time = System.currentTimeMillis() - time;
+            
+            consistentFacts = 0;
+            for(Relation relation: facts.relations()){
+            	consistentFacts += facts.tuples(relation).size();
+            }
         }
         
         String info = null;
-        if(!logMinimizationHistory)
-        	info = new Long(time).toString();
-        else{
+        if(logMinimizationHistory){
         	MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
         	info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
         }
+        else{
+        	if(logConsistentFacts){
+        		info = time + "\t" + consistentFacts;        		
+        	}
+        	else{
+        		info = new Long(time).toString();        		
+        	}
+        }
         
-        //TODO separate translation and execution times.
         System.out.println("1: " + info);
         if(trial == 0)
         	output.add(info);
@@ -349,8 +406,6 @@ public final class ExecutionTimeRecorder {
         	for(int i = 0; i < optNumberOfTrials.value; i++){
         		System.out.println("TRIAL " + (i + 1) + "------");
         		System.out.println("time");
-        		output.add("time");
-        		
         		
         		long time = 0;
         		time = System.currentTimeMillis();
