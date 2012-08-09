@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import javax.swing.JOptionPane;
-
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.Expression;
@@ -319,6 +317,8 @@ public final class MinA4Solution {
         solver.options().setSkolemDepth(opt.skolemDepth);
         solver.options().setBitwidth(bitwidth);
         solver.options().setIntEncoding(Options.IntEncoding.TWOSCOMPLEMENT);
+        if(originalOptions.logMinimizationHistory)
+        	solver.extraOptions().setLogMinimizationHistory(true);
      }
 
     /** Construct a new A4Solution that is the continuation of the old one, but with the "next" instance. */

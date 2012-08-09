@@ -16,10 +16,8 @@
 package minalloy.translator;
 
 import java.io.Serializable;
-import java.util.prefs.Preferences;
 import edu.mit.csail.sdg.alloy4.ErrorAPI;
 import edu.mit.csail.sdg.alloy4.SafeList;
-import minalloy.Util;
 
 /** Mutable; this class encapsulates the customizable options of the Alloy-to-Kodkod translator. */
 
@@ -147,6 +145,9 @@ public final class MinA4Options implements Serializable {
      * <p> Default value is 20.
      */
     public int symmetry = 20;
+    
+    /** Tells the underlying solver to log minimization information. */
+    public boolean logMinimizationHistory = false;
 
     /** This option specifies the maximum skolem-function depth.
      * <p> Default value is 0, which means it will only generate skolem constants, and will not generate skolem functions.
@@ -198,6 +199,7 @@ public final class MinA4Options implements Serializable {
         x.tempDirectory = tempDirectory;
         x.originalFilename = originalFilename;
         x.recordKodkod = recordKodkod;
+        x.logMinimizationHistory = logMinimizationHistory;
         return x;
     }
 }

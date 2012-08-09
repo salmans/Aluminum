@@ -25,8 +25,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JOptionPane;
-
 import minsolver.MinSATSolver;
 
 import kodkod.ast.Expression;
@@ -45,7 +43,6 @@ import kodkod.engine.bool.BooleanValue;
 import kodkod.engine.bool.Int;
 import kodkod.engine.bool.Operator;
 import kodkod.engine.config.Options;
-import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.util.ints.IntSet;

@@ -38,8 +38,6 @@ import java.awt.Container;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import static java.awt.event.KeyEvent.VK_PAGE_UP;

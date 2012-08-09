@@ -22,6 +22,7 @@ package minsolver;
  * THE SOFTWARE.
  */
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,6 +32,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -42,6 +44,7 @@ import org.sat4j.specs.TimeoutException;
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.config.Options;
+import minsolver.MinSolution.MinimizationHistory;
 import minsolver.fol2sat.MinHigherOrderDeclException;
 import minsolver.fol2sat.MinTranslation;
 import minsolver.fol2sat.MinTranslationLog;
@@ -70,29 +73,46 @@ import kodkod.util.ints.IntSet;
  */
 public final class MinSolver {
 	private final Options options;
+	private final MinExtraOptions extraOptions;	
 	
 	//The iterator that acquires the SAT solver.
 	private MinSolutionIterator activeIterator;
 
 	/**
-	 * Constructs a new Solver with the default options.
+	 * Constructs a new Solver with the default options and extraOptions.
 	 * @effects this.options' = new Options()
+	 * @effects this.extraOptions = new MinExtraOptions()
 	 */
 	public MinSolver() {
 		this.options = new Options();
+		this.extraOptions = new MinExtraOptions();
 	}
 
 	/**
 	 * Constructs a new Solver with the given options.
 	 * @effects this.options' = options
+	 * @effects this.extraOptions = new MinExtraOptions()
 	 * @throws NullPointerException - options = null
 	 */
 	public MinSolver(Options options) {
 		if (options == null)
 			throw new NullPointerException();
 		this.options = options;
+		this.extraOptions = new MinExtraOptions();
 	}
 
+	/**
+	 * Constructs a new Solver with the given options.
+	 * @effects this.options' = options
+	 * @throws NullPointerException - options = null || extraOptions == null
+	 */
+	public MinSolver(Options options, MinExtraOptions extraOptions) {
+		if (options == null || extraOptions == null)
+			throw new NullPointerException();
+		this.options = options;
+		this.extraOptions = extraOptions;
+	}
+		
 	/**
 	 * Returns the Options object used by this Solver
 	 * to guide translation of formulas from first-order
@@ -101,6 +121,15 @@ public final class MinSolver {
 	 */
 	public Options options() {
 		return options;
+	}
+
+	/**
+	 * Returns the MinExtraOptions object used by this Solver to customize the
+	 * minimization behavior.
+	 * @return this.options
+	 */
+	public MinExtraOptions extraOptions() {
+		return extraOptions;
 	}
 	
 	/**
@@ -239,7 +268,7 @@ public final class MinSolver {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, origBounds, options);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, origBounds, options, extraOptions);
 		
 		return iterator;
 	}
@@ -316,7 +345,7 @@ public final class MinSolver {
 		
 		// We want the same MinSolver, because MinSolver governs
 		// the active iterator and allows the iterators to share the SAT solver.
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, allLifters, msiterator);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, extraOptions, allLifters, msiterator);
 				
 		return iterator;
 	}	
@@ -665,7 +694,7 @@ public final class MinSolver {
 	 * @return the result of solving a sat formula.
 	 */
 	private static MinSolution sat(Bounds bounds, MinTranslation translation, MinStatistics stats) {
-		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), 0, null);
+		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), null, null);
 		translation.cnf().free();
 		return sol;
 	}
@@ -680,9 +709,9 @@ public final class MinSolver {
 		final SATSolver cnf = translation.cnf();
 		final MinTranslationLog log = translation.log();
 		if (cnf instanceof SATProver && log != null) {
-			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), 0, null);
+			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null, null);
 		} else { // can free memory
-			final MinSolution sol = MinSolution.unsatisfiable(stats, null, 0, null);
+			final MinSolution sol = MinSolution.unsatisfiable(stats, null, null, null);
 			cnf.free();
 			return sol;
 		}
@@ -709,9 +738,9 @@ public final class MinSolver {
 	private static MinSolution trivial(Bounds bounds, MinTrivialFormulaException desc, long translTime) {
 		final MinStatistics stats = new MinStatistics(trivialPrimaries(desc.bounds()), 0, 0, translTime, 0);
 		if (desc.value().booleanValue()) {
-			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), 0, null);
+			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), null, null);
 		} else {
-			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()), 0, null);
+			return MinSolution.triviallyUnsatisfiable(stats, trivialProof(desc.log()), null, null);
 		}
 	}
 	
@@ -770,6 +799,8 @@ public final class MinSolver {
 	 */
 	static final class MinSolutionIterator implements Iterator<MinSolution> {
 		private final Options options;
+		private final MinExtraOptions extraOptions;
+		
 		private Formula formula;
 		
 		/**
@@ -825,8 +856,8 @@ public final class MinSolver {
 		/**
 		 * Constructs a solution iterator for the given formula, bounds, and options.
 		 */
-		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options) {			
-			this(minSolver, formula, origBounds, options, null, null);			
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options, MinExtraOptions extraOptions) {			
+			this(minSolver, formula, origBounds, options, extraOptions, null, null);			
 		}
 
 		/**
@@ -843,11 +874,13 @@ public final class MinSolver {
 		 * @param prevIterator
 		 */
 		
-		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options, ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
+		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options, MinExtraOptions extraOptions, 
+				ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
 			this.minSolver = minSolver;
 			this.formula = formula;
 			this.origBounds = origBounds;
 			this.options = options;
+			this.extraOptions = extraOptions;
 			this.translation = null;
 			this.lifters = (lifters == null) ? null : toIntCollection(lifters);					
 			
@@ -972,9 +1005,13 @@ public final class MinSolver {
 				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
 				if (isSat) {
 					int[] propositionalModel = translation.cnf().getLastModel().clone();
+					MyReporter reporter = (MyReporter)options.reporter();
+					MinimizationHistory history = null;
+					if(extraOptions.logMinimizationHistory())
+						history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), reporter.getReducedAttributes(), reporter.getReducedRelations());
+					
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), 
-							((MyReporter)options.reporter()).getIterations(), propositionalModel);
+					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), history, propositionalModel);
 					return sol;
 				} else {
 					unsatSolution = unsat(translation, stats); 
@@ -1027,7 +1064,6 @@ public final class MinSolver {
 		 * @param internalSolver
 		 * @throws ContradictionException
 		 */
-		@SuppressWarnings("unused")
 		private void addPermConeRestrictions(Set<Integer> notModel, MinSATSolver internalSolver) 
 				throws ContradictionException
 		{			
@@ -1102,13 +1138,13 @@ public final class MinSolver {
 			if (tfe.value().booleanValue()) {				
 				final Bounds translBounds = tfe.bounds();
 				final Instance trivialInstance = padInstance(toInstance(translBounds), origBounds);
-				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, 0, null);
+				final MinSolution sol = MinSolution.triviallySatisfiable(stats, trivialInstance, null, null);
 				
 				// Disallow future solving via this iterator.
-				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, 0, null);
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, null, null, null);
 				return sol;
 			} else {
-				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), 0, null);
+				unsatSolution = MinSolution.triviallyUnsatisfiable(stats, trivialProof(tfe.log()), null, null);
 				return unsatSolution;
 			}
 		}
@@ -1239,7 +1275,10 @@ public final class MinSolver {
 		 */
 		private void minimize() throws TimeoutException, ContradictionException
 		{
+			boolean logDifference = extraOptions.logMinimizationHistory();
 			
+			int[] modelBeforeMinimization = null;
+			int[] modelAfterMinimization = null;			
 			// Assumption: Have already found a model at this point!							
 			
 			// This keeps constraints to be removed from the solver
@@ -1254,6 +1293,8 @@ public final class MinSolver {
 				unitClauses.add(value);
 			
 			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());						
+			if(logDifference)		
+				modelBeforeMinimization = theSolver.getLastModel().clone();
 			
 			theSolver.deactivateSBP();
 			
@@ -1296,25 +1337,66 @@ public final class MinSolver {
 				iterationCounter++;
 			}
 			while(Boolean.valueOf(theSolver.solve(toIntCollection(unitClauses))));
-							
+
+			if(logDifference){
+				modelAfterMinimization = theSolver.getLastModel().clone();
+				computeDifference(modelBeforeMinimization, modelAfterMinimization);
+			}
+			
 			((MyReporter)options.reporter()).setIterations(iterationCounter);
 						
 			if(!isAugmented()) //if the iterator is NOT an augmentation, activate SBP.
 				theSolver.activateSBP();
 			
-//			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
-					
 			// Remove all the (non-unit) loseSomethingPositive constraints we just added from the solver:
 			Iterator<IConstr> it = constraints.iterator();
 			while(it.hasNext()){
 				theSolver.removeConstraint(it.next());		
 			}
-			
-			// Do NOT add a constraint here to force the solver out of this cone. 
-			// Do that in the next solve() call. We want to leave open the possibility
-			// of landing in this cone again to support lifting/exporation!		
 		}
 
+		/**
+		 * This method computes the differences between the two propositional models before and after minimization and updates
+		 * the reporter accordingly.
+		 * @param modelBeforeMinimization the propositional model before minimization.
+		 * @param modelAfterMinimization the propositional model after minimization.
+		 */
+		private void computeDifference(int[] modelBeforeMinimization, int[] modelAfterMinimization){
+			int reducedElements = 0;
+			int reducedAttributes = 0;
+			int reducedRelations = 0;
+			
+			MyReporter reporter = (MyReporter)options.reporter();
+			
+			Set<Object> atomsBeforeMinimization = new LinkedHashSet<Object>();
+			Set<Object> atomsAfterMinimization = new LinkedHashSet<Object>();
+			
+			//Computing the difference set:
+			for(int i = 0; i < translation.numPrimaryVariables(); i++){
+				//getting the translation for this proposition: 
+				Entry<Relation, TupleSet> trans = MinTwoWayTranslator.translateProposition(translation, reporter.skolemBounds, mapVarToRelation, i+1);
+
+				if(modelBeforeMinimization[i] > 0) //a fact is true before minimization, so store its atoms in the first set.
+					atomsBeforeMinimization.addAll(getAtoms(trans.getValue()));
+				
+				if(modelAfterMinimization[i] > 0) //a fact is true after minimization, so store its atoms in the second set.
+					atomsAfterMinimization.addAll(getAtoms(trans.getValue()));
+				
+				if(modelBeforeMinimization[i] > 0 && modelAfterMinimization[i] < 0){ //if a fact is true before minimization but not after 
+					if(trans.getKey().arity() == 1) reducedAttributes++; //The corresponding relation is unary.
+					else if(trans.getKey().arity() > 1) reducedRelations++; //The corresponding relation is binary or higher.					
+				}
+			}
+			
+			for(Object atom: atomsBeforeMinimization)
+				if(!atomsAfterMinimization.contains(atom)) reducedElements++;
+			
+			reporter.setReducedElements(reducedElements);
+			reporter.setReducedAttributes(reducedAttributes);
+			reporter.setReducedRelations(reducedRelations);			
+		}
+		
+		
 		
 		/**
 		 * Minimizes the model in the SAT solver.
@@ -1602,7 +1684,7 @@ public final class MinSolver {
 			}
 		}		
 		
-		static int[] toIntCollection(Collection<Integer> integers)
+		private static int[] toIntCollection(Collection<Integer> integers)
 		{
 		    int[] ret = new int[integers.size()];
 		    int iIndex = 0;
@@ -1619,7 +1701,7 @@ public final class MinSolver {
 		 * @param list the list.
 		 * @return the ArrayList containing the elements of list.
 		 */
-		private Set<Integer> toSet(int[] list){
+		private static Set<Integer> toSet(int[] list){
 			Set<Integer> retVal = new HashSet<Integer>();
 			if(list != null){
 				for(int i = 0; i < list.length; i++){
@@ -1628,6 +1710,21 @@ public final class MinSolver {
 			}
 			
 			return retVal;
+		}
+		
+		/**
+		 * Returns all the atoms in a TupleSet
+		 * @param tuples the input TupleSet
+		 * @return a set of atoms
+		 */
+		private static Set<Object> getAtoms(TupleSet tuples){
+			Set<Object> atoms = new HashSet<Object>();
+			
+			for(Tuple tuple: tuples){
+				for(int i = 0; i < tuple.arity(); i++) { atoms.add(tuple.atom(i)); }
+			}
+			
+			return atoms;
 		}
 	}
 	
@@ -1638,7 +1735,6 @@ public final class MinSolver {
 	 *
 	 */
 	public static class MinTwoWayTranslator{
-		
 		private static Map<Integer, Relation> buildVarToRelationMap(
 				MinTranslation translation, Bounds aBounds){
 			Map<Integer, Relation> mapVarToRelation = new HashMap<Integer, Relation>(); 
@@ -1698,6 +1794,7 @@ public final class MinSolver {
 		 * Converts a set of primary propositional variables into set of relational expressions.
 		 * @param translation the translation.
 		 * @param aBounds the bounds.
+		 * @param mapVarToRelation a map that maps the propositional variables to the relations that they appear in.
 		 * @param theVars a VectInt of the variables to convert.
 		 * @return
 		 */
@@ -1707,26 +1804,16 @@ public final class MinSolver {
 			// Populate an empty instance over the universe we're using:
 			Instance result = new Instance(aBounds.universe());
 
-			// Now that we have the mapping from var --> its relation, we can find the tuple:		
 			for(int i = 0; i < theVars.length; i++)
 			{	
-				int theVar = theVars[i];
-				Relation myRelation = mapVarToRelation.get(theVar);
-				
-				IntSet s = translation.primaryVariables(myRelation);
-				
-				Tuple myTuple = getTupleForPropVariable(
-							aBounds, translation, s, myRelation, theVar);
-					
-				// .add here is actually .set -- it overwrites what is already in the relation.
-				// So we CANNOT just do:			
-				//result.add(myRelation, bounds.universe().factory().setOf(myTuple));
+				Entry<Relation, TupleSet> entry = translateProposition(translation, aBounds, mapVarToRelation, theVars[i]);
+				Relation myRelation = entry.getKey();
+				TupleSet theContents = entry.getValue();
 				
 				TupleSet currentContents = result.tuples(myRelation);
-				TupleSet theContents = aBounds.universe().factory().setOf(myTuple);
 				if(currentContents != null) // returns null instead of empty set!!
-					theContents.addAll(currentContents); 
-				
+					theContents.addAll(currentContents); 				
+
 				result.add(myRelation, theContents);
 			}
 			
@@ -1737,6 +1824,30 @@ public final class MinSolver {
 			return result;				
 		}
 
+		/**
+		 * Converts a single primary propositional variable to a relational expression.
+		 * @param translation the translation.
+		 * @param bounds the bounds.
+		 * @param mapVarToRelation a map that maps the propositional variables to the relations that they appear in.
+		 * @param vars a propositional variable to convert.
+		 * @return a Map.Entry object mapping a Relation to a TupleSet.
+		 */
+		private static Entry<Relation, TupleSet> translateProposition(MinTranslation translation, Bounds bounds, 
+				Map<Integer, Relation> mapVarToRelation, final int var){
+			Relation myRelation = mapVarToRelation.get(var);
+
+			IntSet s = translation.primaryVariables(myRelation);
+			
+			Tuple myTuple = getTupleForPropVariable(
+						bounds, translation, s, myRelation, var);
+				
+			// .add here is actually .set -- it overwrites what is already in the relation.
+			// So we CANNOT just do:			
+			//result.add(myRelation, bounds.universe().factory().setOf(myTuple));
+			TupleSet theContents = bounds.universe().factory().setOf(myTuple);
+			
+			return new SimpleEntry<Relation, TupleSet>(myRelation, theContents);
+		}
 		
 		private static Tuple getTupleForPropVariable(Bounds aBounds, MinTranslation theTranslation, IntSet s, Relation r, int theVar)
 		//throws MInternalNoBoundsException

@@ -1,9 +1,10 @@
 package minsolver;
 
+import minsolver.MinSolution.MinimizationHistory;
 import kodkod.instance.Instance;
 
 public class MinSolutionFactory {
-	public static MinSolution satisfiable(MinStatistics stats, Instance instance, int SATSolverInvocations, int[] propositionalModel){
-		return MinSolution.satisfiable(stats, instance, SATSolverInvocations, propositionalModel);
+	public static MinSolution satisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel){
+		return MinSolution.satisfiable(stats, instance, minimizationHistory, propositionalModel);
 	}
 }

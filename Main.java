@@ -5,10 +5,7 @@ import java.util.*;
 
 import minsolver.*;
 
-import org.sat4j.core.VecInt;
-import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ContradictionException;
-import org.sat4j.specs.ISolver;
 import org.sat4j.specs.TimeoutException;
 
 
@@ -18,7 +15,6 @@ import kodkod.instance.*;
 import kodkod.engine.Solution;
 import kodkod.engine.Solver;
 import kodkod.engine.fol2sat.TrivialFormulaException;
-import kodkod.engine.satlab.*;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -890,7 +886,7 @@ public class Main {
 			currTime = System.currentTimeMillis();
 			MinSolution sol = minModels.next();
 			minimalModelTimes.add(System.currentTimeMillis() - currTime);
-			minimalModelIterations.add(sol.getSATSolverInvocations());
+			minimalModelIterations.add(sol.minimizationHistory.SATSolverInvocations);
 			
 			if(numberOfModels != 0){
 				if(minimalModelTimes.size() == numberOfModels)

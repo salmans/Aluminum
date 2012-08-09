@@ -5,7 +5,6 @@ import java.util.Set;
 
 import kodkod.ast.Relation;
 import kodkod.engine.Solution;
-import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleSet;

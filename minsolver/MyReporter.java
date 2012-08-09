@@ -15,7 +15,10 @@ public class MyReporter implements Reporter
 {
 	Bounds skolemBounds = null; 
 	private int primaryVars;
-	private int iterations;
+	private int iterations = 0;
+	private int reducedElements = 0;
+	private int reducedAttributes = 0;	
+	private int reducedRelations = 0;	
 	
 	@Override
 	public void detectedSymmetries(Set<IntSet> parts) {
@@ -64,8 +67,32 @@ public class MyReporter implements Reporter
 		this.iterations = iterations;
 	}
 
+	public void setReducedElements(int reducedElements){
+		this.reducedElements = reducedElements;
+	}
+
+	public void setReducedAttributes(int reducedAttributes){
+		this.reducedAttributes = reducedAttributes;
+	}
+
+	public void setReducedRelations(int reducedRelations){
+		this.reducedRelations = reducedRelations;
+	}
+	
 	public int getIterations(){
 		return iterations;
+	}	
+
+	public int getReducedElements(){
+		return reducedElements;
+	}	
+	
+	public int getReducedAttributes(){
+		return reducedAttributes;
+	}	
+	
+	public int getReducedRelations(){
+		return reducedRelations;
 	}	
 	
 	int getNumPrimaryVariables()

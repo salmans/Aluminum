@@ -1,7 +1,6 @@
 package minalloy;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -132,7 +131,7 @@ public class IsomorphicSolutionBuilder {
 				if(newTupleSet.size() > 0)
 					instance.add(r, factory.setOf(newTupleSet)); //add the new tuple set to the this relation
 			}
-			MinSolution solution = MinSolutionFactory.satisfiable(input.stats(), instance, input.getSATSolverInvocations(), input.getPropositionalModel());
+			MinSolution solution = MinSolutionFactory.satisfiable(input.stats(), instance, input.minimizationHistory, input.getPropositionalModel());
 			
 			results.add(solution);
 		}
@@ -145,7 +144,7 @@ public class IsomorphicSolutionBuilder {
 	        }
 	    });
 	    
-		noDuplicates.addAll(results);					
+		noDuplicates.addAll(results);
 		
 		return noDuplicates;
 	}

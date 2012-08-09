@@ -37,11 +37,40 @@ import kodkod.instance.TupleSet;
  * @author Emina Torlak
  */
 public final class MinSolution{
+	public static class MinimizationHistory{
+		public final int reducedElements;
+		public final int reducedAttributes;
+		public final int reducedRelations;		
+		public final int SATSolverInvocations;
+
+		public MinimizationHistory(){
+			this.SATSolverInvocations = 0;
+			this.reducedElements = 0;
+			this.reducedAttributes = 0;
+			this.reducedRelations = 0;			
+		}
+				
+		public MinimizationHistory(int SATSolverInvocations){
+			this.SATSolverInvocations = SATSolverInvocations;
+			this.reducedElements = 0;
+			this.reducedAttributes = 0;
+			this.reducedRelations = 0;			
+		}
+		
+		public MinimizationHistory(int SATSolverInvocations, int reducedElements, int reducedAttributes, int reducedRelations){
+			this.SATSolverInvocations = SATSolverInvocations;
+			this.reducedElements = reducedElements;
+			this.reducedAttributes = reducedAttributes;
+			this.reducedRelations = reducedRelations;
+		}		
+	}
+	
 	private final Outcome outcome;
 	private final MinStatistics stats;
 	private Instance instance;
 	private final MinProof proof;
-	private final int SATSolverInvocations;
+	public final MinimizationHistory minimizationHistory;
+	
 	/** Stores the propositional model for this solution. 
 	 * This field is going to be used for lifting operations.*/ 
 	private final int[] propositionalModel;
@@ -52,59 +81,52 @@ public final class MinSolution{
 	public int[] getPropositionalModel() {		
 		return propositionalModel;
 	}
-
-	/**
-	 * Returns the propositional model for this solution.
-	 */
-	public int getSATSolverInvocations() {
-		return SATSolverInvocations;
-	}
 	
 	/**
 	 * Constructs a Solution from the given values.
 	 * @requires outcome != null && stats != null
 	 * @requires outcome = SATISFIABLE || TRIVIALLY_SATISFIABLE => instance != null
 	 */
-	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, MinProof proof, int SATSolverInvocations,int[] propositionalModel) {
+	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, MinProof proof, MinimizationHistory minimizationHistory,int[] propositionalModel) {
 		assert outcome != null && stats != null;
 		this.outcome = outcome;
 		this.stats = stats;
 		this.instance = instance;
 		this.proof = proof;
 		this.propositionalModel = propositionalModel;
-		this.SATSolverInvocations = SATSolverInvocations;
+		this.minimizationHistory = minimizationHistory;
 	}
 	
 	/**
 	 * Returns a new Solution with a SATISFIABLE outcome, given stats and instance.
 	 * @return {s: Solution | s.outcome() = SATISFIABLE && s.stats() = stats && s.instance() = instance }
 	 */
-	static MinSolution satisfiable(MinStatistics stats, Instance instance, int SATSolverInvocations, int[] propositionalModel) {
-		return new MinSolution(Outcome.SATISFIABLE, stats, instance, null, SATSolverInvocations, propositionalModel);
+	static MinSolution satisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+		return new MinSolution(Outcome.SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel);
 	}
 	
 	/**
 	 * Returns a new Solution with a TRIVIALLY_SATISFIABLE outcome, given stats and instance.
 	 * @return {s: Solution | s.outcome() = TRIVIALLY_SATISFIABLE && s.stats() = stats && s.instance() = instance }
 	 */
-	static MinSolution triviallySatisfiable(MinStatistics stats, Instance instance, int SATSolverInvocations, int[] propositionalModel) {
-		return new MinSolution(Outcome.TRIVIALLY_SATISFIABLE, stats, instance, null, SATSolverInvocations, propositionalModel);
+	static MinSolution triviallySatisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+		return new MinSolution(Outcome.TRIVIALLY_SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel);
 	}
 	
 	/**
 	 * Returns a new Solution with a UNSATISFIABLE outcome, given stats and proof.
 	 * @return {s: Solution | s.outcome() = UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
-	static MinSolution unsatisfiable(MinStatistics stats, MinProof proof, int SATSolverInvocations, int[] propositionalModel) {
-		return new MinSolution(Outcome.UNSATISFIABLE, stats, null, proof, SATSolverInvocations, propositionalModel);
+	static MinSolution unsatisfiable(MinStatistics stats, MinProof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+		return new MinSolution(Outcome.UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
 	}
 	
 	/**
 	 * Returns a new Solution with a TRIVIALLY_UNSATISFIABLE outcome, given stats and proof.
 	 * @return {s: Solution | s.outcome() = TRIVIALLY_UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
-	static MinSolution triviallyUnsatisfiable(MinStatistics stats, MinProof proof, int SATSolverInvocations, int[] propositionalModel) {
-		return new MinSolution(Outcome.TRIVIALLY_UNSATISFIABLE, stats, null, proof, SATSolverInvocations, propositionalModel);
+	static MinSolution triviallyUnsatisfiable(MinStatistics stats, MinProof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+		return new MinSolution(Outcome.TRIVIALLY_UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
 	}
 		
 	/**
