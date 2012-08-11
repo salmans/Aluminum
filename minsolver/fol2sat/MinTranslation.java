@@ -21,24 +21,16 @@
  */
 package minsolver.fol2sat;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
-import javax.swing.JOptionPane;
 
 import minsolver.MinSATSolver;
 
 import kodkod.ast.Relation;
-import kodkod.engine.bool.BooleanMatrix;
-import kodkod.engine.bool.BooleanValue;
-import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
-import kodkod.util.ints.IndexedEntry;
 import kodkod.util.ints.IntIterator;
 import kodkod.util.ints.IntSet;
 import kodkod.util.ints.Ints;

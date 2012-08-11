@@ -19,7 +19,6 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.lang.Thread.UncaughtExceptionHandler;
 import edu.mit.csail.sdg.alloy4.OurDialog;
-import edu.mit.csail.sdg.alloy4.OurUtil;
 
 /** 
  * Modified heavily from edu.mit.csail.sdg.alloy4.MailBug 

@@ -21,10 +21,7 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -33,9 +30,6 @@ import javax.swing.JOptionPane;
 import kodkod.engine.satlab.SATSolver;
 
 import org.sat4j.core.VecInt;
-import org.sat4j.minisat.SolverFactory;
-import org.sat4j.minisat.constraints.cnf.UnitClause;
-import org.sat4j.minisat.core.Solver;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IConstr;
 import org.sat4j.specs.ISolver;
@@ -133,9 +127,6 @@ public final class MinSATSolver implements SATSolver {
 		
 		// The current implementation of sat4j does not handle REMOVING unit clauses; it forces
 		// the use of assumptions. So we need the separate assumptions list above.
-		
-		int foo = solver.nConstraints();
-		
 		for(IConstr toRemove : toRemoveSBP)
 		{					
 			// Expect no UnitClauses here
@@ -256,9 +247,6 @@ public final class MinSATSolver implements SATSolver {
 	public boolean addSBPClause(int[] lits)
 	{
 		// Can't just call addClause, that would obstruct the IConstr
-		
-		int foo = solver.nConstraints();
-		
 		try {			
 
 			// Still need to use assumptions...

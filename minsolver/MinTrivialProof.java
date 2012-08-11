@@ -159,7 +159,6 @@ final class MinTrivialProof extends MinProof {
 		 * Constructs a proof finder for the given log.
 		 * @effects this.log' = log
 		 */
-		@SuppressWarnings("unchecked")
 		NodePruner(MinTranslationLog log) {
 			visited = new IdentityHashSet<Node>();
 			relevant = new IdentityHashSet<Node>();

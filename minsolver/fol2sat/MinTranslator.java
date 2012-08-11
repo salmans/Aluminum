@@ -357,7 +357,6 @@ public final class MinTranslator {
 	private MinTranslation generateSBP(AnnotatedNode<Formula> annotated, BooleanFormula circuit, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) 
 	throws MinTrivialFormulaException {
 		options.reporter().generatingSBP();
-		final BooleanFactory factory = interpreter.factory();		
 		final BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking());						
 		
 		//return flatten(annotated, (BooleanFormula)factory.and(circuit, sbp), factory.and(circuit, sbp), interpreter);

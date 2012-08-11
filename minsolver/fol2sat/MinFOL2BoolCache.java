@@ -49,7 +49,6 @@ final class MinFOL2BoolCache {
 	 * Constructs a new translation cache for the given annotated node.
 	 * @effects this.node' = annotated.node 
 	 */
-	@SuppressWarnings("unchecked") 
 	MinFOL2BoolCache(AnnotatedNode<? extends Node> annotated) {
 		final CacheCollector collector = new CacheCollector(annotated.sharedNodes());
 		annotated.node().accept(collector);
@@ -131,7 +130,6 @@ final class MinFOL2BoolCache {
 		 *            this.cache' = this.cache
 		 * @return freeVars
 		 */
-		@SuppressWarnings("unchecked")
 		@Override
 		protected final Set<Variable> cache(Node node, Set<Variable> freeVars) {
 			if (cached.contains(node) || !varsInScope.empty() && !freeVars.contains(varsInScope.peek())) {

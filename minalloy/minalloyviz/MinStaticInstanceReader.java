@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JOptionPane;
-
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinA4SolutionReader;
 import minalloy.translator.MinA4Tuple;

@@ -88,7 +88,6 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	 * @throws IllegalArgumentException - some Relation & annotated.node.^children - bounds.relations
 	 * @throws UnsupportedOperationException - bounds is unmodifiable
 	 */
-	@SuppressWarnings("unchecked")
 	static AnnotatedNode<Formula> skolemize(final AnnotatedNode<Formula> annotated, Bounds bounds, Options options) {
 		if (options.logTranslation()>0) {
 			final Map<Node,Node> source = new IdentityHashMap<Node,Node>();

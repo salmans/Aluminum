@@ -44,17 +44,17 @@ public final class MinSolution{
 		public final int SATSolverInvocations;
 
 		public MinimizationHistory(){
-			this.SATSolverInvocations = 0;
-			this.reducedElements = 0;
-			this.reducedAttributes = 0;
-			this.reducedRelations = 0;			
+			this.SATSolverInvocations = -1;
+			this.reducedElements = -1;
+			this.reducedAttributes = -1;
+			this.reducedRelations = -1;
 		}
 				
 		public MinimizationHistory(int SATSolverInvocations){
 			this.SATSolverInvocations = SATSolverInvocations;
-			this.reducedElements = 0;
-			this.reducedAttributes = 0;
-			this.reducedRelations = 0;			
+			this.reducedElements = -1;
+			this.reducedAttributes = -1;
+			this.reducedRelations = -1;
 		}
 		
 		public MinimizationHistory(int SATSolverInvocations, int reducedElements, int reducedAttributes, int reducedRelations){

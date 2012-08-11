@@ -315,7 +315,6 @@ public final class MinSolver {
 		Map<Relation, TupleSet> solutionTuples = msiterator.lastSatSolutionFound.instance().relationTuples();
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
 
-		//This can be a method!
 		for(Relation r : solutionTuples.keySet()){
 			TupleSet tuples = solutionTuples.get(r);
 			for(Tuple t: tuples){
@@ -939,16 +938,7 @@ public final class MinSolver {
 				do
 				{
 					gotNonMinimal = false;					
-					//try
-					//{
-						isSat = solve();
-					//} catch(NotMinimalModelException e)
-					//{
-					//	isSat = true; // Must have gotten SOME model; need to cone restrict.
-					//	gotNonMinimal = true;
-					//}
-					
-					//JOptionPane.showMessageDialog(null, "Solve() got:"+isSat+";"+gotNonMinimal);
+					isSat = solve();
 					
 					// If a model found, add constraints to forbid its cone.
 					if(isSat)
@@ -964,11 +954,7 @@ public final class MinSolver {
 								notModel.add(-i);
 							}
 						}
-																		
-						//JOptionPane.showMessageDialog(null, "Syms: "+translation.symmetries+
-						//		"\nPerms: "+translation.permutations+
-						//		"\nnotModel="+notModel);
-						
+																								
 						try{	
 							//JOptionPane.showMessageDialog(null, translation.permutations);
 							// Add the cone restriction for this model:
@@ -1000,7 +986,8 @@ public final class MinSolver {
 					MyReporter reporter = (MyReporter)options.reporter();
 					MinimizationHistory history = null;
 					if(extraOptions.logMinimizationHistory())
-						history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), reporter.getReducedAttributes(), reporter.getReducedRelations());
+						history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), 
+								reporter.getReducedAttributes(), reporter.getReducedRelations());
 					
 					// extract the current solution; can't use the sat(..) method because it frees the sat solver
 					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), history, propositionalModel);
@@ -1154,6 +1141,7 @@ public final class MinSolver {
 					translTime = System.currentTimeMillis();
 					translation = MinTranslator.translate(formula, origBounds, options);
 					translTime = System.currentTimeMillis() - translTime;
+					
 					//We use this data structure for translation:
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 

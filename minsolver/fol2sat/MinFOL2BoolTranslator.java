@@ -140,7 +140,6 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 * @throws MinHigherOrderDeclException - annotated.node contains a higher order declaration
 	 * @throws MinUnboundLeafException - annotated.node refers to a variable that neither declared nor bound in env
 	 **/
-	@SuppressWarnings("unchecked")
 	static final BooleanMatrix approximate(AnnotatedNode<Expression> annotated, MinLeafInterpreter interpreter, MinEnvironment<BooleanMatrix> env) {
 		final MinFOL2BoolTranslator approximator = new MinFOL2BoolTranslator(new MinFOL2BoolCache(annotated), interpreter, env) {
 			public final BooleanMatrix visit(BinaryExpression binExpr) {

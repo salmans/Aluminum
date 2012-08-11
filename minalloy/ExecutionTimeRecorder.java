@@ -13,6 +13,7 @@ import java.util.StringTokenizer;
 
 import kodkod.ast.Relation;
 import kodkod.instance.Instance;
+import kodkod.instance.Tuple;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -26,9 +27,9 @@ import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.parser.CompUtil;
-import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
-import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
+import test.translator.A4Options;
+import test.translator.A4Solution;
+import test.translator.TranslateAlloyToKodkod;
 import minalloy.translator.MinA4Options;
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinTranslateAlloyToKodkod;
@@ -186,7 +187,7 @@ public final class ExecutionTimeRecorder {
     		output.add("Command:\t" + command.toString() + "-------------\n");
     		
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
-            int lineNumber = output.size() - 1;    		
+            int lineNumber = output.size();
     		
         	for(int i = 0; i < optNumberOfTrials.value; i++){   
         		System.out.println("TRIAL " + (i + 1) + "------");
@@ -197,7 +198,7 @@ public final class ExecutionTimeRecorder {
         		}
         		else{
         			if(optLogConsistentFacts.value){
-            			System.out.println("time\t#facts");
+            			System.out.println("time\t#facts\taugmentation time");
             			//output.add("time\t#facts");
         			}else{
 	        			System.out.println("time");
@@ -216,25 +217,52 @@ public final class ExecutionTimeRecorder {
 
         		long time = 0;
         		int consistentFacts = 0;
+        		long totalAugmentationTime = 0;
         		int counter = 1;
 
         		while(ans.satisfiable()){
         			if(counter == optNumberOfModels.value)
         				break;
 
-        			time = System.currentTimeMillis();                	
+        			//time = System.currentTimeMillis();                	
         			ans = ans.next();
-        			time = System.currentTimeMillis() - time;
+        			//time = System.currentTimeMillis() - time;
+        			time = ans.getCurrentSolution().stats().solvingTime();
 
         			if(optLogConsistentFacts.value){
-            			time = System.currentTimeMillis();                	
-            			Instance facts = ans.getConsistentFacts(null);
-            			time = System.currentTimeMillis() - time;
-            			
-                        consistentFacts = 0;
-                        for(Relation relation: facts.relations()){
-                        	consistentFacts += facts.tuples(relation).size();
-                        }            			
+        				if(ans.satisfiable()){
+        					//Get all the consistent facts:
+	            			time = System.currentTimeMillis();
+	            			Instance facts = ans.getConsistentFacts();
+	            			time = System.currentTimeMillis() - time;
+	            			
+	                        consistentFacts = 0;	//Compute the total number of consistent facts:
+	                        for(Relation relation: facts.relations()){
+	                        	consistentFacts += facts.tuples(relation).size();
+	                        }
+	                        
+	                        //Compute the time to augment the solution using the consistent facts:
+	                        if(consistentFacts > 0){	//if there is any consistent facts
+	                        	for(Relation relation: facts.relations()){
+	                        		for(Tuple tuple: facts.tuples(relation)){
+			                        	long augmentationTime = System.currentTimeMillis();
+			                        	try{
+			                        		ans.lift(relation.toString()+tuple.toString(), null);
+			                        	}
+			                        	catch(ExplorationException e){
+			                        		System.err.println(e.getMessage());
+			                        		System.exit(0);
+			                        	}
+			                        	augmentationTime = System.currentTimeMillis() - augmentationTime;
+			                        	totalAugmentationTime += augmentationTime;
+	                        		}
+	                        	}
+	                        }
+        				}
+        				else{
+        					time = -1;
+        					consistentFacts = -1;
+        				}
         			}
         			
         			String info = null;
@@ -247,7 +275,7 @@ public final class ExecutionTimeRecorder {
         				info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
         			}else{
         	        	if(optLogConsistentFacts.value){
-        	        		info = time + "\t" + consistentFacts;        		
+        	        		info = time + "\t" + consistentFacts + "\t" + totalAugmentationTime;        		
         	        	}
         	        	else{
         	        		info = new Long(time).toString();
@@ -258,7 +286,7 @@ public final class ExecutionTimeRecorder {
         			if(i == 0)
             			output.add(info);
         			else
-        				output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + info);
+        				output.set(counter + lineNumber -1, output.get(counter + lineNumber -1) + "\t" + info);
         		}
         	}
 	        
@@ -276,11 +304,14 @@ public final class ExecutionTimeRecorder {
 			boolean logConsistentFacts, int trial, int lineNumber)
 					throws Err, ExplorationException{
         long time = 0;
+        long translTime = 0;
         int consistentFacts = 0;
         
-        time = System.currentTimeMillis();
+        //time = System.currentTimeMillis();
         MinA4Solution ans = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);
-        time = System.currentTimeMillis() - time;
+        //time = System.currentTimeMillis() - time;
+        translTime = ans.getCurrentSolution().stats().translationTime();
+        time = ans.getCurrentSolution().stats().solvingTime();
         
         int counter = 1;
 
@@ -291,20 +322,28 @@ public final class ExecutionTimeRecorder {
         		counter ++;
         	}
         	
-        	time = System.currentTimeMillis();
+        	//time = System.currentTimeMillis();
         	ans = ans.lift(aug.augmentingFact, null);
-        	time = System.currentTimeMillis() - time;	
+        	translTime = ans.getCurrentSolution().stats().translationTime();
+        	time = ans.getCurrentSolution().stats().solvingTime();
+        	//time = System.currentTimeMillis() - time;	
         }
         
         if(logConsistentFacts){ //When logging consistent facts, ignore the time to fetch the last model.
-        	time = System.currentTimeMillis();
-        	Instance facts = ans.getConsistentFacts(null);
-            time = System.currentTimeMillis() - time;
-            
-            consistentFacts = 0;
-            for(Relation relation: facts.relations()){
-            	consistentFacts += facts.tuples(relation).size();
-            }
+        	if(ans.satisfiable()){
+	        	time = System.currentTimeMillis();
+	        	Instance facts = ans.getConsistentFacts();
+	            time = System.currentTimeMillis() - time;
+	            
+	            consistentFacts = 0;
+	            for(Relation relation: facts.relations()){
+	            	consistentFacts += facts.tuples(relation).size();
+	            }
+        	}
+        	else{
+        		consistentFacts = -1;
+        		time = -1;
+        	}
         }
         
         String info = null;
@@ -321,11 +360,20 @@ public final class ExecutionTimeRecorder {
         	}
         }
         
+        if(!logMinimizationHistory && !logConsistentFacts)
+        	System.out.println("0: " + translTime);
+        	
         System.out.println("1: " + info);
-        if(trial == 0)
+        if(trial == 0){
+            if(!logMinimizationHistory && !logConsistentFacts)
+            	output.add(new Long(translTime).toString());
         	output.add(info);
-        else
-        	output.set(lineNumber + 1, output.get(lineNumber + 1) + "\t" + info);
+        }
+        else{
+            if(!logMinimizationHistory && !logConsistentFacts)
+            	output.set(lineNumber, output.get(lineNumber) + "\t" + translTime);
+        	output.set(lineNumber, output.get(lineNumber) + "\t" + info);
+        }
 		
 		return ans;
 	}
@@ -401,33 +449,42 @@ public final class ExecutionTimeRecorder {
         	output.add("Command:\t" + command.toString() + "-------------\n");
 
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
-            int lineNumber = output.size() - 1;
+            int lineNumber = output.size();
 
         	for(int i = 0; i < optNumberOfTrials.value; i++){
         		System.out.println("TRIAL " + (i + 1) + "------");
         		System.out.println("time");
         		
         		long time = 0;
-        		time = System.currentTimeMillis();
+        		long translTime = 0;
+        		//time = System.currentTimeMillis();
         		A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);
-        		time = System.currentTimeMillis() - time;
+        		//time = System.currentTimeMillis() - time;
+        		translTime = ans.getCurrentSolution().stats().translationTime();
+        		time = ans.getCurrentSolution().stats().solvingTime();
         		
-        		int counter = 1;
-        		
-        		//TODO separate translation and execution times.
+        		int counter = 0;
+
+        		System.out.println("0: " + translTime);
         		System.out.println("1: " + time);
-        		if(i == 0)
+        		if(i == 0){
+        			output.add(new Long(translTime).toString());
         			output.add(new Long(time).toString());
-        		else
+        			counter++;
+        		}
+        		else{
+        			output.set(lineNumber + counter, output.get(lineNumber + counter++) + "\t" + translTime);
         			output.set(lineNumber + counter, output.get(lineNumber + counter) + "\t" + time);
+        		}
 
         		while(ans.satisfiable()){
         			if(counter == optNumberOfModels.value)
         				break;
 
-        			time = System.currentTimeMillis();                	
+        			//time = System.currentTimeMillis();                	
         			ans = ans.next();
-        			time = System.currentTimeMillis() - time;
+        			//time = System.currentTimeMillis() - time;
+        			time = ans.getCurrentSolution().stats().solvingTime();
 
         			System.out.println(++counter + ": " + time);
         			if(i == 0)

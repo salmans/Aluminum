@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JOptionPane;
-
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.ast.RelationPredicate;
@@ -47,7 +45,6 @@ import kodkod.engine.bool.BooleanConstant;
 import kodkod.engine.bool.BooleanFactory;
 import kodkod.engine.bool.BooleanMatrix;
 import kodkod.engine.bool.BooleanValue;
-import kodkod.engine.bool.BooleanVariable;
 import kodkod.engine.bool.Operator;
 import kodkod.engine.config.Reporter;
 import kodkod.instance.Bounds;

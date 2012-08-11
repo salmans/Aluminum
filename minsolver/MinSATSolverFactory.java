@@ -32,5 +32,4 @@ public class MinSATSolverFactory extends SATFactory
     	//TODO result.registerReporter(theReporter);
         return result;
     }
-    
 }

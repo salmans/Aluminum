@@ -79,7 +79,6 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * @effects this.log().roots() = Nodes.conjuncts(annotated)
 	 * @effects no this.records' 
 	 */
-	@SuppressWarnings("unchecked")
 	MinFileLogger(final AnnotatedNode<Formula> annotated, Bounds bounds) {
 		this.annotated = annotated;
 		try {
@@ -94,7 +93,6 @@ final class MinFileLogger extends MinTranslationLogger {
 	
 		this.logMap = new FixedMap<Formula, Variable[]>(freeVarMap.keySet());	
 		
-		int index = 0;
 		for(Map.Entry<Formula, Variable[]> e : logMap.entrySet()) {
 			Set<Variable> vars = freeVarMap.get(e.getKey());
 			int size = vars.size();
@@ -103,7 +101,6 @@ final class MinFileLogger extends MinTranslationLogger {
 			} else {
 				e.setValue(Containers.identitySort(vars.toArray(new Variable[size])));
 			}
-			index++;
 		}
 		this.bounds = bounds.unmodifiableView();
 	}

@@ -23,12 +23,6 @@ package minsolver.fol2sat;
 
 import static kodkod.engine.bool.Operator.AND;
 
-import java.util.Arrays;
-
-import javax.swing.JOptionPane;
-
-import org.sat4j.minisat.constraints.cnf.UnitClause;
-
 import minsolver.MinSATSolver;
 import kodkod.engine.bool.BooleanFormula;
 import kodkod.engine.bool.BooleanValue;
