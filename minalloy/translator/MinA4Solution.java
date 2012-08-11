@@ -1017,7 +1017,7 @@ public final class MinA4Solution {
     public MinA4Solution lift(String inputFact, Map<String, String> dictionary) throws Err, ExplorationException {
         Formula fgoal = Formula.and(formulas);
         
-        Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator, null, atom2name);
+        Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
         
         //if the fact does not exists in the given bounds:
         if(inst == null)
@@ -1046,7 +1046,7 @@ public final class MinA4Solution {
 
     /** Returns a list of facts consistent to the current loaded solution. */
     public String listConsistentFacts(Map<String, String> dictionary) {
-    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, null, atom2name);
+    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
     }  
 
     /** Returns an instance containing the consistent facts. */
