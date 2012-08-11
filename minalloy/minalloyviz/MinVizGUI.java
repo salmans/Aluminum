@@ -443,9 +443,9 @@ public final class MinVizGUI implements ComponentListener {
          toolbar.add(enumerateButton=OurUtil.button("Next", "Show the next solution", "images/24_history.gif", doNext()));
          toolbar.add(saveModelButton=OurUtil.button("Save", "Save the current model", "images/24_save.gif", doSaveModelAs()));
          toolbar.addSeparator();
-         toolbar.add(exploreButton=OurUtil.button("Explore", "Explore consistent models", "images/24_graph.gif", doExplore()));
-         toolbar.add(backtrackButton=OurUtil.button("Backtrack", "Backtrack exploration", "images/24_settings_close3.gif", doBacktrack()));
-         toolbar.add(consistentFactsButton=OurUtil.button("Consistent Facts", "Find consistent facts", "images/24_texttree.gif", doFindConsistentFacts()));         
+         toolbar.add(exploreButton=OurUtil.button("Augment", "Augment this instance with a consistent fact", "images/24_graph.gif", doExplore()));
+         toolbar.add(backtrackButton=OurUtil.button("Backtrack", "Undo the last augmentation", "images/24_settings_close3.gif", doBacktrack()));
+         toolbar.add(consistentFactsButton=OurUtil.button("Consistent Facts", "Find facts that can be added consistently", "images/24_texttree.gif", doFindConsistentFacts()));         
          toolbar.add(projectionButton);
          toolbar.add(loadSettingsButton=OurUtil.button("Load", "Load the theme customization from a theme file", "images/24_open.gif", doLoadTheme()));
          toolbar.add(saveSettingsButton=OurUtil.button("Save", "Save the current theme customization", "images/24_save.gif", doSaveTheme()));
