@@ -218,6 +218,11 @@ public final class ExecutionTimeRecorder {
         		long time = 0;
         		int consistentFacts = 0;
         		int counter = 1;
+        		
+        		if(!optLogConsistentFacts.value && !optLogMinimizationHistory.value){
+        			counter++; //adding an extra row for translation time
+        			optNumberOfModels.value ++;
+        		}
 
         		while(ans.satisfiable())
         		{
@@ -302,7 +307,7 @@ public final class ExecutionTimeRecorder {
         			if(i == 0)
             			output.add(info);
         			else
-        				output.set(counter + lineNumber -1, output.get(counter + lineNumber -1) + "\t" + info);
+        				output.set(counter + lineNumber - 1, output.get(counter + lineNumber - 1) + "\t" + info);
         		} // end for each solution
         	}
 	        
@@ -420,8 +425,10 @@ public final class ExecutionTimeRecorder {
         	output.add(info);
         }
         else{
-            if(!logMinimizationHistory && !logConsistentFacts)
+            if(!logMinimizationHistory && !logConsistentFacts){
             	output.set(lineNumber, output.get(lineNumber) + "\t" + translTime);
+            	lineNumber++;
+            }
         	output.set(lineNumber, output.get(lineNumber) + "\t" + info);
         }
 		
