@@ -345,21 +345,55 @@ public final class ExecutionTimeRecorder {
         	//time = System.currentTimeMillis() - time;	
         }
         
+		long totalAugmentationTimeNS = 0;		
         if(logConsistentFacts){ //When logging consistent facts, ignore the time to fetch the last model.
-        	if(ans.satisfiable()){
-	        	time = System.currentTimeMillis();
-	        	Instance facts = ans.getConsistentFacts();
-	            time = System.currentTimeMillis() - time;
-	            
-	            consistentFacts = 0;
-	            for(Relation relation: facts.relations()){
-	            	consistentFacts += facts.tuples(relation).size();
-	            }
-        	}
-        	else{
-        		consistentFacts = -1;
-        		time = -1;
-        	}
+			if(ans.satisfiable()){
+				//Get all the consistent facts:
+    			time = System.currentTimeMillis();
+    			Instance facts = ans.getConsistentFacts();
+    			time = System.currentTimeMillis() - time;
+    			
+                consistentFacts = 0;	
+                // Compute the total number of consistent facts:
+                for(Relation relation: facts.relations()){
+                	consistentFacts += facts.tuples(relation).size();
+                }
+                
+                // Compute the time to augment the solution using the consistent facts:
+                if(consistentFacts > 0) {	
+                	//  if there are any consistent facts
+                	for(Relation relation: facts.relations()){
+                		for(Tuple tuple: facts.tuples(relation)){
+                			// "This method provides nanosecond precision, but not necessarily nanosecond accuracy."
+                        	long augmentationTimeNS = System.nanoTime();
+                        	try{			                   
+                        		// No translation (so we can use the tuple string in raw form)
+                        		ans.lift(relation.toString()+tuple.toString(), null);
+                        		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
+	                        	totalAugmentationTimeNS += augmentationTimeNS;
+	                        	//System.out.println(augmentationTimeNS);
+	                        	// ans is actually modified in the current code; so the returned solution
+                        		// has all the augmented state change as well as the CURRENT one. MUST
+                        		// explicitly backtrack. (TODO: Why did we do it this way? - TN)
+                        		ans.backtrack();
+
+                        	}
+                        	catch(ExplorationException e){
+                        		System.err.println(e.getMessage());
+                        		System.exit(1);
+                        	} catch (IOException e) {
+                        		System.err.println(e.getMessage());
+                        		System.exit(2);
+							}
+                        	
+                		}
+                	}
+                }
+			}
+			else{
+				time = -1;
+				consistentFacts = -1;
+			}
         }
         
         String info = null;
@@ -369,7 +403,7 @@ public final class ExecutionTimeRecorder {
         }
         else{
         	if(logConsistentFacts){
-        		info = time + "\t" + consistentFacts;        		
+        		info = time + "\t" + consistentFacts + "\t" + (totalAugmentationTimeNS/1000000);        		
         	}
         	else{
         		info = new Long(time).toString();        		
