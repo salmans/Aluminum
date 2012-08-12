@@ -217,11 +217,12 @@ public final class ExecutionTimeRecorder {
 
         		long time = 0;
         		int consistentFacts = 0;
-        		long totalAugmentationTimeNS = 0;
         		int counter = 1;
 
         		while(ans.satisfiable())
         		{
+            		long totalAugmentationTimeNS = 0;
+        			
         			if(counter == optNumberOfModels.value)
         				break;
 
