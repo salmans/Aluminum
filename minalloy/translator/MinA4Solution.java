@@ -57,6 +57,7 @@ import minsolver.MinProof;
 import minsolver.MinSATSolverFactory;
 import minsolver.MinSolution;
 import minsolver.MinSolver;
+import minsolver.MinSolver.MinSolutionIterator;
 import minsolver.MyReporter;
 import kodkod.engine.config.Options;
 import minsolver.fol2sat.MinTranslationRecord;
@@ -1022,10 +1023,10 @@ public final class MinA4Solution {
         //if the fact does not exists in the given bounds:
         if(inst == null)
         	throw new ExplorationException("The input fact is not valid!");       
-        
-        // Get an augmented iterator
-        Iterator<MinSolution> augmentedIterator = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);
                 
+        // Get an augmented iterator
+        Iterator<MinSolution> augmentedIterator = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);                       
+        
         // Push the current solution and iterator onto the stack, so we can backtrack.
         solutionStack.push(new SolutionStackElement(kEnumerator, currentSolution));
 

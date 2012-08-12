@@ -305,13 +305,20 @@ public final class MinSolver {
 			return msiterator;
 		}
 		
+		// If this iterator never produced a model
+		if(msiterator.lastSatSolutionFound == null && !msiterator.hasNext())
+		{
+			// Error
+			throw new ExplorationException("Attempted to augment without a model.");
+		}
+		
 		//Lifting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
 		
 		ArrayList<Integer> allLifters = new ArrayList<Integer>();
 		
 		// Do not use getLastSolution() here: it may be the iterator is empty, in which case it would contain no
-		// propositional model, being the UNSAT soln. Instead, use the last *instance* found:
+		// propositional model, being the UNSAT soln. Instead, use the last *instance* found:	
 		Map<Relation, TupleSet> solutionTuples = msiterator.lastSatSolutionFound.instance().relationTuples();
 		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
 
@@ -788,7 +795,7 @@ public final class MinSolver {
 	 * An iterator over all solutions of a model.
 	 * @author Emina Torlak
 	 */
-	static final class MinSolutionIterator implements Iterator<MinSolution> {
+	public static final class MinSolutionIterator implements Iterator<MinSolution> {
 		private final Options options;
 		private final MinExtraOptions extraOptions;
 		
@@ -818,7 +825,7 @@ public final class MinSolver {
 		 * Augmentation requires we keep a handle on the last instance found
 		 * even if the iterator is now empty (i.e., lastSolution = an unsatisfiable result).
 		 */
-		MinSolution lastSatSolutionFound = null;
+		public MinSolution lastSatSolutionFound = null;
 		
 		/**
 		 * Keeps cone restriction clauses such that the next model from the SATsolver
@@ -1624,12 +1631,14 @@ public final class MinSolver {
 		 * Always use this function to update lastSolution.
 		 * Otherwise the last prop. model will not be saved.
 		 */
-		private void setLastSolution(MinSolution last) {			
-			this.lastSolution = last;
+		private void setLastSolution(MinSolution last) {
+			if(last != null)
+				this.lastSolution = last;
+			
 			if(last.instance() != null)
 			{
 				this.lastSatSolutionFound = last;
-			}
+			}			
 		}
 		
 		/**
