@@ -542,7 +542,7 @@ public final class MinSolver {
 	 */
 	public Instance parseString(String inputStr, Iterator<MinSolution> iterator, Map<String, String> display2orig, Map<Object, String> atom2name) throws ExplorationException {
 		inputStr = inputStr.trim();
-		inputStr = inputStr.replaceAll(" ", "");				
+		//inputStr = inputStr.replaceAll(" ", "");				
 		
 		String relationName = null;
 		int index1 = inputStr.indexOf('[');
@@ -559,7 +559,7 @@ public final class MinSolver {
 		StringTokenizer tokenizer = new StringTokenizer(inputStr.substring(index1 + 1, index2), ",");		
 		ArrayList<String> stringComponentsGiven = new ArrayList<String>();		
 		while(tokenizer.hasMoreTokens()){
-			stringComponentsGiven.add(tokenizer.nextToken());
+			stringComponentsGiven.add(tokenizer.nextToken().trim());
 		}
 
 		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
