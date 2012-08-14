@@ -8,8 +8,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -263,7 +261,6 @@ public final class ExecutionTimeRecorder {
 			                        		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
 				                        	totalAugmentationTimeNS += augmentationTimeNS;
 			                        		ans = ans.backtrack();
-			                        		System.gc();
 			                        	}
 			                        	catch(ExplorationException e){
 			                        		System.err.println(e.getMessage());
@@ -274,6 +271,8 @@ public final class ExecutionTimeRecorder {
 										}
 	                        		}
 	                        	}
+	                        	//Freeing up the garbage that augmentation and backtracking produces:
+                        		System.gc();
 	                        }
         				}
         				else{
