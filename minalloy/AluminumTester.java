@@ -196,7 +196,7 @@ public final class AluminumTester {
 
         	// groupindex -> dupe groupindices
         	Map<Integer, Set<Integer>> dupeSolnMap = new HashMap<Integer, Set<Integer>>();
-        	
+        	Set<Integer> isDupeOrdered = new HashSet<Integer>();
         	if(optIsomorphicSolutions.value){
         		System.out.println("Building isomorphic solutions for the minimal solutions ....");
         		// Will log # repeats in this call
@@ -204,8 +204,7 @@ public final class AluminumTester {
             	System.out.println("Done!");
             	
             	// Obtain count of duplicates from the map.
-            	// It is NOT half of the number of entries (unless all classes are size=2):
-            	Set<Integer> isDupeOrdered = new HashSet<Integer>();
+            	// It is NOT half of the number of entries (unless all classes are size=2):            	
             	for(Integer ii : dupeSolnMap.keySet())
             	{
             		for(Integer jj : dupeSolnMap.get(ii))
@@ -222,7 +221,6 @@ public final class AluminumTester {
             		
             	}
             	System.out.println("  Number of iso dupes:\n  "+isDupeOrdered.size());
-            	distributionLog.append("Number of dupes:\t"+isDupeOrdered.size());
             	System.out.println("  Duplication map: "+dupeSolnMap);
          		
          		
@@ -241,15 +239,15 @@ public final class AluminumTester {
         		}
         	}        	        	        	        	
         	
-            System.out.print("Running Alloy for command: " + command + ": ");
-        	
+            System.out.print("Running Alloy for command: " + command + ": ");        	
+            
         	A4Solution alloy = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, alloyOptions);
         	
         	System.out.println("Done!");
         	    
     		// Reduce output spam. Also, writing to the screen is expensive. 
-        	int nEveryFewChecks = 100;
-        	int nEveryFewDots = 10;
+        	final int nEveryFewChecks = 100;
+        	final int nEveryFewDots = 10;
         	        	
         	// Taken from SimpleReporter. We want to count only solutions that Alloy actually
         	// *SHOWS THE USER*. Alloy trims out duplicates using this hashset after solution
@@ -269,7 +267,7 @@ public final class AluminumTester {
         			if (tries<100) 
         			{ 
         				tries++;
-        				alloy = alloy.next();        				
+        				alloy = alloy.next();            			
         				continue;
         			}
         			// Otherwise, give up (as Alloy's visualizer would)        			        			
@@ -368,8 +366,13 @@ public final class AluminumTester {
         	
         	System.out.println("OS Alloy: "+ordinalSumAlloy);
         	System.out.println("OS Aluminum: "+ordinalSumAluminum);
-        	distributionLog.append("OS Alloy:\t"+ordinalSumAlloy);
-        	distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum);
+        	distributionLog.append("OS Alloy:\t"+ordinalSumAlloy+"\n");
+        	distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum+"\n");
+        	if(optIsomorphicSolutions.value)
+        	{
+        		distributionLog.append("Number of dupes:\t"+isDupeOrdered.size()+"\n");
+        	}
+        	System.out.println("Number of Alloy solutions processed (not counting same-string dupes): "+counter);
         	
         	// Separator to help find break between command results 
         	System.out.println("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
