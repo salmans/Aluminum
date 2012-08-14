@@ -147,7 +147,8 @@ public final class AluminumTester {
         aluminumOptions.skolemDepth = optSkolemDepth.value;
         alloyOptions.symmetry = optSymmetryBreaking.value;
         alloyOptions.skolemDepth = optSkolemDepth.value;
-
+        // SAT4J is the default                
+        
 		boolean foundError = false;
 		int totalErrors = 0;
 		int minimalSolutions = 0;
@@ -250,13 +251,36 @@ public final class AluminumTester {
         	int nEveryFewChecks = 100;
         	int nEveryFewDots = 10;
         	        	
+        	// Taken from SimpleReporter. We want to count only solutions that Alloy actually
+        	// *SHOWS THE USER*. Alloy trims out duplicates using this hashset after solution
+        	// generation (up to 100 times per model displayed):
+        	// The set of Strings already enumerated for this current solution. 
+            final Set<String> latestKodkods=new LinkedHashSet<String>();
+        	
         	int counter = 0;        	
-        	while(alloy.satisfiable()){
+        	int tries = 0;
+        	while(alloy.satisfiable())
+        	{        		
+        		        		        		
+        		// Do not count this solution if Alloy wouldn't display it (VITAL CHECK for fairness):
+        		// (alloy.toString() is different from alloy.getCurrentSolution.toString())
+        		if(!latestKodkods.add(alloy.toString()))
+        		{        		
+        			if (tries<100) 
+        			{ 
+        				tries++;
+        				alloy = alloy.next();        				
+        				continue;
+        			}
+        			// Otherwise, give up (as Alloy's visualizer would)        			        			
+        		}
+        		
+        		
         		boolean foundMinimal = false;
         		counter++;
         	        		
         		// DEBUG
-        		//System.out.println("Alloy solution "+counter+" had this many atoms actually used: "+alloy.getAllAtoms());
+        	//	System.out.println("Alloy solution "+counter+" had this many atoms actually used: "+alloy.getAllAtoms());
         		
         		if(counter % nEveryFewChecks == 0)
         			System.out.print("Checking solution " + counter + ": ");

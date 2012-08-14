@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
@@ -65,8 +66,7 @@ import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 /** This helper method is used by SimpleGUI. */
 
 final class MinSimpleReporter extends A4Reporter {
-
-    public static final class SimpleCallback1 implements WorkerCallback {
+	public static final class SimpleCallback1 implements WorkerCallback {
         private final SimpleGUI gui;
         private final MinVizGUI viz;
         private final SwingLogPanel span;
@@ -410,8 +410,10 @@ final class MinSimpleReporter extends A4Reporter {
                 String toString = sol.toString();
                 synchronized(MinSimpleReporter.class) {
                 	//TODO what should we do with this code:
+                	//JOptionPane.showMessageDialog(null, toString);
+                	
                     if (!latestKodkods.add(toString)) if (tries<100) { tries++; continue; }
-                    // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going
+                    // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going                    
                     writeXML(null, mod, filename, sol, latestKodkodSRC); latestKodkod=sol;
                 }
                 cb("declare", filename);
