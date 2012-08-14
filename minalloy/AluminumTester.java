@@ -6,8 +6,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import kodkod.instance.Bounds;
 
@@ -180,26 +183,65 @@ public final class AluminumTester {
 
         	minimalSolutions = initialSolutions.size();
         	
+        	// Per command
+        	int ordinalSumAlloy = 0;
+        	int ordinalSumAluminum = 0;
+        	Set<Integer> wantToSeeClassesForOrdinal = new HashSet<Integer>();
+        	
         	// Print the number here and later on (in case it takes a long time to run)
         	System.out.println("\n  Got "+minimalSolutions+" minimal solutions from Aluminum.");
 
-        	List<AluminumSolution> aluminumSolutions = new ArrayList<AluminumSolution>();
+        	List<AluminumSolution> aluminumSolutionsWithIsos = new ArrayList<AluminumSolution>();
+
+        	// groupindex -> dupe groupindices
+        	Map<Integer, Set<Integer>> dupeSolnMap = new HashMap<Integer, Set<Integer>>();
         	
         	if(optIsomorphicSolutions.value){
         		System.out.println("Building isomorphic solutions for the minimal solutions ....");
         		// Will log # repeats in this call
-        		aluminumSolutions = getIsomorphicSolutions(initialSolutions, aluminum.getSkolemBounds());
+        		aluminumSolutionsWithIsos = getIsomorphicSolutions(initialSolutions, aluminum.getSkolemBounds(), dupeSolnMap);
             	System.out.println("Done!");
             	
-            	isomorphicMinimalSolutions = aluminumSolutions.size();
+            	// Obtain count of duplicates from the map.
+            	// It is NOT half of the number of entries (unless all classes are size=2):
+            	Set<Integer> isDupeOrdered = new HashSet<Integer>();
+            	for(Integer ii : dupeSolnMap.keySet())
+            	{
+            		for(Integer jj : dupeSolnMap.get(ii))
+            		{
+            			if(jj > ii)
+            				isDupeOrdered.add(jj);
+            		}
+            		
+            		// Populate in preparation for ordinal-sum production
+            		if(!isDupeOrdered.contains(ii))
+            			ordinalSumAluminum += (ii+1);
+            		// Include ALL classes 
+            		wantToSeeClassesForOrdinal.add(ii); // not i+1 (classes start with index 0)
+            		
+            	}
+            	System.out.println("  Number of iso dupes:\n  "+isDupeOrdered.size());
+            	distributionLog.append("Number of dupes:\t"+isDupeOrdered.size());
+            	System.out.println("  Duplication map: "+dupeSolnMap);
+         		
+         		
+            	isomorphicMinimalSolutions = aluminumSolutionsWithIsos.size();
 
             	System.out.println("  Got "+isomorphicMinimalSolutions+" ismorphic+original minimal solutions.");
+            	            	
         	}else{
-        		for(int i = 0; i < initialSolutions.size(); i++){ aluminumSolutions.add(new AluminumSolution(initialSolutions.get(i), i));}
+        		for(int i = 0; i < initialSolutions.size(); i++)
+        		{
+        			aluminumSolutionsWithIsos.add(new AluminumSolution(initialSolutions.get(i), i));
+        			
+        			// Populate in preparation for ordinal-sum production
+        			ordinalSumAluminum += (i+1);
+        			wantToSeeClassesForOrdinal.add(i); // not i+1 (classes start with index 0)
+        		}
         	}        	        	        	        	
         	
             System.out.print("Running Alloy for command: " + command + ": ");
-        	int counter = 0;
+        	
         	A4Solution alloy = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, alloyOptions);
         	
         	System.out.println("Done!");
@@ -208,21 +250,27 @@ public final class AluminumTester {
         	int nEveryFewChecks = 100;
         	int nEveryFewDots = 10;
         	        	
-        	
+        	int counter = 0;        	
         	while(alloy.satisfiable()){
         		boolean foundMinimal = false;
         		counter++;
         	        		
+        		// DEBUG
+        		//System.out.println("Alloy solution "+counter+" had this many atoms actually used: "+alloy.getAllAtoms());
+        		
         		if(counter % nEveryFewChecks == 0)
         			System.out.print("Checking solution " + counter + ": ");
         		
         		int dotCounter = 1;
-        		for(int i = 0; i < aluminumSolutions.size(); i++){
+        		for(int iAlumWithIsoIndex = 0; iAlumWithIsoIndex < aluminumSolutionsWithIsos.size(); iAlumWithIsoIndex++)
+        		{
+        			AluminumSolution thisAlumIsomorph = aluminumSolutionsWithIsos.get(iAlumWithIsoIndex);
+        			
         			if(counter % nEveryFewChecks == 0 && dotCounter % nEveryFewDots == 0)
         				System.out.print(".");
         			dotCounter++;
         			
-        			int comparison = SolutionComparator.compare(aluminumSolutions.get(i).solution, alloy.getCurrentSolution());
+        			int comparison = SolutionComparator.compare(thisAlumIsomorph.solution, alloy.getCurrentSolution());
         			
         			if(!foundMinimal)
         				foundMinimal = (comparison == -1 || comparison == 0);
@@ -231,16 +279,40 @@ public final class AluminumTester {
     					foundError = true;
     					totalErrors++;
             			data.append( "The following Aluminum solution is not minimal:\n\n" + 
-    					aluminumSolutions.get(i).toString() + "\n\n" +
+    					thisAlumIsomorph.toString() + "\n\n" +
             					"because Alloy gave something smaller:\n\n" + 
     					alloy.getCurrentSolution().toString() + "\n\n" +
             					"-------------------------------------\n");
     				}
     				
-    				//Log distribution
-    				if(logDistribution){
-    					if(comparison == -1 || comparison ==0){
-    						distributionLog.append(counter + "\t" + i + "\t" + aluminumSolutions.get(i).groupIndex + "\t" + comparison + "\n");
+    				// Logging cone distribution
+    				if(logDistribution)
+    				{						
+    					
+    					//////////
+    					// Calculate the ordinal sum for Alloy's iterator. If this is an exact
+    					// match, and we need to count this iso class still:
+    					if(comparison == 0)
+    					{    						
+    						if(wantToSeeClassesForOrdinal.remove(thisAlumIsomorph.groupIndex))
+    						{
+    							ordinalSumAlloy += counter; // Not +1; alloy starts with from 1 not 0
+    							
+    							wantToSeeClassesForOrdinal.removeAll(dupeSolnMap.get(thisAlumIsomorph.groupIndex));    							
+    							
+    							System.out.println("  MATCH for Ordinal Sum: "+thisAlumIsomorph.groupIndex+
+    									" at Alloy Model "+counter+
+    									"\n    Eliminating entire class:"+dupeSolnMap.get(thisAlumIsomorph.groupIndex)+" plus "+thisAlumIsomorph.groupIndex+
+    									"\n    so total is: "+ordinalSumAlloy);
+    						}
+    					}
+    					    					    					
+    					//////////
+    					// Log a row saying that this Alloy model is in the cone of this Aluminum isomorph
+    					// (the isomorph isn't necessarily generated by Aluminum, but is a symmetry for easy comparison)
+    					if(comparison == -1 || comparison == 0)
+    					{
+    						distributionLog.append(counter + "\t" + iAlumWithIsoIndex + "\t" + aluminumSolutionsWithIsos.get(iAlumWithIsoIndex).groupIndex + "\t" + comparison + "\n");
     					}
     				}
         		}
@@ -269,6 +341,11 @@ public final class AluminumTester {
         		
         		alloy = alloy.next();
         	} // end for each Alloy model
+        	
+        	System.out.println("OS Alloy: "+ordinalSumAlloy);
+        	System.out.println("OS Aluminum: "+ordinalSumAluminum);
+        	distributionLog.append("OS Alloy:\t"+ordinalSumAlloy);
+        	distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum);
         	
         	// Separator to help find break between command results 
         	System.out.println("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -325,7 +402,8 @@ public final class AluminumTester {
 	}
 	
 	
-	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> inputInstances, Bounds skolemBounds){
+	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> inputInstances, Bounds skolemBounds, 
+			Map<Integer, Set<Integer>> dupeSolnMap){
 		// Do not build permutations if there are no results. 
 		// (Avoid long delay + possible out-of-memory if there are large bounds.)
 		List<AluminumSolution> results = new ArrayList<AluminumSolution>();
@@ -339,9 +417,9 @@ public final class AluminumTester {
 			// This effectively removes "labeling" relations inserted by Alloy.
 			inputInstances.get(i).sanitizeToBounds(skolemBounds);
 			results.add(new AluminumSolution(inputInstances.get(i), i));
+			dupeSolnMap.put(i, new HashSet<Integer>());
 		}
-		
-		int iNumberOfIsoDupes = 0;
+				
 		
  		for(int instanceIndex = 0; instanceIndex < inputInstances.size(); instanceIndex++)
  		{ 			
@@ -359,10 +437,11 @@ public final class AluminumTester {
  				for(MinSolution sol: isosForThisInstance)
  				{
  					if(SolutionComparator.compare(sol, otherInputInstance) == 0)
- 					{
- 						// Yes, it is!
- 						iNumberOfIsoDupes++;
- 						break;
+ 					{ 						 					
+ 						// Don't break. Want to detect everything this dupe is iso for.
+ 						// (Note that that means the number of duplicates is NOT half the number of entries)
+ 						dupeSolnMap.get(instanceIndex).add(otherIndex);
+ 						dupeSolnMap.get(otherIndex).add(instanceIndex);
  					}
  				}
  			}
@@ -374,9 +453,7 @@ public final class AluminumTester {
  					results.add(new AluminumSolution(sol, instanceIndex));
  				}
  			} 			 			
-		} 		 		 		
- 		
- 		System.out.println("\n  Number of iso dupes:\n  "+iNumberOfIsoDupes);
+		} 		 		 		 		
  		
 		return results;
 	}	
