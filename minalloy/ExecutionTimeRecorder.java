@@ -224,19 +224,12 @@ public final class ExecutionTimeRecorder {
         		
         		if(!optLogConsistentFacts.value && !optLogMinimizationHistory.value);
 
-        		final Set<String> latestKodkods=new LinkedHashSet<String>();
         		while(ans.satisfiable())
         		{
             		long totalAugmentationTimeNS = 0;
       		
         			if(counter == optNumberOfModels.value)
         				break;
-
-        			if(!latestKodkods.add(ans.toString()))
-        			{
-        				ans = ans.next();
-        				continue;
-        			}
         			
         			//System.out.println(ans.toString());
         			
@@ -538,17 +531,10 @@ public final class ExecutionTimeRecorder {
         			output.set(lineNumber + counter, output.get(lineNumber + counter) + "\t" + time);
         		}
 
-        		final Set<String> latestKodkods=new LinkedHashSet<String>();
         		while(ans.satisfiable()){
         			if(counter == optNumberOfModels.value)
         				break;
-
-        			if(!latestKodkods.add(ans.toString()))
-        			{
-        				ans = ans.next();
-        				continue;
-        			}
-        			
+        		
         			//time = System.currentTimeMillis();                	
         			ans = ans.next();
         			//time = System.currentTimeMillis() - time;
