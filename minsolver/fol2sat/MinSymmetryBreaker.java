@@ -85,7 +85,6 @@ final class MinSymmetryBreaker {
 		reporter.detectingSymmetries(bounds);
 		this.symmetries = MinSymmetryDetector.partition(bounds);
 		reporter.detectedSymmetries(symmetries);
-//		System.out.println(symmetries);
 	}
 	
 	/**
@@ -234,8 +233,6 @@ final class MinSymmetryBreaker {
 				prevIndex = curIndex;
 			}
 		}
-		
-		//JOptionPane.showMessageDialog(null, sbp);
 		
 		return factory.accumulate(sbp);
 	}
