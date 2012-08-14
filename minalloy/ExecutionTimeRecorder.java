@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -162,6 +164,7 @@ public final class ExecutionTimeRecorder {
         output.add("-hist = " + optLogMinimizationHistory.value);
         System.out.println("-cf = " + optLogConsistentFacts.value + "\n");
         output.add("-cf = " + optLogConsistentFacts.value + "\n");        
+        System.out.println("-t = " + optNumberOfTrials.value + "\n"); 
         
         Module world = CompUtil.parseEverything_fromFile(rep, null, optInput.value.getPath());
 
@@ -220,14 +223,23 @@ public final class ExecutionTimeRecorder {
         		int counter = 1;
         		
         		if(!optLogConsistentFacts.value && !optLogMinimizationHistory.value);
-        		
+
+        		final Set<String> latestKodkods=new LinkedHashSet<String>();
         		while(ans.satisfiable())
         		{
             		long totalAugmentationTimeNS = 0;
-        			
+      		
         			if(counter == optNumberOfModels.value)
         				break;
 
+        			if(!latestKodkods.add(ans.toString()))
+        			{
+        				ans = ans.next();
+        				continue;
+        			}
+        			
+        			//System.out.println(ans.toString());
+        			
         			//time = System.currentTimeMillis();                	
         			ans = ans.next();
         			//time = System.currentTimeMillis() - time;
@@ -526,10 +538,17 @@ public final class ExecutionTimeRecorder {
         			output.set(lineNumber + counter, output.get(lineNumber + counter) + "\t" + time);
         		}
 
+        		final Set<String> latestKodkods=new LinkedHashSet<String>();
         		while(ans.satisfiable()){
         			if(counter == optNumberOfModels.value)
         				break;
 
+        			if(!latestKodkods.add(ans.toString()))
+        			{
+        				ans = ans.next();
+        				continue;
+        			}
+        			
         			//time = System.currentTimeMillis();                	
         			ans = ans.next();
         			//time = System.currentTimeMillis() - time;
