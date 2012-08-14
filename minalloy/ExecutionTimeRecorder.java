@@ -258,6 +258,7 @@ public final class ExecutionTimeRecorder {
 			                        		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
 				                        	totalAugmentationTimeNS += augmentationTimeNS;
 			                        		ans = ans.backtrack();
+			                        		System.gc();
 			                        	}
 			                        	catch(ExplorationException e){
 			                        		System.err.println(e.getMessage());
