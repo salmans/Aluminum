@@ -303,14 +303,16 @@ public final class ExecutionTimeRecorder {
         					output.set(counter + lineNumber -1, output.get(counter + lineNumber - 1) + "\t" + info);        				
         			}
         		} // end for each solution
-        	}
-	        
-	        try{
-	        	writeOutput(output, optOutput.value);
-	        }
-	        catch(IOException e){
-	        	System.err.println(e.getMessage());
-	        }
+        		
+        		//Writing the current state of data to a file.
+    	        try{
+    	        	//We are not keeping appending data to a previous log file.
+    	        	writeOutput(output, optOutput.value, false);
+    	        }
+    	        catch(IOException e){
+    	        	System.err.println(e.getMessage());
+    	        }        	
+        	}	        
         }
 	}
 	
@@ -538,15 +540,18 @@ public final class ExecutionTimeRecorder {
         			else
         				output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + time);
         		}
-            }
-        }
-        
-        try{
-        	writeOutput(output, optOutput.value);
-        }
-        catch(IOException e){
-        	System.err.println(e.getMessage());
-        }
+        		
+        		//Write the results of this trial to the output.
+                try{
+                	//We do not support appending the data to the end of a previous report file.
+                	//We simply write the current state of data after each trial.
+                	writeOutput(output, optOutput.value, false);
+                }
+                catch(IOException e){
+                	System.err.println(e.getMessage());
+                }
+        	}
+        }        
 	}
     
 	/**
@@ -574,8 +579,8 @@ public final class ExecutionTimeRecorder {
 	/**
 	 * Helper methods
 	 */
-    private static void writeOutput(ArrayList<String> output, File outputFile) throws IOException{
-    	FileWriter fstream = new FileWriter(outputFile);
+    private static void writeOutput(ArrayList<String> output, File outputFile, boolean append) throws IOException{
+    	FileWriter fstream = new FileWriter(outputFile,append);
     	BufferedWriter out = new BufferedWriter(fstream);
     	for(String str: output){
     		out.write(str + "\n");
