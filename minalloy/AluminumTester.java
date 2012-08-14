@@ -366,9 +366,12 @@ public final class AluminumTester {
         	
         	System.out.println("OS Alloy: "+ordinalSumAlloy);
         	System.out.println("OS Aluminum: "+ordinalSumAluminum);
-        	distributionLog.append("OS Alloy:\t"+ordinalSumAlloy+"\n");
-        	distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum+"\n");
-        	if(optIsomorphicSolutions.value)
+        	if(logDistribution)
+        	{
+        		distributionLog.append("OS Alloy:\t"+ordinalSumAlloy+"\n");
+        		distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum+"\n");
+        	}
+        	if(optIsomorphicSolutions.value && logDistribution)
         	{
         		distributionLog.append("Number of dupes:\t"+isDupeOrdered.size()+"\n");
         	}
