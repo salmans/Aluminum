@@ -186,7 +186,8 @@ public final class AluminumTester {
         	List<AluminumSolution> aluminumSolutions = new ArrayList<AluminumSolution>();
         	
         	if(optIsomorphicSolutions.value){
-        		System.out.print("Building isomorphic solutions for the minimal solutions ....");
+        		System.out.println("Building isomorphic solutions for the minimal solutions ....");
+        		// Will log # repeats in this call
         		aluminumSolutions = getIsomorphicSolutions(initialSolutions, aluminum.getSkolemBounds());
             	System.out.println("Done!");
             	
@@ -195,8 +196,8 @@ public final class AluminumTester {
             	System.out.println("  Got "+isomorphicMinimalSolutions+" ismorphic+original minimal solutions.");
         	}else{
         		for(int i = 0; i < initialSolutions.size(); i++){ aluminumSolutions.add(new AluminumSolution(initialSolutions.get(i), i));}
-        	}        	        	
-        	        	
+        	}        	        	        	        	
+        	
             System.out.print("Running Alloy for command: " + command + ": ");
         	int counter = 0;
         	A4Solution alloy = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, alloyOptions);
@@ -311,7 +312,7 @@ public final class AluminumTester {
     	System.out.println("Inconsistencies: " + totalErrors);
     	System.out.println("Minimal Solutions: " + minimalSolutions);
     	if(optIsomorphicSolutions.value)
-    		System.out.println("Isomorphic Minimal Solutions: " + isomorphicMinimalSolutions);    	
+    		System.out.println("Detected isomorphs of the minimal solutions for comparison: " + isomorphicMinimalSolutions);    	
 	}
 	
 	private static void writeData(File file, String data) throws IOException{
@@ -324,31 +325,58 @@ public final class AluminumTester {
 	}
 	
 	
-	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> input, Bounds skolemBounds){
+	private static List<AluminumSolution> getIsomorphicSolutions(List<MinSolution> inputInstances, Bounds skolemBounds){
 		// Do not build permutations if there are no results. 
 		// (Avoid long delay + possible out-of-memory if there are large bounds.)
 		List<AluminumSolution> results = new ArrayList<AluminumSolution>();
 		
-		if(input.size() == 0) return results;
-
+		if(inputInstances.size() == 0) return results;		
+							
 		//For reporting purposes, we want to keep the original minimal models produced by Aluminum in
 		//their current place in the list:
-		for(int i = 0; i < input.size(); i++) {
+		for(int i = 0; i < inputInstances.size(); i++) {
 			// sanitizeToBounds removes every relation not in the Skolem bounds.
 			// This effectively removes "labeling" relations inserted by Alloy.
-			input.get(i).sanitizeToBounds(skolemBounds);
-			results.add(new AluminumSolution(input.get(i), i));
+			inputInstances.get(i).sanitizeToBounds(skolemBounds);
+			results.add(new AluminumSolution(inputInstances.get(i), i));
 		}
 		
- 		for(int i = 0; i < input.size(); i++){
- 			Set<MinSolution> solutions = IsomorphicSolutionBuilder.getIsomorphicSolutions(input.get(i), skolemBounds);
- 			for(MinSolution sol: solutions){ 				 				
- 				//Now, we should avoid duplicate entries. (This is not the best way of doing this but it is fine for now)
- 				if(SolutionComparator.compare(input.get(i), sol) != 0){
- 					results.add(new AluminumSolution(sol, i));
+		int iNumberOfIsoDupes = 0;
+		
+ 		for(int instanceIndex = 0; instanceIndex < inputInstances.size(); instanceIndex++)
+ 		{ 			
+ 			// Build the solutions isomorphic to this one (UP TO KODKOD'S GREEDY DETECTION)
+ 			MinSolution thisInputInstance = inputInstances.get(instanceIndex);
+ 			Set<MinSolution> isosForThisInstance = IsomorphicSolutionBuilder.getIsomorphicSolutions(thisInputInstance, skolemBounds);
+ 			
+ 			// Log the number of repeats UP TO KODKOD's SYMMETRY DETECTION. The naive way is:
+ 			// For every input after this one, see if it's equal to something in the isos above.
+ 			// (Suffices to check only those *after* since isomorphism is symmetric)
+ 			for(int otherIndex = instanceIndex+1;otherIndex<inputInstances.size();otherIndex++ )
+ 			{
+ 				MinSolution otherInputInstance = inputInstances.get(otherIndex);
+ 				// Is otherInputInstance ~=_{kodkod} thisInputInstance?
+ 				for(MinSolution sol: isosForThisInstance)
+ 				{
+ 					if(SolutionComparator.compare(sol, otherInputInstance) == 0)
+ 					{
+ 						// Yes, it is!
+ 						iNumberOfIsoDupes++;
+ 						break;
+ 					}
  				}
  			}
-		} 		
+ 			
+ 			// Add non-duplicates to the list: 			
+ 			for(MinSolution sol: isosForThisInstance){ 				 				
+ 				//Now, we should avoid duplicate entries. (This is not the best way of doing this but it is fine for now)
+ 				if(SolutionComparator.compare(thisInputInstance, sol) != 0){
+ 					results.add(new AluminumSolution(sol, instanceIndex));
+ 				}
+ 			} 			 			
+		} 		 		 		
+ 		
+ 		System.out.println("\n  Number of iso dupes:\n  "+iNumberOfIsoDupes);
  		
 		return results;
 	}	
