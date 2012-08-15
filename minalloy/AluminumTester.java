@@ -186,6 +186,7 @@ public final class AluminumTester {
         	
         	// Per command
         	int ordinalSumAlloy = 0;
+        	int minInstanceCoverage = 0;
         	int ordinalSumAluminum = 0;
         	Set<Integer> wantToSeeClassesForOrdinal = new HashSet<Integer>();
         	
@@ -319,7 +320,7 @@ public final class AluminumTester {
     						if(wantToSeeClassesForOrdinal.remove(thisAlumIsomorph.groupIndex))
     						{
     							ordinalSumAlloy += counter; // Not +1; alloy starts with from 1 not 0
-    							
+    							minInstanceCoverage = counter;
     							wantToSeeClassesForOrdinal.removeAll(dupeSolnMap.get(thisAlumIsomorph.groupIndex));    							
     							
     							System.out.println("  MATCH for Ordinal Sum: "+thisAlumIsomorph.groupIndex+
@@ -370,6 +371,7 @@ public final class AluminumTester {
         	{
         		distributionLog.append("OS Alloy:\t"+ordinalSumAlloy+"\n");
         		distributionLog.append("OS Aluminum:\t"+ordinalSumAluminum+"\n");
+        		distributionLog.append("Min. Instance Coverage: \t"+minInstanceCoverage+"\n");
         	}
         	if(optIsomorphicSolutions.value && logDistribution)
         	{
