@@ -1073,7 +1073,7 @@ public final class MinA4Solution {
         //if (eval==null) return this;
         if (nextCache==null) nextCache=new MinA4Solution(this, sol);
         return nextCache;
-    }    
+    }  
     //===================================================================================================//
 
     /** This caches the toString() output. */

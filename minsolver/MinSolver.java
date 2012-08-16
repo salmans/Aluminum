@@ -112,7 +112,7 @@ public final class MinSolver {
 		this.options = options;
 		this.extraOptions = extraOptions;
 	}
-		
+	
 	/**
 	 * Returns the Options object used by this Solver
 	 * to guide translation of formulas from first-order
@@ -693,7 +693,7 @@ public final class MinSolver {
 	 */
 	private static MinSolution sat(Bounds bounds, MinTranslation translation, MinStatistics stats) {
 		final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), bounds), null, null);
-		translation.cnf().free();
+		//translation.cnf().free();
 		return sol;
 	}
 
@@ -710,7 +710,7 @@ public final class MinSolver {
 			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null, null);
 		} else { // can free memory
 			final MinSolution sol = MinSolution.unsatisfiable(stats, null, null, null);
-			cnf.free();
+			//cnf.free();
 			return sol;
 		}
 	}
