@@ -636,7 +636,7 @@ final class MinSimpleReporter extends A4Reporter {
                 final Command cmd=cmds.get(i);
                 rep.tempfile=tempCNF;
                 cb(out, "bold", "Executing \""+cmd+"\"\n");
-                MinA4Solution ai= MinTranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
+                MinA4Solution ai= MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), cmd, options);
                 if (ai==null) result.add(null);
                 else if (ai.satisfiable()) result.add(tempXML);
                 else if (ai.highLevelCore().a.size()>0) result.add(tempCNF+".core");
