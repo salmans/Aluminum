@@ -511,8 +511,12 @@ public final class MinSolver {
 	        ret.append("]");
 	        pattern.append("]");
 	        	        
-	        if(uniqueOutputPattern.add(r.toString()+ pattern.toString())) //if the pattern is not repetitive
-	        	return r.toString() + ret.toString() + "\n";
+	        if(uniqueOutputPattern.add(r.toString()+ pattern.toString())){ //if the pattern is not repetitive
+	        	String relationName = r.toString();
+	        	if(relationName.startsWith("this/"))	//Drop this from the beginning of the relations.
+	        		relationName = relationName.substring(5);
+	        	return relationName + ret.toString() + "\n";
+	        }
 	        else
 	        	return "";
 		} 
@@ -567,7 +571,7 @@ public final class MinSolver {
 		Set<Relation> relations = bounds.relations();
 		Relation relation = null;
 		for(Relation r: relations){
-			if(r.name().equals(relationName)){
+			if(r.name().equals(relationName) || r.name().equals("this/" + relationName)){
 				relation = r;
 				break;
 			}
