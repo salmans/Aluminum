@@ -67,7 +67,22 @@ provide more detail here if desired.)
 with a relational fact F, producing a new iterator for the models that
 are <=-minimal under the original CNF plus F.
 
-() We deactivate symmetry-breaking entirely for the new iterator, for
+(a) The code to actually do this is at:
+
+[REF] 
+
+(b) We made the design choice to have all these iterators (the
+original, augments of the original, etc.) share a SAT4J
+instance. Hence calls that reclaim the sat-solver, or re-assert
+constraints:
+
+[REF]
+
+It would also be possible to give iterator their own SAT4J
+instance. More space consumption, but simpler code and faster
+performance; we were unsure which would work out better.
+
+(c) We deactivate symmetry-breaking entirely for the new iterator, for
 the same reason as in 2. (More detail on request.)
 
 [REF]
