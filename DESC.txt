@@ -53,6 +53,9 @@ this the "cone-restriction" clause in some of the comments.  [REF]
 
 [TODO: shadow clauses?]
 
+[TODO: we remove clauses. because of this, we need to use assumptions;
+SAT4J doesn't always let you remove unit clauses once added.]
+
 ---------------------------------------- 
 
 (2) Given an instance I, a consistent-fact of I is a relational fact F
