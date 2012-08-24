@@ -19,6 +19,8 @@ MinSolutionIterator. Since many of Kodkod's classes were final, we
 circumvented that restriction by duplicating quite a few classes,
 giving them the "Min" prefix, rather than extending them.
 
+[TODO: get rid of "lifters" in code]
+
 ----------------------------------------
 
 (1) We altered solveAll() to produce iterators over only the
@@ -47,6 +49,8 @@ of M ("Never give me this model again"), we issue the negation of the
 positive diagram of M ("Never give me a model >= this one."); we call
 this the "cone-restriction" clause in some of the comments.  [REF]
 
+[TODO: say that each iterator keeps its own cone-restriction clauses]
+
 [TODO: shadow clauses?]
 
 ---------------------------------------- 
@@ -63,9 +67,12 @@ provide more detail here if desired.)
 
 ---------------------------------------- 
 
-(3) An iterator produced by solveAll() can "augment" the current model
+(3) A MinSolver can "augment" the latest model of one of its iterators
 with a relational fact F, producing a new iterator for the models that
 are <=-minimal under the original CNF plus F.
+
+[TODO: doing all this WITHOUT re-translating. Avoid overhead and loss
+of current position in model stream]
 
 (a) The code to actually do this is at:
 
@@ -79,8 +86,11 @@ constraints:
 [REF]
 
 It would also be possible to give iterator their own SAT4J
-instance. More space consumption, but simpler code and faster
-performance; we were unsure which would work out better.
+instance. More space consumption and longer to construct a fresh
+iterator, but simpler code and faster performance otherwise; we were
+unsure which would be best.
+
+[TODO: reapply own cone-restrictions when reclaiming the solver]
 
 (c) We deactivate symmetry-breaking entirely for the new iterator, for
 the same reason as in 2. (More detail on request.)
