@@ -1,0 +1,79 @@
+
+This document describes what we changed in Kodkod in order to produce
+minimal models and allow augmentation and backtracking. 
+
+We'll use the term "relational fact" to mean whether, in an instance
+I, a given tuple is in a relation. These are the relational entities
+that Kodkod maps to/from propositional variables via its Translation
+class.
+
+There is a partial order <= on all instances given by relational
+facts: I <= I' if and only if the relational facts true in I are a
+subset of the relational facts true in I'.
+
+Our hack to Kodkod does three broad things, given below. We use only
+SAT4j; our existing code does not do any of this for other solvers. 
+
+Where Kodkod has Solver, we have MinSolver. SolutionIterator becomes
+MinSolutionIterator. Since many of Kodkod's classes were final, we
+circumvented that restriction by duplicating quite a few classes,
+giving them the "Min" prefix, rather than extending them.
+
+----------------------------------------
+
+(1) We altered solveAll() to produce iterators over only the
+<=-minimal instances.  To do this, we:
+
+(a) Get a candidate propositional model from the SAT-solver.
+[REF]
+
+(b) Minimize that model by iteratively removing unnecessary relational
+facts; let M be the result.
+[REF]
+
+However...
+
+(c) We want models that are minimal with respect to the CNF of the
+original relational sentence; NOT with respect to the
+symmetry-breaking predicate. So we keep the two separate, rather than
+conjoining them at the Boolean circuit stage: [REF]
+
+and remove the SBP's clauses for minimization in (b). This is not
+without performance cost; by splitting the two formulas we sacrifice
+some simplification.
+
+(d) Where Kodkod would issue a clause with the negation of the diagram
+of M ("Never give me this model again"), we issue the negation of the
+positive diagram of M ("Never give me a model >= this one."); we call
+this the "cone-restriction" clause in some of the comments.  [REF]
+
+[TODO: shadow clauses?]
+
+---------------------------------------- 
+
+(2) Given an instance I, a consistent-fact of I is a relational fact F
+that is *not* true in I, but for which there exists an I' > I where F
+is true. We made changes to let an iterator compute the
+consistent-fact set of the last instance it produced.
+
+[REF]
+
+Note that we disable symmetry-breaking when computing this set. (I can
+provide more detail here if desired.)
+
+---------------------------------------- 
+
+(3) An iterator produced by solveAll() can "augment" the current model
+with a relational fact F, producing a new iterator for the models that
+are <=-minimal under the original CNF plus F.
+
+() We deactivate symmetry-breaking entirely for the new iterator, for
+the same reason as in 2. (More detail on request.)
+
+[REF]
+
+(Our modifications to Alloy include a backtracking feature. That is
+not necessary at the Kodkod level, since augmentation is handed via
+separate solution-iterators.)
+
+----------------------------------------
