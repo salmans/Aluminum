@@ -274,12 +274,12 @@ public final class MinSolver {
 	}
 	
 	/**
-	 * Augments a model from an iterator with a set of facts aka lifters.
+	 * Augments a model from an iterator with a set of facts
 	 * @param formula the original FOL formula.
 	 * @param origBounds the bounds.
 	 * @param iterator the previous iterator.
-	 * @param solution the current solution of the previous iterator being lifted.
-	 * @param lifters the facts to augment.
+	 * @param solution the current solution of the previous iterator being augmented.
+	 * @param augmentWith the facts to augment.
 	 * @return a new iterator over the augmented models.
 	 * @throws MinHigherOrderDeclException
 	 * @throws UnboundLeafException
@@ -287,8 +287,8 @@ public final class MinSolver {
 	 */
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
-	public MinSolutionIterator lift(final Formula formula, Iterator<MinSolution> prevIterator, 
-			Instance lifters)
+	public MinSolutionIterator augment(final Formula formula, Iterator<MinSolution> prevIterator, 
+			Instance augmentWith)
 			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
 		
 		if (!options.solver().incremental())
@@ -312,15 +312,15 @@ public final class MinSolver {
 			throw new ExplorationException("Attempted to augment without a model.");
 		}
 		
-		//Lifting is always performed on skolemBounds.
+		// Augmenting is always performed on skolemBounds.
 		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
 		
-		ArrayList<Integer> allLifters = new ArrayList<Integer>();
+		ArrayList<Integer> allAugments = new ArrayList<Integer>();
 		
 		// Do not use getLastSolution() here: it may be the iterator is empty, in which case it would contain no
 		// propositional model, being the UNSAT soln. Instead, use the last *instance* found:	
 		Map<Relation, TupleSet> solutionTuples = msiterator.lastSatSolutionFound.instance().relationTuples();
-		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
+		Map<Relation, TupleSet> augmentTuples = augmentWith.relationTuples();
 
 		for(Relation r : solutionTuples.keySet()){
 			TupleSet tuples = solutionTuples.get(r);
@@ -329,12 +329,12 @@ public final class MinSolver {
 				//if there is no primary variables assigned to this relation, continue.
 				if(index == -1)
 					continue;
-				allLifters.add(index);
+				allAugments.add(index);
 			}
 		}
 		
-		for(Relation r : lifterTuples.keySet()){
-			TupleSet tuples = lifterTuples.get(r);
+		for(Relation r : augmentTuples.keySet()){
+			TupleSet tuples = augmentTuples.get(r);
 			if(tuples != null)
 				for(Tuple t: tuples){
 					if(solutionTuples.get(r).contains(t))
@@ -345,30 +345,30 @@ public final class MinSolver {
 					if(index == -1)
 						continue;
 					
-					allLifters.add(index);
+					allAugments.add(index);
 				}
 		}
 		
 		// We want the same MinSolver, because MinSolver governs
 		// the active iterator and allows the iterators to share the SAT solver.
-		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, extraOptions, allLifters, msiterator);
+		MinSolutionIterator iterator = new MinSolutionIterator(this, formula, skBounds, options, extraOptions, allAugments, msiterator);
 				
 		return iterator;
 	}	
 	
 	/**
-	 * Returns the lifters for the current model loaded in the given iterator.
+	 * Returns the consistent facts for the current model loaded in the given iterator.
 	 * @param iterator the iterator.
-	 * @return the lifters tuple relations of an instance.
+	 * @return the consistent facts tuple relations of an instance.
 	 * @throws TimeoutException
 	 * @throws ContradictionException
 	 */
-	public Instance getLifters(Iterator<MinSolution> iterator) throws TimeoutException, ContradictionException{
+	public Instance getConsistentFacts(Iterator<MinSolution> iterator) throws TimeoutException, ContradictionException{
 		MinSolutionIterator theIterator = (MinSolutionIterator)iterator;
 				
 		if(theIterator.trivial)
 		{
-			// No translation available to lift. Get the upper bounds - the lower bounds:
+			// No translation available to augment. Get the upper bounds - the lower bounds:
 			Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;			
 			Instance results = new Instance(skBounds.universe());			
 			for(Relation r : skBounds.relations())
@@ -378,7 +378,7 @@ public final class MinSolver {
 				results.add(r, tuples);							
 			}
 			
-			//JOptionPane.showMessageDialog(null, "getLifters: "+results);			
+			//JOptionPane.showMessageDialog(null, "getConsistentFacts: "+results);			
 			return results;
 		}
 
@@ -386,22 +386,22 @@ public final class MinSolver {
 		return MinTwoWayTranslator.translatePropositions(
 				theIterator.translation, ((MyReporter)theIterator.options.reporter()).skolemBounds,
 				theIterator.mapVarToRelation,
-				theIterator.getLifters()); 
+				theIterator.getConsistentFacts()); 
 	}
 	
 	/**
-	 * Returns a list of lifters for the current model loaded in the given iterator as 
+	 * Returns a list of consistent facts for the current model loaded in the given iterator as 
 	 * a line separated string.
 	 * @param iterator the iterator.
-	 * @return returns a list of line separated strings of lifters. If an exception occurs,
+	 * @return returns a list of line separated strings of consistent facts. If an exception occurs,
 	 * it returns an empty string.
 	 */    
-	public String getLiftersList(Iterator<MinSolution> iterator){
-		return getLiftersList(iterator, null, null);
+	public String getCFList(Iterator<MinSolution> iterator){
+		return getCFList(iterator, null, null);
 	}	
 	
 	/**
-	 * Returns a list of lifters for the current model loaded in the given iterator as 
+	 * Returns a list of consistent facts for the current model loaded in the given iterator as 
 	 * a line separated string.
 	 * 
 	 * Alloy can actually rename an atom *twice* -- e.g., Kodkod may have an atom Object$2 that
@@ -412,10 +412,10 @@ public final class MinSolver {
 	 * @param iterator the iterator.
 	 * @param dictionary Alloy original names mapped to Alloy display names
 	 * @param atom2name Kodkod names mapped to Alloy original names
-	 * @return returns a list of line separated strings of lifters. If an exception occurs,
+	 * @return returns a list of line separated strings of consistent facts. If an exception occurs,
 	 * it returns an empty string.
 	 */    
-	public String getLiftersList(Iterator<MinSolution> iterator, Map<String, String> dictionary, Map<Object, String> atom2name){
+	public String getCFList(Iterator<MinSolution> iterator, Map<String, String> dictionary, Map<Object, String> atom2name){
 		String retVal = "";
 		MinSolutionIterator miniterator = ((MinSolutionIterator)iterator);
 		MinTranslation translation = miniterator.translation;	
@@ -426,20 +426,20 @@ public final class MinSolver {
 		// repetitive patterns will be discarded.
 		Set<String> uniqueOutputPattern = new LinkedHashSet<String>();
 		
-		Instance lifters = null;
+		Instance consistentFacts = null;
 		
 		try{
-			lifters = getLifters(iterator);
+			consistentFacts = getConsistentFacts(iterator);
 		}
 		catch(Exception e){
 			return "";
 		}
 		
-		Map<Relation, TupleSet> lifterTuples = lifters.relationTuples();
+		Map<Relation, TupleSet> cfTuples = consistentFacts.relationTuples();
 
-		// For each relational fact in the lifter set, construct a descriptive string.
-		for(Relation r : lifterTuples.keySet()){
-			TupleSet tuples = lifterTuples.get(r);
+		// For each relational fact in the set, construct a descriptive string.
+		for(Relation r : cfTuples.keySet()){
+			TupleSet tuples = cfTuples.get(r);
 			for(Tuple t: tuples){
 				if(!miniterator.trivial)
 				{
@@ -449,15 +449,15 @@ public final class MinSolver {
 						continue;
 				}
 				
-				retVal += lifterTupleToString(r, t, dictionary, atom2name, uniqueOutputPattern);
+				retVal += augmentTupleToString(r, t, dictionary, atom2name, uniqueOutputPattern);
 				
-			} // end each tuple for this relation in lifters
-		} // end for each relation in lifters
+			} // end each tuple for this relation in CFs
+		} // end for each relation in CFs
 		
 		return retVal;
 	}
 
-	private String lifterTupleToString(Relation r, Tuple t,
+	private String augmentTupleToString(Relation r, Tuple t,
 			Map<String, String> dictionary, Map<Object, String> atom2name,
 			Set<String> uniqueOutputPattern)
 	{
@@ -482,7 +482,7 @@ public final class MinSolver {
 	        	        
 	        ////////////////////////////////////////////////// 
 	        
-	        // To make sure no repeats of identical (up to choice of new atom) lifters,
+	        // To make sure no repeats of identical (up to choice of new atom) augmentation string,
 	        // pattern removes the labels from ret.	        
 	        
 	        // For each atom in the tuple:	        	        
@@ -526,22 +526,22 @@ public final class MinSolver {
 	}
 
 	/**
-	 * Builds a consistent fact that can be used for lifting a model.
+	 * Builds a consistent fact that can be used for augmenting a model.
 	 * @param inputStr the input string
-	 * @param iterator the iterator to be lifted by this fact.
-	 * @return an object of type Instance containing the lifting fact.
-	 * @throws LifterFailureException 
+	 * @param iterator the iterator to be augmented by this fact.
+	 * @return an object of type Instance containing the augmenting fact.
+	 * @throws ExplorationException
 	 */	
 	public Instance parseString(String inputStr, Iterator<MinSolution> iterator) throws ExplorationException{
 		return parseString(inputStr, iterator, null, null);
 	}	
 	
 	/**
-	 * Builds a consistent fact that can be used for lifting a model.
+	 * Builds a consistent fact that can be used for augmenting a model.
 	 * @param inputStr the input string
-	 * @param iterator the iterator to be lifted by this fact.
+	 * @param iterator the iterator to be augmented by this fact.
 	 * @param display2orig is used to translate the atoms to their names in Kodkod.
-	 * @return an object of type Instance containing the lifting fact. 
+	 * @return an object of type Instance containing the augmenting fact. 
 	 * @throws ExplorationException 
 	 */
 	public Instance parseString(String inputStr, Iterator<MinSolution> iterator, Map<String, String> display2orig, Map<Object, String> atom2name) throws ExplorationException {
@@ -838,7 +838,7 @@ public final class MinSolver {
 		private Set<Set<Integer>> coneRestrictionClauses = new HashSet<Set<Integer>>();
 		/**
 		 * Keeps a list of all the constraints that are being taken into account.
-		 * Some operations such as getLifters() has to eliminate all the constraints.
+		 * Some operations such as getConsistentFacts() has to eliminate all the constraints.
 		 * Also, when another iterator is using the solver, the constraints from
 		 * the current iterator should be removed.
 		 */
@@ -851,9 +851,9 @@ public final class MinSolver {
 		private Set<Integer> coneRestrictionUnits = new HashSet<Integer>();
 		
 		/**
-		 * The lifters for this iteration.
+		 * The augments for this iterator.
 		 */
-		private final int[] lifters;
+		private final int[] augments;
 		
 		/**
 		 * Constructs a solution iterator for the given formula, bounds, and options.
@@ -868,25 +868,25 @@ public final class MinSolver {
 		long parentHash = 0;
 		
 		/**
-		 * Constructs a solution iterator for the given formula, bounds, options and lifters.
+		 * Constructs a solution iterator for the given formula, bounds, options and augmentations.
 		 * @param formula
 		 * @param origBounds
 		 * @param options
-		 * @param lifters
+		 * @param augs
 		 * @param prevIterator
 		 */
 		
 		MinSolutionIterator(MinSolver minSolver, Formula formula, Bounds origBounds, Options options, MinExtraOptions extraOptions, 
-				ArrayList<Integer> lifters, MinSolutionIterator prevIterator) {
+				ArrayList<Integer> augs, MinSolutionIterator prevIterator) {
 			this.minSolver = minSolver;
 			this.formula = formula;
 			this.origBounds = origBounds;
 			this.options = options;
 			this.extraOptions = extraOptions;
 			this.translation = null;
-			this.lifters = (lifters == null) ? null : toIntCollection(lifters);					
+			this.augments = (augs == null) ? null : toIntCollection(augs);					
 			
-			if(prevIterator != null){  //if lifting on a previous iterator
+			if(prevIterator != null){  //if augmenting on a previous iterator
 				this.translation = prevIterator.getTranslation();
 				this.mapVarToRelation = prevIterator.mapVarToRelation;		
 				this.parentHash = prevIterator.hashCode();
@@ -903,7 +903,7 @@ public final class MinSolver {
 			result.append("Iterator parent's hash code:"+parentHash+"\n");
 			result.append("Iterator formula:"+formula+"\n");
 			result.append("Iterator origBounds:"+origBounds+"\n");
-			result.append("Iterator lifters:"+Arrays.toString(lifters)+"\n");
+			result.append("Iterator augmentations:"+Arrays.toString(augments)+"\n");
 			result.append("Iterator translation's num pri vars:"+translation.numPrimaryVariables()+"\n");
 			result.append("Iterator solver's hash code:"+minSolver.hashCode()+"\n");
 			result.append("Iterator mapVarToRelation:"+mapVarToRelation+"\n");
@@ -1231,7 +1231,7 @@ public final class MinSolver {
 			
 			try{
 				Set<Integer> allUnits = new HashSet<Integer>();
-				allUnits.addAll(toSet(lifters));
+				allUnits.addAll(toSet(augments));
 				allUnits.addAll(coneRestrictionUnits);
 				
 				if(allUnits.size() == 0)
@@ -1277,7 +1277,7 @@ public final class MinSolver {
 			Set<IConstr> constraints = new HashSet<IConstr>();
 			
 			// All the unit clauses being passed to the solver as assumptions.
-			Set<Integer> unitClauses = toSet(lifters);						
+			Set<Integer> unitClauses = toSet(augments);						
 			
 			// Add all coneRestrictionUnits
 			for(Integer value: coneRestrictionUnits)
@@ -1387,141 +1387,13 @@ public final class MinSolver {
 			reporter.setReducedRelations(reducedRelations);			
 		}
 		
-		
-		
 		/**
-		 * Minimizes the model in the SAT solver.
-		 * @throws TimeoutException
-		 * @throws ContradictionException
-		 * @throws NotMinimalModelException 
-		 */
-/*		private void minimizeWithDiscard() throws TimeoutException, ContradictionException, NotMinimalModelException{
-			
-			// Assumption: Have already found a model at this point!
-					
-			
-			// This keeps constraints to be removed from the solver
-			// after finding the next model.
-			Set<IConstr> constraints = new HashSet<IConstr>();
-			
-			// All the unit clauses being passed to the solver as assumptions.
-			Set<Integer> unitClauses = toSet(lifters);
-			
-			// Add all coneRestrictionUnits
-			for(Integer value: coneRestrictionUnits)
-				unitClauses.add(value);
-			
-			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());
-			
-			boolean needToCheck = true;
-			
-			//COMMENT: With the current configuration (SB = OFF) for the augmented iterators, we don't need to
-			//check for minimality.
-			if(isAugmented()) //if the iterator is an augmentation
-				needToCheck = false;
-			
-			
-			int iterationCounter = 1;						
-			
-			do
-			{
-				// Given that candidate for minimal-model, try to make something smaller.
-				// add: disjunction of negations of all positive literals in M (constraint)
-				// add: all negative literals as unit clauses
-				
-				// An array of the next constraint being added.
-				List<Integer> loseSomethingPositive = new ArrayList<Integer>();
-				
-				int numPrimaryVariables = translation.numPrimaryVariables();
-					
-				for(int i = 1; i <= numPrimaryVariables; i++){
-					if(theSolver.valueOf(i) == true)
-						loseSomethingPositive.add(-i);
-					else // don't set anything curr. negative to positive.
-						unitClauses.add(-i);
-				}
-				
-				if(loseSomethingPositive.size() == 0)
-				{
-					// We have minimized down to the empty model. No need to
-					// check to see if it is minimal in the original category!
-					// Also: avoid calling the final SAT (would be a Contradiction).
-					needToCheck = false;
-					break;
-				}
-				if(loseSomethingPositive.size() == 1)
-				{
-					// We have only one relational fact that can possibly be removed.
-					unitClauses.add(loseSomethingPositive.get(0));
-				}
-				else
-				{
-					constraints.add(theSolver.addConstraint(toIntCollection(loseSomethingPositive)));
-				}
-				
-				iterationCounter++;
-			}
-			while(Boolean.valueOf(theSolver.solve(toIntCollection(unitClauses))));
-					
-			boolean badSolution = false;
-			// Don't check for true minimality if we already have the empty model.
-			if(needToCheck)
-			{
-				//////////////////////////////////
-				// Deactivate SBP. We need to see if this minimal candidate
-				// is truly minimal in the original category (NOT the category
-				// that includes the SBP.)			
-				//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
-				theSolver.deactivateSBP();
-				// Unsatisfiable w/ SBP active (or we wouldn't be here). Try without:
-				badSolution = theSolver.solve(toIntCollection(unitClauses), false);							
-				// Re-activate SBP 
-				//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
-				theSolver.activateSBP();
-				//JOptionPane.showMessageDialog(null, theSolver.internalNumConstraints());
-				//////////////////////////////////
-			}
-			
-			((MyReporter)options.reporter()).setIterations(iterationCounter);
-			
-			//internalMinimalCandidatesFoundCounter++;
-			
-//			JOptionPane.showMessageDialog(null, Arrays.toString(Arrays.copyOf(theSolver.getLastModel(), translation.numPrimaryVariables())));
-					
-			// Remove all the (non-unit) loseSomethingPositive constraints we just added from the solver:
-			Iterator<IConstr> it = constraints.iterator();
-			while(it.hasNext()){
-				theSolver.removeConstraint(it.next());		
-			}
-			
-			// Do NOT add a constraint here to force the solver out of this cone. 
-			// Do that in the next solve() call. We want to leave open the possibility
-			// of landing in this cone again to support lifting/exporation!		
-			
-			// Finally, if this isn't a real solution, throw an exception to warn the caller.
-			if(badSolution)
-				throw new NotMinimalModelException();
-		}*/
-
-		
-		/*class NotMinimalModelException extends Exception
-		{			
-			private static final long serialVersionUID = 1L;
-
-			NotMinimalModelException()
-			{
-				
-			}
-		}*/
-		
-		
-		/**
-		 * Computes all the lifters for the current model loaded in the solver.
+		 * Computes all the CFs for the current model loaded in the solver.
 		 * @return
 		 * @throws TimeoutException
 		 * @throws ContradictionException
 		 */
-		public int[] getLifters() throws TimeoutException, ContradictionException
+		public int[] getConsistentFacts() throws TimeoutException, ContradictionException
 		{			
 			assert(!trivial);
 			
@@ -1585,19 +1457,19 @@ public final class MinSolver {
 				{
 					
 					//System.out.println("Model found was: "+Arrays.toString(tempModel));
-					Set<Integer> foundLifters = new HashSet<Integer>(); // avoid concurrentmodificationexception
+					Set<Integer> foundAugments = new HashSet<Integer>(); // avoid concurrentmodificationexception
 					for(Integer toAdd : wantToAdd)
 					{
 						// The -1 is because the model is an array (start = 0) 
 						// yet our variables start=1
 						if(solver.valueOf(toAdd))
 						{
-							foundLifters.add(toAdd);
+							foundAugments.add(toAdd);
 							retVal.add(toAdd);
 						}
 					}
 
-					wantToAdd.removeAll(foundLifters);
+					wantToAdd.removeAll(foundAugments);
 				}	
 				
 				// Remove the targets for this iteration (needed to keep the shared solver clean)
@@ -1649,7 +1521,7 @@ public final class MinSolver {
 		 * Returns true if the iterator is an augmentation and returns false otherwise.
 		 */
 		private boolean isAugmented(){
-			return lifters != null && lifters.length > 0;
+			return augments != null && augments.length > 0;
 		}
 		
 		//Helpers:

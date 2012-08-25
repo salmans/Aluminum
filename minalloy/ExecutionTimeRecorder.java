@@ -257,7 +257,7 @@ public final class ExecutionTimeRecorder {
 			                        	long augmentationTimeNS = System.nanoTime();
 			                        	try{
 			                        		// No translation (so we can use the tuple string in raw form)
-			                        		ans = ans.lift(relation.toString()+tuple.toString(), null);
+			                        		ans = ans.augment(relation.toString()+tuple.toString(), null);
 			                        		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
 				                        	totalAugmentationTimeNS += augmentationTimeNS;
 			                        		ans = ans.backtrack();
@@ -345,7 +345,7 @@ public final class ExecutionTimeRecorder {
         	}
         	
         	//time = System.currentTimeMillis();
-        	ans = ans.lift(aug.augmentingFact, null);
+        	ans = ans.augment(aug.augmentingFact, null);
         	translTime = ans.getCurrentSolution().stats().translationTime();
         	time = ans.getCurrentSolution().stats().solvingTime();
         	//time = System.currentTimeMillis() - time;	
@@ -374,7 +374,7 @@ public final class ExecutionTimeRecorder {
                         	long augmentationTimeNS = System.nanoTime();
                         	try{
                         		// No translation (so we can use the tuple string in raw form)
-                        		ans = ans.lift(relation.toString()+tuple.toString(), null);
+                        		ans = ans.augment(relation.toString()+tuple.toString(), null);
                         		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
 	                        	totalAugmentationTimeNS += augmentationTimeNS;	                        	
                         		ans = ans.backtrack();

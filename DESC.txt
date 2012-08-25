@@ -1,6 +1,12 @@
 
-This document describes what we changed in Kodkod in order to produce
-minimal models and allow augmentation and backtracking. 
+This document describes the classes we added to Kodkod in order to
+produce minimal models and allow augmentation and backtracking. The
+new classes are just modifications to the originals.  Where Kodkod has
+Solver, we have MinSolver. SolutionIterator becomes
+MinSolutionIterator, and so on. Since many of Kodkod's classes were
+final, we circumvented that restriction by duplicating quite a few
+classes, giving them the "Min" prefix, rather than extending them,
+which would have avoided a great deal of duplicate code.
 
 We'll use the term "relational fact" to mean whether, in an instance
 I, a given tuple is in a relation. These are the relational entities
@@ -11,15 +17,16 @@ There is a partial order <= on all instances given by relational
 facts: I <= I' if and only if the relational facts true in I are a
 subset of the relational facts true in I'.
 
-Our hack to Kodkod does three broad things, given below. We use only
-SAT4j; our existing code does not do any of this for other solvers. 
-
-Where Kodkod has Solver, we have MinSolver. SolutionIterator becomes
-MinSolutionIterator. Since many of Kodkod's classes were final, we
-circumvented that restriction by duplicating quite a few classes,
-giving them the "Min" prefix, rather than extending them.
+Our new classes do three broad things, given below. We use only SAT4j;
+our existing code does not do any of this for other solvers.
 
 [TODO: get rid of "lifters" in code]
+
+
+[ TODO: main problem with this doc is that it does not prepare the
+reader to deal with the ENORMOUS NUMBER of files we duplicated. Can we
+pare that down? Alternatively, need to diff the original and Min
+versions]
 
 ----------------------------------------
 

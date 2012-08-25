@@ -72,7 +72,7 @@ public final class MinSolution{
 	public final MinimizationHistory minimizationHistory;
 	
 	/** Stores the propositional model for this solution. 
-	 * This field is going to be used for lifting operations.*/ 
+	 * This field is going to be used for augmenting operations.*/ 
 	private final int[] propositionalModel;
 
 	/**

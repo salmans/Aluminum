@@ -681,14 +681,14 @@ public class Main {
 				System.out.println("MODELS:");
 			}
 			
-			// !!! question: how much of this delay in producing lifters is due to having to remove clauses?
+			// !!! question: how much of this delay in producing CFs is due to having to remove clauses?
 			
 			System.out.println("Minimal model: "+model.instance().relationTuples());
 			System.out.println("Time to produce+print minimal model or UNSAT (ms): "+(System.currentTimeMillis()-currTime));
 			currTime = System.currentTimeMillis();
 						
 			if(optAugmentation.isOn()){
-				Map<Relation, TupleSet> results = solver.getLifters(models).relationTuples();			
+				Map<Relation, TupleSet> results = solver.getConsistentFacts(models).relationTuples();			
 				Iterator<Relation> it1 = results.keySet().iterator();
 				while(it1.hasNext()){
 					Relation r = it1.next();
@@ -703,27 +703,27 @@ public class Main {
 						System.out.println("-------------------------------------------------------");
 						System.out.println("Consistent Fact:   " + instance.relationTuples());
 						System.out.println("Model:    " + model.instance().relationTuples());
-						Iterator<MinSolution> liftModels = null;
+						Iterator<MinSolution> augModels = null;
 						try{
-							liftModels = solver.lift(fs.fmla, models, instance);
+							augModels = solver.augment(fs.fmla, models, instance);
 						}
 						catch(ExplorationException e){
 							System.err.println(e.getMessage());
 							System.exit(0);
 						}
 						
-						while(liftModels.hasNext()){
-							MinSolution liftModel = liftModels.next();
-							if(MinSolution.Outcome.UNSATISFIABLE.equals(liftModel.outcome()) ||
-									MinSolution.Outcome.TRIVIALLY_UNSATISFIABLE.equals(liftModel.outcome()))
+						while(augModels.hasNext()){
+							MinSolution augModel = augModels.next();
+							if(MinSolution.Outcome.UNSATISFIABLE.equals(augModel.outcome()) ||
+									MinSolution.Outcome.TRIVIALLY_UNSATISFIABLE.equals(augModel.outcome()))
 								break;						
-							System.out.println("Lifted model:  " + liftModel.instance().relationTuples());
+							System.out.println("Augmented model:  " + augModel.instance().relationTuples());
 						}
 						
 					}
 				}
 			
-			//System.out.println("Augmentations: "+ solver.getLifters(models).relationTuples());			
+			//System.out.println("Augmentations: "+ solver.getConsistentFacts(models).relationTuples());			
 				System.out.println("Time to produce+print augmentations (ms): "+(System.currentTimeMillis()-currTime));
 			}
 			System.out.println("========================================================\n");

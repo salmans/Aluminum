@@ -1013,8 +1013,8 @@ public final class MinA4Solution {
         return this;
     }
     
-    /** Lifts a model with some augmenting facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    public MinA4Solution lift(String inputFact, Map<String, String> dictionary) throws Err, ExplorationException {
+    /** Augments a model with some new facts; if cmd==null, we will simply use the lowerbound of each relation as its value. */
+    public MinA4Solution augment(String inputFact, Map<String, String> dictionary) throws Err, ExplorationException {
         Formula fgoal = Formula.and(formulas);
         
         Instance inst = solver.parseString(inputFact, ((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
@@ -1024,7 +1024,7 @@ public final class MinA4Solution {
         	throw new ExplorationException("The input fact is not valid!");       
                 
         // Get an augmented iterator
-        Iterator<MinSolution> augmentedIterator = solver.lift(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);                       
+        Iterator<MinSolution> augmentedIterator = solver.augment(fgoal, ((Peeker<MinSolution>)kEnumerator).iterator, inst);                       
         
         // Push the current solution and iterator onto the stack, so we can backtrack.
         solutionStack.push(new SolutionStackElement(kEnumerator, currentSolution));
@@ -1046,13 +1046,13 @@ public final class MinA4Solution {
 
     /** Returns a list of facts consistent to the current loaded solution. */
     public String listConsistentFacts(Map<String, String> dictionary) {
-    	return solver.getLiftersList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
+    	return solver.getCFList(((Peeker<MinSolution>)kEnumerator).iterator, dictionary, atom2name);
     }  
 
     /** Returns an instance containing the consistent facts. */
     public Instance getConsistentFacts(){
     	try {
-			return solver.getLifters(((Peeker<MinSolution>)kEnumerator).iterator);
+			return solver.getConsistentFacts(((Peeker<MinSolution>)kEnumerator).iterator);
 		} catch (TimeoutException e) {
 			e.printStackTrace();
 			return null;

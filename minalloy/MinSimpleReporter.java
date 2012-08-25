@@ -468,7 +468,7 @@ final class MinSimpleReporter extends A4Reporter {
             //int tries=0;
             while(true) {
             	try{
-            		sol=sol.lift(inputFact, dictionary);
+            		sol=sol.augment(inputFact, dictionary);
             	}
             	catch(Exception e){
                 	cb("pop", e.getMessage());
