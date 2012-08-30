@@ -1,88 +1,133 @@
 
 This document describes the classes we added to Kodkod in order to
-produce minimal models and allow augmentation and backtracking. The
-new classes are just modifications to the originals.  Where Kodkod has
-Solver, we have MinSolver. SolutionIterator becomes
+produce minimal models and allow augmentation and backtracking. 
+
+CAVEATS:
+
+* The new classes are just modifications to the originals.  Where
+Kodkod has Solver, we have MinSolver. SolutionIterator becomes
 MinSolutionIterator, and so on. Since many of Kodkod's classes were
 final, we circumvented that restriction by duplicating quite a few
 classes, giving them the "Min" prefix, rather than extending them,
 which would have avoided a great deal of duplicate code.
 
+* Many of the files in the current repo were copied merely to
+circumvent final and/or public restrictions, and do not contain any
+actual changes vs. kodkod.
+
+* Our code only uses SAT4J, not any of the other solvers that Kodkod
+supports. To support other solvers, some additional work would be
+needed.
+
+* SAT4J does not handle removing unit clauses well. Since we often
+need to remove clauses as well as add them, we tend to keep separate
+sets of unit and non-unit clauses and pass units as "assumptions" that
+are not permanently learned by the solver.
+
+* In our prototype code, all MinSolutionIterators share the same SAT4J
+  instance. [TODO: more on this]
+
+THEORY: 
+
 We'll use the term "relational fact" to mean whether, in an instance
 I, a given tuple is in a relation. These are the relational entities
 that Kodkod maps to/from propositional variables via its Translation
-class.
+class. 
 
 There is a partial order <= on all instances given by relational
 facts: I <= I' if and only if the relational facts true in I are a
-subset of the relational facts true in I'.
+subset of the relational facts true in I'. We are interested in
+finding and manipulating the models that are minimal under this
+ordering.
 
-Our new classes do three broad things, given below. We use only SAT4j;
-our existing code does not do any of this for other solvers.
+IMPLEMENTATION:
 
-[TODO: get rid of "lifters" in code]
-
-
-[ TODO: main problem with this doc is that it does not prepare the
-reader to deal with the ENORMOUS NUMBER of files we duplicated. Can we
-pare that down? Alternatively, need to diff the original and Min
-versions]
+Our new classes do three broad things, given below. All kodkod-level
+changes are confined to the minsolver/ branch of the repository. The
+minalloy/ branch contains the UI changes we made to Alloy.
 
 ----------------------------------------
 
-(1) We altered solveAll() to produce iterators over only the
-<=-minimal instances.  To do this, we:
+Some of our changes required separating out the CNF for the original
+sentence and the symmetry-breaking predicate that Kodkod
+produces. This required some changes to the fol2sat package:
 
-(a) Get a candidate propositional model from the SAT-solver.
-[REF]
+* MinSymmetryBreaker.java records the permutations of atoms that are
+  broken in the SBP.
 
-(b) Minimize that model by iteratively removing unnecessary relational
-facts; let M be the result.
-[REF]
+* MinTranslator.java, MinTranslation.java and
+  MinBool2CNFTranslator.java keep the original CNF and the SBP's CNF
+  separate rather than conjoining them in the Boolean-circuit stage.
+  This is not without performance cost; by splitting the two formulas
+  we sacrifice some simplification.
 
-However...
+* MinSATSolver.java is our wrapper for SAT4J, analogous to the
+  SATSolver class in kodkod. We added the ability to add/remove the
+  SBP's clauses via its activateSBP() and deactivateSBP() methods.
 
-(c) We want models that are minimal with respect to the CNF of the
-original relational sentence; NOT with respect to the
-symmetry-breaking predicate. So we keep the two separate, rather than
-conjoining them at the Boolean circuit stage: [REF]
+----------------------------------------
 
-and remove the SBP's clauses for minimization in (b). This is not
-without performance cost; by splitting the two formulas we sacrifice
-some simplification.
+MinSolver.java produces iterators (MinSolutionIterator) over only the
+<=-minimal instances. The actual minimization is done in the iterator
+itself (also defined in MinSolver.java).
 
-(d) Where Kodkod would issue a clause with the negation of the diagram
+* The MinSolutionIterator.solve() method prepares minimal models,
+returning true iff there are more minimal models to give. It first
+finds a candidate propositional model by calling
+translation.cnf().solve() --- just as Kodkod does --- and then calls
+minimize() on it. minimize() iteratively removes facts that can be
+consistently removed from the model. It terminates when no more facts
+can be removed.
+
+* Note that we want models that are minimal with respect to the CNF of
+the original relational sentence; NOT with respect to the
+symmetry-breaking predicate as well. So we keep the two separate as
+mentioned above, and minimize() calls deactivateSBP() before trying to
+minimize.
+
+* Where Kodkod would issue a clause with the negation of the diagram
 of M ("Never give me this model again"), we issue the negation of the
 positive diagram of M ("Never give me a model >= this one."); we call
-this the "cone-restriction" clause in some of the comments.  [REF]
+this the "cone-restriction" clause in some of the comments. Each
+iterator remembers its cone-restriction clauses
+(MinSolutionIterator.coneRestrictionClauses). This is done in the
+nonTrivialSolution() method of MinSolutionIterator.
 
-[TODO: say that each iterator keeps its own cone-restriction clauses]
-
-[TODO: shadow clauses?]
-
-[TODO: we remove clauses. because of this, we need to use assumptions;
-SAT4J doesn't always let you remove unit clauses once added.]
+* We issue additional cone restriction clauses in an attempt to rule
+out isomorphic models that were admitted by disabling the SBP for
+minimization. We call these the "shadow" or "perm" clauses in some of
+the comments. The cone-restriction clause and the shadow clauses are
+added separately via calls to addConeRestriction() vs. addPerm
+ConeRestriction().
 
 ---------------------------------------- 
 
-(2) Given an instance I, a consistent-fact of I is a relational fact F
+Given an instance I, a consistent-fact of I is a relational fact F
 that is *not* true in I, but for which there exists an I' > I where F
-is true. We made changes to let an iterator compute the
-consistent-fact set of the last instance it produced.
+is true. 
 
-[REF]
+Given a MinSolutionIterator, MinSolver.getConsistentFacts() produces
+the consistent-fact set of the last instance that the iterator
+produced. This involves some translation between the propositional and
+relational views, which is handled by the MinTwoWayTranslator
+class. The CF set is returned as an Instance whose tuples are the
+consistent facts.
 
-Note that we disable symmetry-breaking when computing this set. (I can
-provide more detail here if desired.)
+We disable symmetry-breaking via deactivateSBP() when computing this
+set. (I can give more detail here if desired.)
 
 ---------------------------------------- 
 
-(3) A MinSolver can "augment" the latest model of one of its iterators
-with a relational fact F, producing a new iterator for the models that
-are <=-minimal under the original CNF plus F.
+MinSolver can "augment" the latest model of one of its iterators with
+a relational fact F, producing a *new* iterator for the models that are
 
-[TODO: doing all this WITHOUT re-translating. Avoid overhead and loss
-of current position in model stream]
+(a) <=-minimal under the original CNF plus F.
+(b) <=-reachable from the current model.
+
+We do all of this without re-translating, modifying the original
+bounds, or losing our place in the model iterator. Instead, we
+manipulate the SAT-solver.
+
 
 (a) The code to actually do this is at:
 
@@ -107,8 +152,8 @@ the same reason as in 2. (More detail on request.)
 
 [REF]
 
-(Our modifications to Alloy include a backtracking feature. That is
-not necessary at the Kodkod level, since augmentation is handed via
-separate solution-iterators.)
+Our modifications to Alloy include a backtracking feature. The feature
+is not necessary at the Kodkod level, since augmentation is handed via
+separate iterators.
 
 ----------------------------------------
