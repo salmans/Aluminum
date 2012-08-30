@@ -1,31 +1,7 @@
+Modified: August 30th 2012 (TN)
 
 This document describes the classes we added to Kodkod in order to
-produce minimal models and allow augmentation and backtracking. 
-
-CAVEATS:
-
-* The new classes are just modifications to the originals.  Where
-Kodkod has Solver, we have MinSolver. SolutionIterator becomes
-MinSolutionIterator, and so on. Since many of Kodkod's classes were
-final, we circumvented that restriction by duplicating quite a few
-classes, giving them the "Min" prefix, rather than extending them,
-which would have avoided a great deal of duplicate code.
-
-* Many of the files in the current repo were copied merely to
-circumvent final and/or public restrictions, and do not contain any
-actual changes vs. kodkod.
-
-* Our code only uses SAT4J, not any of the other solvers that Kodkod
-supports. To support other solvers, some additional work would be
-needed.
-
-* SAT4J does not handle removing unit clauses well. Since we often
-need to remove clauses as well as add them, we tend to keep separate
-sets of unit and non-unit clauses and pass units as "assumptions" that
-are not permanently learned by the solver.
-
-* In our prototype code, all MinSolutionIterators share the same SAT4J
-  instance. [TODO: more on this]
+produce minimal models and allow augmentation of those models.
 
 THEORY: 
 
@@ -40,11 +16,37 @@ subset of the relational facts true in I'. We are interested in
 finding and manipulating the models that are minimal under this
 ordering.
 
+CAVEATS:
+
+* The new classes are just modifications to the originals.  Where
+Kodkod has Solver, we have MinSolver. SolutionIterator becomes
+MinSolutionIterator, and so on. Since many of Kodkod's classes were
+final, we circumvented that restriction by duplicating quite a few
+classes, giving them the "Min" prefix, rather than extending them,
+which would have avoided a great deal of duplicate code: many of the
+files in the current repo do not contain any actual changes
+vs. kodkod.
+
+* Our code only uses SAT4J, not any of the other solvers that Kodkod
+supports. To support other solvers, some additional work would be
+needed.
+
+* SAT4J does not handle removing unit clauses well. Since we often
+need to remove clauses as well as add them, we tend to keep separate
+sets of unit and non-unit clauses and pass units as "assumptions" that
+are not permanently learned by the solver.
+
+* In our prototype code, all MinSolutionIterators share the same SAT4J
+instance. More details on this decision follow, but this is why you
+will see calls to e.g. reclaim the solver (claimSATSolver()) or remove
+constraints (removeAllConstraints()).
+
+
 IMPLEMENTATION:
 
-Our new classes do three broad things, given below. All kodkod-level
-changes are confined to the minsolver/ branch of the repository. The
-minalloy/ branch contains the UI changes we made to Alloy.
+All kodkod-level changes are confined to the minsolver/ branch of the
+repository. The minalloy/ branch contains the UI changes we made to
+Alloy.
 
 ----------------------------------------
 
@@ -128,32 +130,19 @@ We do all of this without re-translating, modifying the original
 bounds, or losing our place in the model iterator. Instead, we
 manipulate the SAT-solver.
 
+This is all done via the augment() method of MinSolver.
 
-(a) The code to actually do this is at:
+As mentioned above, we made the design choice to have all these
+iterators (the original, augments of the original, etc.) share a SAT4J
+instance. It would also be possible to give each iterator its own
+SAT4J instance, as Kodkod does. This would result in more space
+consumption and more time to construct a fresh iterator, but simpler
+code and faster performance otherwise. We were unsure which would be
+best. When an iterator is invoked, it calls claimSATSolver(),
+re-asserting its constraints and forcing the current owner of the
+iterator to remove its constraints.
 
-[REF] 
-
-(b) We made the design choice to have all these iterators (the
-original, augments of the original, etc.) share a SAT4J
-instance. Hence calls that reclaim the sat-solver, or re-assert
-constraints:
-
-[REF]
-
-It would also be possible to give iterator their own SAT4J
-instance. More space consumption and longer to construct a fresh
-iterator, but simpler code and faster performance otherwise; we were
-unsure which would be best.
-
-[TODO: reapply own cone-restrictions when reclaiming the solver]
-
-(c) We deactivate symmetry-breaking entirely for the new iterator, for
-the same reason as in 2. (More detail on request.)
-
-[REF]
-
-Our modifications to Alloy include a backtracking feature. The feature
-is not necessary at the Kodkod level, since augmentation is handed via
-separate iterators.
+We deactivate symmetry-breaking entirely for the new iterator, for
+the same reasons as before. (More detail on request.)
 
 ----------------------------------------
