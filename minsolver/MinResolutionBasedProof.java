@@ -9,9 +9,9 @@ import kodkod.ast.Formula;
 import kodkod.ast.Node;
 import kodkod.ast.Variable;
 import kodkod.ast.visitor.AbstractVoidVisitor;
-import minsolver.fol2sat.MinRecordFilter;
-import minsolver.fol2sat.MinTranslationLog;
-import minsolver.fol2sat.MinTranslationRecord;
+import minsolver.fol2sat.RecordFilter;
+import minsolver.fol2sat.TranslationLog;
+import minsolver.fol2sat.TranslationRecord;
 import kodkod.engine.satlab.ReductionStrategy;
 import kodkod.engine.satlab.ResolutionTrace;
 import kodkod.engine.satlab.SATProver;
@@ -29,7 +29,7 @@ import kodkod.util.ints.IntTreeSet;
  */
 final class MinResolutionBasedProof extends MinProof {
 	private SATProver solver;
-	private MinRecordFilter coreFilter;
+	private RecordFilter coreFilter;
 	private Map<Formula,Node> coreRoots;
 	
 	/**
@@ -40,7 +40,7 @@ final class MinResolutionBasedProof extends MinProof {
 	 * resulted in the given SATProver
 	 * @effects this.formula' = log.formula
 	 */
-	MinResolutionBasedProof(SATProver solver, MinTranslationLog log) {
+	MinResolutionBasedProof(SATProver solver, TranslationLog log) {
 		super(log);
 		this.solver = solver;
 		this.coreFilter = null;
@@ -56,12 +56,12 @@ final class MinResolutionBasedProof extends MinProof {
 	 */
 	private Set<Formula>  connectedCore(final IntSet coreVars) {
 		final Set<Formula> coreNodes = new IdentityHashSet<Formula>();
-		final MinRecordFilter filter = new MinRecordFilter() {
+		final RecordFilter filter = new RecordFilter() {
 			public boolean accept(Node node, Formula translated, int literal, Map<Variable,TupleSet> env) {
 				return coreVars.contains(StrictMath.abs(literal));
 			}
 		};
-		for(Iterator<MinTranslationRecord> itr = log().replay(filter); itr.hasNext(); ) {
+		for(Iterator<TranslationRecord> itr = log().replay(filter); itr.hasNext(); ) {
 			coreNodes.add(itr.next().translated());
 		}
 		final Set<Formula> connected = new IdentityHashSet<Formula>();
@@ -94,9 +94,9 @@ final class MinResolutionBasedProof extends MinProof {
 	 * {@inheritDoc}
 	 * @see kodkod.engine.Proof#core()
 	 */
-	public final Iterator<MinTranslationRecord> core() { 
+	public final Iterator<TranslationRecord> core() { 
 		if (coreFilter == null) {
-			coreFilter = new MinRecordFilter() {
+			coreFilter = new RecordFilter() {
 				final IntSet coreVariables = StrategyUtils.coreVars(solver.proof());
 				final Set<Formula> coreNodes = connectedCore(coreVariables);
 				public boolean accept(Node node, Formula translated, int literal, Map<Variable,TupleSet> env) {
@@ -113,7 +113,7 @@ final class MinResolutionBasedProof extends MinProof {
 	 */
 	public final Map<Formula, Node> highLevelCore() {
 		if (coreRoots == null) { 
-			final MinRecordFilter unitFilter = new MinRecordFilter() {
+			final RecordFilter unitFilter = new RecordFilter() {
 				final IntSet coreUnits = StrategyUtils.coreUnits(solver.proof());
 				final Set<Formula> roots = log().roots();
 				public boolean accept(Node node, Formula translated, int literal, Map<Variable, TupleSet> env) {
@@ -123,11 +123,11 @@ final class MinResolutionBasedProof extends MinProof {
 			};
 			coreRoots = new LinkedHashMap<Formula, Node>();
 			final IntSet seenUnits = new IntTreeSet();
-			for(Iterator<MinTranslationRecord> itr = log().replay(unitFilter); itr.hasNext(); ) {
+			for(Iterator<TranslationRecord> itr = log().replay(unitFilter); itr.hasNext(); ) {
 				// it is possible that two top-level formulas have identical meaning,
 				// and are represented with the same core unit; in that case, we want only
 				// one of them in the core.
-				final MinTranslationRecord rec = itr.next();
+				final TranslationRecord rec = itr.next();
 				if (seenUnits.add(rec.literal())) {
 					coreRoots.put(rec.translated(), rec.node());
 				}  

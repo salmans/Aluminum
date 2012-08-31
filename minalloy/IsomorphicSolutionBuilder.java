@@ -208,7 +208,7 @@ public class IsomorphicSolutionBuilder {
 		Set<Permutations> result = new HashSet<Permutations>();
 		
 		//Get the symmetry partitions from Kodkod:
-		Set<IntSet> symmetries = MinSymmetryDetectorDelegate.partition(bounds);
+		Set<IntSet> symmetries = MinSymmetryDetectorDelegate.partition(bounds);			
 		
 		//System.out.println("  Detected symmetries: "+symmetries);
 		

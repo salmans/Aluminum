@@ -39,20 +39,20 @@ import kodkod.ast.Variable;
  * @author Emina Torlak 
  */
 @SuppressWarnings("unchecked")
-final class MinEnvironment<T> {
+final class Environment<T> {
 	private final Variable variable;
 	private final T value;
-	private final MinEnvironment<T> parent;
+	private final Environment<T> parent;
 	
 	/**
 	 * The empty environment; EMPTY is its own parent.
 	 */
-	static final MinEnvironment EMPTY = new MinEnvironment();
+	static final Environment EMPTY = new Environment();
 	
 	/**
 	 * Constructs the empty environment.
 	 */
-	private MinEnvironment() {
+	private Environment() {
 		this.variable = null;
 		this.value = null;
 		this.parent = this;
@@ -64,7 +64,7 @@ final class MinEnvironment<T> {
 	 * 
 	 * @effects this.parent' = parent && this.variable' = variable && this.value' = value
 	 */
-	private MinEnvironment(MinEnvironment<T> parent, Variable variable, T value) {
+	private Environment(Environment<T> parent, Variable variable, T value) {
 		this.variable = variable;
 		this.value = value;
 		this.parent = parent;
@@ -74,8 +74,8 @@ final class MinEnvironment<T> {
 	 * Returns the empty environment.
 	 * @return the empty environment.
 	 */
-	public static <T> MinEnvironment<T> empty() {
-		return (MinEnvironment<T>) EMPTY;
+	public static <T> Environment<T> empty() {
+		return (Environment<T>) EMPTY;
 	}
 	
 	/**
@@ -84,7 +84,7 @@ final class MinEnvironment<T> {
 	 * 
 	 * @return this.parent
 	 */
-	public MinEnvironment<T> parent() { return parent; }
+	public Environment<T> parent() { return parent; }
 	
 	/**
 	 * Returns a new environment that extends this environment with the specified
@@ -92,9 +92,9 @@ final class MinEnvironment<T> {
 	 * @requires variable != null
 	 * @return e : Environment | e.parent = this && e.variable = variable && e.value = value
 	 */
-	public MinEnvironment<T> extend(Variable variable, T value) {
+	public Environment<T> extend(Variable variable, T value) {
 		assert variable !=  null;
-		return new MinEnvironment<T>(this, variable, value);
+		return new Environment<T>(this, variable, value);
 	}
 	
 	/**
@@ -132,7 +132,7 @@ final class MinEnvironment<T> {
 	 * @return variable = this.variable => this.value, this.parent.lookup(variable)
 	 */
 	public T lookup(Variable variable) {
-		MinEnvironment<T> p = this;
+		Environment<T> p = this;
 		// ok to use == for testing variable equality: 
 		// see kodkod.ast.LeafExpression#equals
 		while(p!=EMPTY && p.variable!=variable) {

@@ -45,12 +45,7 @@ import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.engine.config.Options;
 import minsolver.MinSolution.MinimizationHistory;
-import minsolver.fol2sat.MinHigherOrderDeclException;
-import minsolver.fol2sat.MinTranslation;
-import minsolver.fol2sat.MinTranslationLog;
-import minsolver.fol2sat.MinTranslator;
-import minsolver.fol2sat.MinTrivialFormulaException;
-import minsolver.fol2sat.MinUnboundLeafException;
+import minsolver.fol2sat.*;
 import kodkod.engine.satlab.SATAbortedException;
 import kodkod.engine.satlab.SATProver;
 import kodkod.engine.satlab.SATSolver;
@@ -155,7 +150,7 @@ public final class MinSolver {
 	 * @see Cost
 	 */
 /*	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
-			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
+			throws MinHigherOrderDeclException, UnboundLeafException, MinAbortedException {
 		if (options.logTranslation()>0 || !options.solver().minimizer())
 			throw new IllegalStateException();
 		
@@ -184,7 +179,7 @@ public final class MinSolver {
 			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
 			
 			return isSat ? sat(bounds, translation, stats) : unsat(translation, stats);
-		} catch (MinTrivialFormulaException trivial) {
+		} catch (TrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(bounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
@@ -214,7 +209,7 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public MinSolution solve(Formula formula, Bounds origBounds)
-			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
+			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
 		final long startTransl = System.currentTimeMillis();
 		
 		try {		
@@ -232,7 +227,7 @@ public final class MinSolver {
 			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
 			return isSat ? sat(origBounds, translation, stats) : unsat(translation, stats);
 			
-		} catch (MinTrivialFormulaException trivial) {
+		} catch (TrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(origBounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
@@ -264,7 +259,7 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds origBounds) 
-		throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException {
+		throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
@@ -289,7 +284,7 @@ public final class MinSolver {
 	//via previous iterator.
 	public MinSolutionIterator augment(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance augmentWith)
-			throws MinHigherOrderDeclException, MinUnboundLeafException, MinAbortedException, ExplorationException {
+			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException, ExplorationException {
 		
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
@@ -709,7 +704,7 @@ public final class MinSolver {
 	 */
 	private static MinSolution unsat(MinTranslation translation, MinStatistics stats) {
 		final SATSolver cnf = translation.cnf();
-		final MinTranslationLog log = translation.log();
+		final TranslationLog log = translation.log();
 		if (cnf instanceof SATProver && log != null) {
 			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null, null);
 		} else { // can free memory
@@ -737,7 +732,7 @@ public final class MinSolver {
 	 * @param translTime translation time
 	 * @return the result of solving a trivially (un)sat formula.
 	 */
-	private static MinSolution trivial(Bounds bounds, MinTrivialFormulaException desc, long translTime) {
+	private static MinSolution trivial(Bounds bounds, TrivialFormulaException desc, long translTime) {
 		final MinStatistics stats = new MinStatistics(trivialPrimaries(desc.bounds()), 0, 0, translTime, 0);
 		if (desc.value().booleanValue()) {
 			return MinSolution.triviallySatisfiable(stats, padInstance(toInstance(desc.bounds()), bounds), null, null);
@@ -753,7 +748,7 @@ public final class MinSolver {
 	 * @return a proof for the trivially unsatisfiable log.formula,
 	 * provided that log is non-null.  Otherwise returns null.
 	 */
-	private static MinProof trivialProof(MinTranslationLog log) {
+	private static MinProof trivialProof(TranslationLog log) {
 		return log==null ? null : new MinTrivialProof(log);
 	}
 	
@@ -1115,7 +1110,7 @@ public final class MinSolver {
 		 * trivial solution from the set of possible solutions.
 		 * @return current solution
 		 */
-		private MinSolution trivialSolution(MinTrivialFormulaException tfe) {
+		private MinSolution trivialSolution(TrivialFormulaException tfe) {
 			final MinStatistics stats = new MinStatistics(0, 0, 0, translTime, 0);
 			
 			// Heavily modified from original. When presenting only minimal models,
@@ -1165,7 +1160,7 @@ public final class MinSolver {
 					//JOptionPane.showMessageDialog(null, transStr);
 					
 					setLastSolution(nonTrivialSolution());
-				} catch (MinTrivialFormulaException tfe) {
+				} catch (TrivialFormulaException tfe) {
 					translTime = System.currentTimeMillis() - translTime;
 					setLastSolution(trivialSolution(tfe));
 				} 

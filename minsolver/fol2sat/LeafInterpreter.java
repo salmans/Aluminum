@@ -64,7 +64,7 @@ import kodkod.util.ints.SparseSequence;
  * 
  * @author Emina Torlak
  */
-final class MinLeafInterpreter {
+final class LeafInterpreter {
 	private final BooleanFactory factory;
 	private final Universe universe;
 	private final Map<Relation, IntRange> vars;
@@ -79,7 +79,7 @@ final class MinLeafInterpreter {
 	 * this.ubounds' = uppers && this.lbounds' = lowers && 
 	 * this.ibounds' = ints
 	 */
-	private MinLeafInterpreter(Universe universe, Map<Relation, TupleSet> lowers, Map<Relation, TupleSet> uppers, 
+	private LeafInterpreter(Universe universe, Map<Relation, TupleSet> lowers, Map<Relation, TupleSet> uppers, 
 			SparseSequence<TupleSet> ints, BooleanFactory factory, Map<Relation, IntRange> vars) {
 		this.universe = universe;
 		this.lowers = lowers;
@@ -99,7 +99,7 @@ final class MinLeafInterpreter {
 	 * this.ibounds' = ints
 	 */
 	@SuppressWarnings("unchecked")
-	private MinLeafInterpreter(Universe universe, Map<Relation, TupleSet> rbound, SparseSequence<TupleSet> ints, Options options) {
+	private LeafInterpreter(Universe universe, Map<Relation, TupleSet> rbound, SparseSequence<TupleSet> ints, Options options) {
 		this(universe, rbound, rbound, ints, BooleanFactory.constantFactory(options), Collections.EMPTY_MAP);
 	}
 	
@@ -109,8 +109,8 @@ final class MinLeafInterpreter {
 	 * l.ints = instance.ints() && l.lbounds = l.ubounds = instance.relationTuples() && 
 	 * l.ibounds = instance.intTuples && l.factory = BooleanFactory.constantFactory(options) && no l.vars }
 	 */
-	static final MinLeafInterpreter exact(Instance instance, Options options) {
-		return new MinLeafInterpreter(instance.universe(), instance.relationTuples(), instance.intTuples(), options);
+	static final LeafInterpreter exact(Instance instance, Options options) {
+		return new LeafInterpreter(instance.universe(), instance.relationTuples(), instance.intTuples(), options);
 	}
 	
 	/**  
@@ -121,7 +121,7 @@ final class MinLeafInterpreter {
 	 * l.factory = BooleanFactory.factory(sum(r: l.relations | #(l.ubounds[r]-l.lbounds[r]))-1, options) &&
 	 * l.vars[relations] = l.factory & BooleanVariable}
 	 */
-	static final MinLeafInterpreter exact(Bounds bounds, Options options) {
+	static final LeafInterpreter exact(Bounds bounds, Options options) {
 		final Map<Relation, IntRange> vars = new LinkedHashMap<Relation,IntRange>();
 		int maxLit = 1;
 		for(Relation r : bounds.relations()) {
@@ -131,7 +131,7 @@ final class MinLeafInterpreter {
 				maxLit += rLits;
 			}
 		}
-		return new MinLeafInterpreter(bounds.universe(), bounds.lowerBounds(), bounds.upperBounds(), 
+		return new LeafInterpreter(bounds.universe(), bounds.lowerBounds(), bounds.upperBounds(), 
 				bounds.intBounds(), BooleanFactory.factory(maxLit-1, options), vars);
 	}
 	
@@ -141,8 +141,8 @@ final class MinLeafInterpreter {
 	 * l.ints = bounds.ints() && l.lbounds = l.ubounds = bounds.upperBound && 
 	 * l.ibounds = bounds.intBound && l.factory = BooleanFactory.constantFactory(options) && no l.vars }
 	 */
-	static final MinLeafInterpreter overapproximating(Bounds bounds, Options options) {
-		return new MinLeafInterpreter(bounds.universe(), bounds.upperBounds(), bounds.intBounds(), options);
+	static final LeafInterpreter overapproximating(Bounds bounds, Options options) {
+		return new LeafInterpreter(bounds.universe(), bounds.upperBounds(), bounds.intBounds(), options);
 	}
 	
 	/**
@@ -184,11 +184,11 @@ final class MinLeafInterpreter {
 	 *           m.elements[lset] = TRUE && m.elements[dset-hset] = FALSE &&
 	 *           all disj i, j: hset-lset | m.elements[i]+m.elements[j] in this.vars[r] && 
 	 *            m.elements[i].label < m.elements[j].label <=> i < j }
-	 * @throws MinUnboundLeafException - r !in this.relations
+	 * @throws UnboundLeafException - r !in this.relations
 	 */
 	public final BooleanMatrix interpret(Relation r) {
 		if (!lowers.containsKey(r))
-			throw new MinUnboundLeafException("Unbound relation: ", r);
+			throw new UnboundLeafException("Unbound relation: ", r);
 		final IntSet lowerBound = lowers.get(r).indexView();
 		final IntSet upperBound = uppers.get(r).indexView();
 		

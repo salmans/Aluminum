@@ -64,7 +64,7 @@ import kodkod.util.nodes.Nodes;
  * @invariant Solver.solve(formula, bounds).instance() == null iff Solver.solve(originalFormula, originalBounds).instance() == null
  * @author Emina Torlak
  */
-final class MinFileLogger extends MinTranslationLogger {
+final class FileLogger extends TranslationLogger {
 	
 	private final FixedMap<Formula, Variable[]> logMap;
 	private final AnnotatedNode<Formula> annotated;
@@ -79,7 +79,8 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * @effects this.log().roots() = Nodes.conjuncts(annotated)
 	 * @effects no this.records' 
 	 */
-	MinFileLogger(final AnnotatedNode<Formula> annotated, Bounds bounds) {
+	@SuppressWarnings("unchecked")
+	FileLogger(final AnnotatedNode<Formula> annotated, Bounds bounds) {
 		this.annotated = annotated;
 		try {
 			this.file = File.createTempFile("kodkod", ".log");
@@ -93,6 +94,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	
 		this.logMap = new FixedMap<Formula, Variable[]>(freeVarMap.keySet());	
 		
+		int index = 0;
 		for(Map.Entry<Formula, Variable[]> e : logMap.entrySet()) {
 			Set<Variable> vars = freeVarMap.get(e.getKey());
 			int size = vars.size();
@@ -101,6 +103,7 @@ final class MinFileLogger extends MinTranslationLogger {
 			} else {
 				e.setValue(Containers.identitySort(vars.toArray(new Variable[size])));
 			}
+			index++;
 		}
 		this.bounds = bounds.unmodifiableView();
 	}
@@ -112,7 +115,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	@SuppressWarnings("unchecked")
 	private static Map<Formula,Set<Variable>> freeVars(final AnnotatedNode<Formula> annotated) {
 		final Map<Formula,Set<Variable>> freeVarMap = new IdentityHashMap<Formula,Set<Variable>>();
-		final MinFreeVariableCollector collector = new MinFreeVariableCollector(annotated.sharedNodes()) {
+		final FreeVariableCollector collector = new FreeVariableCollector(annotated.sharedNodes()) {
 			protected Set<Variable> cache(Node node, Set<Variable> freeVars) {
 				if (node instanceof Formula) {
 					freeVarMap.put((Formula)node, freeVars);
@@ -150,7 +153,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * @throws IllegalStateException - this log has been closed
 	 */
 	@Override
-	void log(Formula f, BooleanValue v, MinEnvironment<BooleanMatrix> env) {
+	void log(Formula f, BooleanValue v, Environment<BooleanMatrix> env) {
 		if (out==null) throw new IllegalStateException();
 	
 		final int index = logMap.indexOf(f);
@@ -173,7 +176,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * @see kodkod.engine.fol2sat.TranslationLogger#log()
 	 */
 	@Override
-	MinTranslationLog log() {
+	TranslationLog log() {
 		return new FileLog(annotated, logMap, file, bounds);
 	}
 	
@@ -188,7 +191,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * A file-based translation log, written by a FileLogger.
 	 * @author Emina Torlak
 	 */
-	private static final class FileLog extends MinTranslationLog {
+	private static final class FileLog extends TranslationLog {
 	    private final Set<Formula> roots;
 		private final Node[] original;
 		private final Formula[] translated;
@@ -244,9 +247,9 @@ final class MinFileLogger extends MinTranslationLogger {
 		 * {@inheritDoc}
 		 * @see kodkod.engine.fol2sat.TranslationLog#replay(kodkod.engine.fol2sat.RecordFilter)
 		 */
-		public Iterator<MinTranslationRecord> replay(final MinRecordFilter filter) {
+		public Iterator<TranslationRecord> replay(final RecordFilter filter) {
 			try {	
-				return new Iterator<MinTranslationRecord>() {
+				return new Iterator<TranslationRecord>() {
 					final TupleFactory factory = bounds.universe().factory();
 					final DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(file)));
 					final MutableRecord current = new MutableRecord(), next = new MutableRecord();
@@ -289,7 +292,7 @@ final class MinFileLogger extends MinTranslationLogger {
 						}
 					}
 
-					public MinTranslationRecord next() {
+					public TranslationRecord next() {
 						if (!hasNext()) throw new NoSuchElementException();
 						return current.setAll(next);
 					}
@@ -310,7 +313,7 @@ final class MinFileLogger extends MinTranslationLogger {
 	 * A mutable translation record.
 	 * @author Emina Torlak
 	 */
-	private static final class MutableRecord extends MinTranslationRecord {
+	private static final class MutableRecord extends TranslationRecord {
 		Node node = null; 
 		Formula translated = null;
 		int literal = 0;
@@ -325,7 +328,7 @@ final class MinFileLogger extends MinTranslationLogger {
 			this.literal = literal;
 			this.env = env;
 		}
-		MinTranslationRecord setAll(MutableRecord other) {
+		TranslationRecord setAll(MutableRecord other) {
 			setAll(other.node, other.translated, other.literal, other.env);
 			other.setAll(null,null,0,null);
 			return this;

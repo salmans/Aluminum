@@ -72,7 +72,7 @@ import kodkod.util.nodes.AnnotatedNode;
  * number of nestings (within universal quantifiers). 
  * @author Emina Torlak
  */
-abstract class MinSkolemizer extends AbstractReplacer {	
+abstract class Skolemizer extends AbstractReplacer {	
 	
 	/**
 	 * Skolemizes the given annotated formula using the given bounds and options.  If 
@@ -88,10 +88,11 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	 * @throws IllegalArgumentException - some Relation & annotated.node.^children - bounds.relations
 	 * @throws UnsupportedOperationException - bounds is unmodifiable
 	 */
+	@SuppressWarnings("unchecked")
 	static AnnotatedNode<Formula> skolemize(final AnnotatedNode<Formula> annotated, Bounds bounds, Options options) {
 		if (options.logTranslation()>0) {
 			final Map<Node,Node> source = new IdentityHashMap<Node,Node>();
-			final MinSkolemizer r = new MinSkolemizer(annotated, bounds, options) {
+			final Skolemizer r = new Skolemizer(annotated, bounds, options) {
 				protected Formula source(Formula f, Node n) {
 					//System.out.println("logging " + f + " <-- " + n);
 					final Node nsource = annotated.sourceOf(n);
@@ -102,7 +103,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 			final Formula f = annotated.node().accept(r);
 			return f==annotated.node() ? annotated : annotate(f, source);
 		} else {
-			final MinSkolemizer r = new MinSkolemizer(annotated, bounds, options) {};
+			final Skolemizer r = new Skolemizer(annotated, bounds, options) {};
 			final Formula f = annotated.node().accept(r);
 			return f==annotated.node() ? annotated : annotate(f);
 		}
@@ -131,10 +132,10 @@ abstract class MinSkolemizer extends AbstractReplacer {
 
 	/* replacement environment; maps skolemized variables to their skolem expressions,
 	 * and non-skolemized variables to themselves */
-	private MinEnvironment<Expression> repEnv;
+	private Environment<Expression> repEnv;
 	/* the interpreter used to determine the upper bounds for skolem constants;
 	 * the upper bounds for skolem constants will be added to interpreter.bounds */
-	private final MinLeafInterpreter interpreter;
+	private final LeafInterpreter interpreter;
 	/* bounds on which the interpreter is based */
 	private final Bounds bounds;
 	/* reporter */
@@ -153,7 +154,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	/**
 	 * Constructs a skolem replacer from the given arguments. 
 	 */
-	private MinSkolemizer(AnnotatedNode<Formula> annotated, Bounds bounds, Options options) {
+	private Skolemizer(AnnotatedNode<Formula> annotated, Bounds bounds, Options options) {
 		super(annotated.sharedNodes());
 
 		// only cache intermediate computations for expressions with no free variables
@@ -168,8 +169,8 @@ abstract class MinSkolemizer extends AbstractReplacer {
 		}
 		this.reporter = options.reporter();
 		this.bounds = bounds;
-		this.interpreter = MinLeafInterpreter.overapproximating(bounds, options);
-		this.repEnv = MinEnvironment.empty();
+		this.interpreter = LeafInterpreter.overapproximating(bounds, options);
+		this.repEnv = Environment.empty();
 		this.nonSkolems = new ArrayList<DeclInfo>();
 		this.nonSkolemsView = new AbstractList<Decl>() {
 			public Decl get(int index) { return nonSkolems.get(index).decl;	}
@@ -273,13 +274,13 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	/** 
 	 * Returns the binding for the given variable in the current replacement environment.
 	 * @return the binding for the given variable in the current replacement environment.
-	 * @throws MinUnboundLeafException - variable not bound in teh replacement environment.
+	 * @throws UnboundLeafException - variable not bound in teh replacement environment.
 	 */
 	@Override
 	public final Expression visit(Variable variable) { 
 		final Expression ret = repEnv.lookup(variable);
 		if (ret==null)
-			throw new MinUnboundLeafException("Unbound variable", variable);
+			throw new UnboundLeafException("Unbound variable", variable);
 		return ret;
 	}	
 	
@@ -290,7 +291,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	public final Expression visit(Comprehension expr) {
 		Expression ret = lookup(expr);
 		if (ret!=null) return ret;
-		final MinEnvironment<Expression> oldRepEnv = repEnv; // skolemDepth < 0 at this point
+		final Environment<Expression> oldRepEnv = repEnv; // skolemDepth < 0 at this point
 		final Decls decls = visit((Decls)expr.decls());
 		final Formula formula = expr.formula().accept(this);
 		ret = (decls==expr.decls() && formula==expr.formula()) ? expr : formula.comprehension(decls);
@@ -304,7 +305,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	public final IntExpression visit(SumExpression intExpr) {
 		IntExpression ret = lookup(intExpr);
 		if (ret!=null) return ret;	
-		final MinEnvironment<Expression> oldRepEnv = repEnv; // skolemDepth < 0 at this point
+		final Environment<Expression> oldRepEnv = repEnv; // skolemDepth < 0 at this point
 		final Decls decls  = visit((Decls)intExpr.decls());
 		final IntExpression expr = intExpr.intExpr().accept(this);
 		ret =  (decls==intExpr.decls() && expr==intExpr.intExpr()) ? intExpr : expr.sum(decls);
@@ -317,8 +318,8 @@ abstract class MinSkolemizer extends AbstractReplacer {
 	 * Returns the least sound upper bound on the value of expr
 	 * @return the least sound upper bound on the value of expr
 	 */
-	private final BooleanMatrix upperBound(Expression expr, MinEnvironment<BooleanMatrix> env) {
-		return MinFOL2BoolTranslator.approximate(annotate(expr), interpreter, env);
+	private final BooleanMatrix upperBound(Expression expr, Environment<BooleanMatrix> env) {
+		return FOL2BoolTranslator.approximate(annotate(expr), interpreter, env);
 	}
 	
 	/**
@@ -334,7 +335,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 		final int arity = depth + skolemDecl.variable().arity();
 
 		Expression skolemExpr = skolem;
-		MinEnvironment<BooleanMatrix> skolemEnv = MinEnvironment.empty();
+		Environment<BooleanMatrix> skolemEnv = Environment.empty();
 
 		for(DeclInfo info : nonSkolems) {
 			if (info.upperBound==null) {
@@ -383,7 +384,7 @@ abstract class MinSkolemizer extends AbstractReplacer {
 		Formula ret = lookup(qf);
 		if (ret!=null) return ret;
 		
-		final MinEnvironment<Expression> oldRepEnv = repEnv;	
+		final Environment<Expression> oldRepEnv = repEnv;	
 		final Quantifier quant = qf.quantifier();
 		final Decls decls = qf.decls();
 		

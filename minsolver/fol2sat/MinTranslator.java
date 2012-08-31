@@ -50,6 +50,8 @@ import kodkod.util.nodes.AnnotatedNode;
 
 import static kodkod.util.nodes.AnnotatedNode.*;
 
+// Aluminum: Separate SBP and original formula's CNF. Allow access to permutations broken for clause generation.
+
 /** 
  * Translates, evaluates, and approximates {@link Node nodes} with
  * respect to given {@link Bounds bounds} (or {@link Instance instances}) and {@link Options}.
@@ -64,12 +66,12 @@ public final class MinTranslator {
 	 * @return a BooleanMatrix whose TRUE entries represent the tuples contained in a sound overapproximation
 	 * of the expression.
 	 * @throws expression = null || instance = null || options = null
-	 * @throws MinUnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
+	 * @throws UnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
 	 * @throws MinHigherOrderDeclException - the expression contains a higher order declaration
 	 */
 	@SuppressWarnings("unchecked")
 	public static BooleanMatrix approximate(Expression expression, Bounds bounds, Options options) {
-		return MinFOL2BoolTranslator.approximate(annotate(expression), MinLeafInterpreter.overapproximating(bounds, options), MinEnvironment.EMPTY);
+		return FOL2BoolTranslator.approximate(annotate(expression), LeafInterpreter.overapproximating(bounds, options), Environment.EMPTY);
 	}
 	
 	/**
@@ -77,11 +79,11 @@ public final class MinTranslator {
 	 * 
 	 * @return a BooleanConstant that represents the value of the formula.
 	 * @throws NullPointerException - formula = null || instance = null || options = null
-	 * @throws MinUnboundLeafException - the formula refers to an undeclared variable or a relation not mapped by the instance
+	 * @throws UnboundLeafException - the formula refers to an undeclared variable or a relation not mapped by the instance
 	 * @throws MinHigherOrderDeclException - the formula contains a higher order declaration
 	 */
 	public static BooleanConstant evaluate(Formula formula, Instance instance, Options options) {
-		return (BooleanConstant) MinFOL2BoolTranslator.translate(annotate(formula), MinLeafInterpreter.exact(instance, options));
+		return (BooleanConstant) FOL2BoolTranslator.translate(annotate(formula), LeafInterpreter.exact(instance, options));
 	}
 	
 	/**
@@ -89,11 +91,11 @@ public final class MinTranslator {
 	 * 
 	 * @return a BooleanMatrix whose TRUE entries represent the tuples contained by the expression.
 	 * @throws NullPointerException - expression = null || instance = null || options = null
-	 * @throws MinUnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
+	 * @throws UnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
 	 * @throws MinHigherOrderDeclException - the expression contains a higher order declaration
 	 */
 	public static BooleanMatrix evaluate(Expression expression,Instance instance, Options options) {
-		return (BooleanMatrix) MinFOL2BoolTranslator.translate(annotate(expression), MinLeafInterpreter.exact(instance, options));
+		return (BooleanMatrix) FOL2BoolTranslator.translate(annotate(expression), LeafInterpreter.exact(instance, options));
 	}
 
 	/**
@@ -101,11 +103,11 @@ public final class MinTranslator {
 	 * @return an {@link kodkod.engine.bool.Int} representing the value of the intExpr with respect
 	 * to the specified instance and options.
 	 * @throws NullPointerException - formula = null || instance = null || options = null
-	 * @throws MinUnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
+	 * @throws UnboundLeafException - the expression refers to an undeclared variable or a relation not mapped by the instance
 	 * @throws MinHigherOrderDeclException - the expression contains a higher order declaration
 	 */
 	public static Int evaluate(IntExpression intExpr, Instance instance, Options options) {
-		return (Int) MinFOL2BoolTranslator.translate(annotate(intExpr), MinLeafInterpreter.exact(instance,options));
+		return (Int) FOL2BoolTranslator.translate(annotate(intExpr), LeafInterpreter.exact(instance,options));
 	}
 	
 	/**
@@ -115,14 +117,14 @@ public final class MinTranslator {
 	 * is generated in such a way that the magnitude of the literal representing the truth
 	 * value of a given formula is strictly larger than the magnitudes of the literals representing
 	 * the truth values of the formula's descendants.  
-	 * @throws MinTrivialFormulaException - the given formula is reduced to a constant during translation
+	 * @throws TrivialFormulaException - the given formula is reduced to a constant during translation
 	 * (i.e. the formula is trivially (un)satisfiable).
 	 * @throws NullPointerException - any of the arguments are null
-	 * @throws MinUnboundLeafException - the formula refers to an undeclared variable or a relation not mapped by the given bounds.
+	 * @throws UnboundLeafException - the formula refers to an undeclared variable or a relation not mapped by the given bounds.
 	 * @throws MinHigherOrderDeclException - the formula contains a higher order declaration that cannot
 	 * be skolemized, or it can be skolemized but options.skolemize is false.
 	 */
-	public static MinTranslation translate(Formula formula, Bounds bounds, Options options) throws MinTrivialFormulaException {
+	public static MinTranslation translate(Formula formula, Bounds bounds, Options options) throws TrivialFormulaException {
 		return (new MinTranslator(formula,bounds,options)).translate();
 	}
 	
@@ -137,7 +139,7 @@ public final class MinTranslator {
 	private final Bounds bounds;
 	private final Options options;
 	
-	private MinTranslationLog log;
+	private TranslationLog log;
 		
 	/**
 	 * Constructs a Translator for the given formula, bounds and options.
@@ -160,13 +162,13 @@ public final class MinTranslator {
 	 * is generated in such a way that the magnitude of a literal representing the truth
 	 * value of a given formula is strictly larger than the magnitudes of the literals representing
 	 * the truth values of the formula's descendants.  
-	 * @throws MinTrivialFormulaException - this.formula is reduced to a constant during translation
+	 * @throws TrivialFormulaException - this.formula is reduced to a constant during translation
 	 * (i.e. the formula is trivially (un)satisfiable).
-	 * @throws MinUnboundLeafException - this.formula refers to an undeclared variable or a relation not mapped by this.bounds.
+	 * @throws UnboundLeafException - this.formula refers to an undeclared variable or a relation not mapped by this.bounds.
 	 * @throws MinHigherOrderDeclException - this.formula contains a higher order declaration that cannot
 	 * be skolemized, or it can be skolemized but this.options.skolemDepth < 0
 	 */
-	private MinTranslation translate() throws MinTrivialFormulaException  {
+	private MinTranslation translate() throws TrivialFormulaException  {
 		final AnnotatedNode<Formula> annotated = options.logTranslation()>0 ? annotateRoots(formula) : annotate(formula);
 		final MinSymmetryBreaker breaker = optimizeBounds(annotated);	
 		return toBoolean(optimizeFormula(annotated, breaker), breaker);
@@ -203,16 +205,16 @@ public final class MinTranslator {
 
 		if (options.logTranslation()==0) { // no logging
 			annotated = inlinePredicates(annotated, breaker.breakMatrixSymmetries(annotated.predicates(), true).keySet());
-			return options.skolemDepth()>=0 ? MinSkolemizer.skolemize(annotated, bounds, options) : annotated;
+			return options.skolemDepth()>=0 ? Skolemizer.skolemize(annotated, bounds, options) : annotated;
 		} else { // logging; inlining of predicates *must* happen last when logging is enabled
 			if (options.coreGranularity()==1) { 
-				annotated = MinFormulaFlattener.flatten(annotated, false);
+				annotated = FormulaFlattener.flatten(annotated, false);
 			}
 			if (options.skolemDepth()>=0) {
-				annotated = MinSkolemizer.skolemize(annotated, bounds, options);
+				annotated = Skolemizer.skolemize(annotated, bounds, options);
 			}
 			if (options.coreGranularity()>1) { 
-				annotated = MinFormulaFlattener.flatten(annotated, options.coreGranularity()==3);
+				annotated = FormulaFlattener.flatten(annotated, options.coreGranularity()==3);
 			}
 			return inlinePredicates(annotated, breaker.breakMatrixSymmetries(annotated.predicates(), false));
 		}
@@ -295,31 +297,31 @@ public final class MinTranslator {
 	 * and returns its Translation to CNF.
 	 * @requires [[annotated.node]] <=> ([[this.formula]] and [[breaker.broken]])
 	 * @effects this.options.logTranslation => some this.log'
-	 * @return the result of calling  {@link #generateSBP(BooleanFormula, MinLeafInterpreter, MinSymmetryBreaker)}
+	 * @return the result of calling  {@link #generateSBP(BooleanFormula, LeafInterpreter, MinSymmetryBreaker)}
 	 * on the translation of annotated.node with respect to this.bounds
-	 * @throws MinTrivialFormulaException - the translation of annotated is a constant or can be made into
+	 * @throws TrivialFormulaException - the translation of annotated is a constant or can be made into
 	 * a constant by flattening 
 	 */
-	private MinTranslation toBoolean(AnnotatedNode<Formula> annotated, MinSymmetryBreaker breaker) throws MinTrivialFormulaException {
+	private MinTranslation toBoolean(AnnotatedNode<Formula> annotated, MinSymmetryBreaker breaker) throws TrivialFormulaException {
 		
 		options.reporter().translatingToBoolean(annotated.node(), bounds);
 		
-		final MinLeafInterpreter interpreter = MinLeafInterpreter.exact(bounds, options);
+		final LeafInterpreter interpreter = LeafInterpreter.exact(bounds, options);
 		
 		if (options.logTranslation()>0) {
-			final MinTranslationLogger logger = options.logTranslation()==1 ? new MinMemoryLogger(annotated, bounds) : new MinFileLogger(annotated, bounds);
-			final BooleanAccumulator circuit = MinFOL2BoolTranslator.translate(annotated, interpreter, logger);
+			final TranslationLogger logger = options.logTranslation()==1 ? new MemoryLogger(annotated, bounds) : new FileLogger(annotated, bounds);
+			final BooleanAccumulator circuit = FOL2BoolTranslator.translate(annotated, interpreter, logger);
 			log = logger.log();
 			if (circuit.isShortCircuited()) {
-				throw new MinTrivialFormulaException(annotated.node(), bounds, circuit.op().shortCircuit(), log);
+				throw new TrivialFormulaException(annotated.node(), bounds, circuit.op().shortCircuit(), log);
 			} else if (circuit.size()==0) { 
-				throw new MinTrivialFormulaException(annotated.node(), bounds, circuit.op().identity(), log);
+				throw new TrivialFormulaException(annotated.node(), bounds, circuit.op().identity(), log);
 			}
 			return generateSBP(circuit, interpreter, breaker);
 		} else {
-			final BooleanValue circuit = (BooleanValue)MinFOL2BoolTranslator.translate(annotated, interpreter);
+			final BooleanValue circuit = (BooleanValue)FOL2BoolTranslator.translate(annotated, interpreter);
 			if (circuit.op()==Operator.CONST) {
-				throw new MinTrivialFormulaException(annotated.node(), bounds, (BooleanConstant)circuit, null);
+				throw new TrivialFormulaException(annotated.node(), bounds, (BooleanConstant)circuit, null);
 			} 
 			return generateSBP(annotated, (BooleanFormula)circuit, interpreter, breaker);
 		}
@@ -333,7 +335,7 @@ public final class MinTranslator {
 	 * @requires breaker.bounds = this.bounds
 	 * @return toCNF(circuit && breaker.generateSBP(interpreter))
 	 */
-	private MinTranslation generateSBP(BooleanAccumulator circuit, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) {
+	private MinTranslation generateSBP(BooleanAccumulator circuit, LeafInterpreter interpreter, MinSymmetryBreaker breaker) {
 		options.reporter().generatingSBP();
 		final BooleanFactory factory = interpreter.factory();
 		//circuit.add(breaker.generateSBP(interpreter, options.symmetryBreaking())); 
@@ -352,10 +354,10 @@ public final class MinTranslator {
 	 * @requires interpreter is the leaf interpreter used in generating the given circuit
 	 * @requires breaker.bounds = this.bounds
 	 * @return flatten(circuit && breaker.generateSBP(interpreter), interpreter)
-	 * @throws MinTrivialFormulaException - flattening the circuit and the predicate yields a constant
+	 * @throws TrivialFormulaException - flattening the circuit and the predicate yields a constant
 	 */
-	private MinTranslation generateSBP(AnnotatedNode<Formula> annotated, BooleanFormula circuit, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) 
-	throws MinTrivialFormulaException {
+	private MinTranslation generateSBP(AnnotatedNode<Formula> annotated, BooleanFormula circuit, LeafInterpreter interpreter, MinSymmetryBreaker breaker) 
+	throws TrivialFormulaException {
 		options.reporter().generatingSBP();
 		final BooleanValue sbp = breaker.generateSBP(interpreter, options.symmetryBreaking());						
 		
@@ -372,15 +374,15 @@ public final class MinTranslator {
 	 * @return if this.options.flatten then 
 	 * 	toCNF(flatten(circuit), interpreter.factory().numberOfVariables(), interpreter.vars()) else
 	 *  toCNF(circuit, interpreter.factory().numberOfVariables(), interpreter.vars())
-	 * @throws MinTrivialFormulaException - flattening the circuit yields a constant
+	 * @throws TrivialFormulaException - flattening the circuit yields a constant
 	 */
-	private MinTranslation flatten(AnnotatedNode<Formula> annotated, BooleanFormula circuit, BooleanValue sbp, MinLeafInterpreter interpreter, MinSymmetryBreaker breaker) throws MinTrivialFormulaException {	
+	private MinTranslation flatten(AnnotatedNode<Formula> annotated, BooleanFormula circuit, BooleanValue sbp, LeafInterpreter interpreter, MinSymmetryBreaker breaker) throws TrivialFormulaException {	
 		final BooleanFactory factory = interpreter.factory();
 		if (options.flatten()) {
 			options.reporter().flattening(circuit);
-			final BooleanValue flatCircuit = MinBooleanFormulaFlattener.flatten(circuit, factory);
+			final BooleanValue flatCircuit = BooleanFormulaFlattener.flatten(circuit, factory);
 			if (flatCircuit.op()==Operator.CONST) {
-				throw new MinTrivialFormulaException(annotated.node(), bounds, (BooleanConstant)flatCircuit, null);
+				throw new TrivialFormulaException(annotated.node(), bounds, (BooleanConstant)flatCircuit, null);
 			} else {
 				return toCNF((BooleanFormula)flatCircuit, sbp, factory.numberOfVariables(), interpreter.vars(), breaker);
 			}

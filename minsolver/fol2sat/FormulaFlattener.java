@@ -59,7 +59,7 @@ import kodkod.util.nodes.AnnotatedNode;
  * 
  * @author Emina Torlak
  */
-final class MinFormulaFlattener extends AbstractVoidVisitor {
+final class FormulaFlattener extends AbstractVoidVisitor {
 
 	/**
 	 * Flattens the given formula into a set of conjuncts
@@ -71,7 +71,7 @@ final class MinFormulaFlattener extends AbstractVoidVisitor {
 	 * subformula of annotated.node
 	 */
 	public static AnnotatedNode<Formula> flatten(AnnotatedNode<Formula> annotated, boolean breakupQuantifiers) {  
-		final MinFormulaFlattener flat = new MinFormulaFlattener(annotated.sharedNodes(), breakupQuantifiers);
+		final FormulaFlattener flat = new FormulaFlattener(annotated.sharedNodes(), breakupQuantifiers);
 		annotated.node().accept(flat);
 		final List<Formula> roots = new ArrayList<Formula>(flat.conjuncts.size());
 		roots.addAll(flat.conjuncts.keySet());
@@ -94,7 +94,7 @@ final class MinFormulaFlattener extends AbstractVoidVisitor {
 	/**
 	 * Constructs a flattener for a formula in which the given nodes are shared.
 	 */
-	private MinFormulaFlattener(Set<Node> shared, boolean breakupQuantifiers) { 
+	private FormulaFlattener(Set<Node> shared, boolean breakupQuantifiers) { 
 		this.conjuncts = new LinkedHashMap<Formula, Node>();
 		this.shared = shared;
 		this.visited = new IdentityHashMap<Node,Boolean>();

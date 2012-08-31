@@ -37,6 +37,8 @@ import kodkod.engine.satlab.SATSolver;
 import kodkod.util.ints.IntSet;
 import kodkod.util.ints.Ints;
 
+// ALUMINUM: Modified to separate original and SBP clauses in the solver.
+
 /**
  * Transforms a boolean circuit into a formula in conjunctive
  * normal form.

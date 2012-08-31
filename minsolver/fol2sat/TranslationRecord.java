@@ -44,7 +44,7 @@ import kodkod.instance.TupleSet;
  *                                         // for which this.node (or its desugared form) evaluates to this.literal   
  * @author Emina Torlak
  */
-public abstract class MinTranslationRecord {
+public abstract class TranslationRecord {
 		
 	/**
 	 * Returns this.node.

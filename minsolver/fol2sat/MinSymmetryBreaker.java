@@ -54,6 +54,9 @@ import kodkod.util.ints.IntIterator;
 import kodkod.util.ints.IntSet;
 import kodkod.util.ints.Ints;
 
+// ALUMINUM: Modified to save the permutations broken by the SBP.
+// (These are the adjacent transpositions of each partition detected.)
+
 /**
  * Breaks symmetries for a given problem.  Symmetries
  * are broken for total orders, acyclic relations, and 
@@ -83,7 +86,7 @@ final class MinSymmetryBreaker {
 		this.bounds = bounds;
 		this.usize = bounds.universe().size();
 		reporter.detectingSymmetries(bounds);
-		this.symmetries = MinSymmetryDetector.partition(bounds);
+		this.symmetries = SymmetryDetector.partition(bounds);
 		reporter.detectedSymmetries(symmetries);
 	}
 	
@@ -187,7 +190,7 @@ final class MinSymmetryBreaker {
 	 * @requires interpreter.relations in this.bounds.relations
 	 * @return a symmetry breaking predicate for this.symmetries
 	 */
-	final BooleanValue generateSBP(MinLeafInterpreter interpreter, int predLength) {
+	final BooleanValue generateSBP(LeafInterpreter interpreter, int predLength) {
 		if (symmetries.isEmpty() || predLength==0) return BooleanConstant.TRUE;
 		
 		final List<RelationParts> relParts = relParts();

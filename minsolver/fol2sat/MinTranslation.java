@@ -35,6 +35,8 @@ import kodkod.util.ints.IntIterator;
 import kodkod.util.ints.IntSet;
 import kodkod.util.ints.Ints;
 
+// ALUMINUM: Separates solving and translation time; keeps symmetries detected for use in cone clauses 
+
 /**
  * Stores the translation of a {@link kodkod.ast.Formula kodkod formula}
  * to CNF. 
@@ -50,7 +52,7 @@ public final class MinTranslation {
 	private final MinSATSolver solver;
 	/* maps relations to the literals that comprise their translations */
 	private final Map<Relation, IntSet> primaryVarUsage;
-	private final MinTranslationLog log;
+	private final TranslationLog log;
 	private final int maxPrimaryLit;
 	
 	public final Set<IntSet> symmetries;
@@ -64,7 +66,7 @@ public final class MinTranslation {
 	 * @effects this.solver' = solver && this.bounds' = bounds
 	 */
 	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage,
-			int maxPrimaryLit, MinTranslationLog log, Set<IntSet> symmetries,
+			int maxPrimaryLit, TranslationLog log, Set<IntSet> symmetries,
 			Set<Map<Integer, Integer>> permutations) {			
 		this.solver = solver;				
 		this.bounds = bounds;
@@ -154,7 +156,7 @@ public final class MinTranslation {
 	 * @return the log of the translation that produced this Translation
 	 * object, if this.options.logTranslation was enabled during translation, or null if not. 
 	 */
-	public MinTranslationLog log() {
+	public TranslationLog log() {
 		return log;
 	}
 			

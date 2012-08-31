@@ -51,7 +51,7 @@ import kodkod.util.nodes.Nodes;
  * @invariant Solver.solve(formula, bounds).instance() == null iff Solver.solve(originalFormula, originalBounds).instance() == null
  * @author Emina Torlak
  */
-final class MinMemoryLogger extends MinTranslationLogger {
+final class MemoryLogger extends TranslationLogger {
 	private final FixedMap<Formula, BooleanValue> logMap;
 	private final AnnotatedNode<Formula> annotated;
 	private final Bounds bounds;
@@ -63,7 +63,7 @@ final class MinMemoryLogger extends MinTranslationLogger {
 	 * @effects no this.records' 
 	 * @effects this.log().roots() = Nodes.conjuncts(annotated)
 	 */
-	MinMemoryLogger(final AnnotatedNode<Formula> annotated, Bounds bounds) {
+	MemoryLogger(final AnnotatedNode<Formula> annotated, Bounds bounds) {
 		this.annotated = annotated;
 		this.bounds = bounds;
 		this.logMap = new FixedMap<Formula, BooleanValue>(Nodes.conjuncts(annotated.node()));
@@ -84,7 +84,7 @@ final class MinMemoryLogger extends MinTranslationLogger {
 	 * @see kodkod.engine.fol2sat.TranslationLogger#log(kodkod.ast.Formula, kodkod.engine.bool.BooleanValue, kodkod.engine.fol2sat.Environment)
 	 */
 	@Override
-	void log(Formula f, BooleanValue translation, MinEnvironment<BooleanMatrix> env) {
+	void log(Formula f, BooleanValue translation, Environment<BooleanMatrix> env) {
 		if (logMap.containsKey(f)) { 
 			assert env.isEmpty();
 			final BooleanValue old = logMap.put(f, translation);
@@ -98,13 +98,13 @@ final class MinMemoryLogger extends MinTranslationLogger {
 	 * @see kodkod.engine.fol2sat.TranslationLogger#log()
 	 */
 	@Override
-	MinTranslationLog log() { return new MemoryLog(annotated,logMap,bounds); }
+	TranslationLog log() { return new MemoryLog(annotated,logMap,bounds); }
 	
 	/**
 	 * A memory-based translation log, written by a MemoryLogger.
 	 * @author Emina Torlak
 	 */
-	private static class MemoryLog extends MinTranslationLog {
+	private static class MemoryLog extends TranslationLog {
 		private final Set<Formula> roots;
 		private final Bounds bounds;
 		private final Node[] original;
@@ -138,13 +138,13 @@ final class MinMemoryLogger extends MinTranslationLogger {
 		 * @see kodkod.engine.fol2sat.TranslationLog#replay(kodkod.engine.fol2sat.RecordFilter)
 		 */
 		@Override
-		public Iterator<MinTranslationRecord> replay(final MinRecordFilter filter) {
-			return new Iterator<MinTranslationRecord>() {
+		public Iterator<TranslationRecord> replay(final RecordFilter filter) {
+			return new Iterator<TranslationRecord>() {
 				final Iterator<Formula> itr = roots.iterator();
 				boolean ready = false;
 				int index = -1;
 				Formula root = null;
-				final MinTranslationRecord current = new MinTranslationRecord() {
+				final TranslationRecord current = new TranslationRecord() {
 					@Override
 					public Map<Variable, TupleSet> env() { return Collections.emptyMap(); }
 					@Override
@@ -169,7 +169,7 @@ final class MinMemoryLogger extends MinTranslationLogger {
 					return ready;
 				}
 				
-				public MinTranslationRecord next() {
+				public TranslationRecord next() {
 					if (!hasNext()) throw new NoSuchElementException();
 					ready = false;
 					return current;

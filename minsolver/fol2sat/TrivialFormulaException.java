@@ -35,9 +35,9 @@ import kodkod.instance.Bounds;
  * @specfield value: BooleanConstant // the value to which the reduction simplified
  * @author Emina Torlak
  */
-public final class MinTrivialFormulaException extends Exception {
+public final class TrivialFormulaException extends Exception {
 	private final BooleanConstant value;
-	private final MinTranslationLog log;
+	private final TranslationLog log;
 	private final Formula formula;
 	private final Bounds bounds;
 	
@@ -49,7 +49,7 @@ public final class MinTrivialFormulaException extends Exception {
 	 * @effects this.log' = log && this.formula' = log.formula && 
 	 * this.bounds' = bounds && this.value' = value 
 	 */
-	 MinTrivialFormulaException(Formula formula, Bounds bounds, BooleanConstant formulaValue, MinTranslationLog log) {
+	 TrivialFormulaException(Formula formula, Bounds bounds, BooleanConstant formulaValue, TranslationLog log) {
 		super("Trivially " + ((formulaValue==BooleanConstant.FALSE) ? "un" : "" )  + "satisfiable formula.");
 		assert formulaValue != null && bounds != null;
 		this.log = log;
@@ -62,7 +62,7 @@ public final class MinTrivialFormulaException extends Exception {
 	 * Returns this.log.
 	 * @return this.log
 	 */
-	public MinTranslationLog log() {
+	public TranslationLog log() {
 		return log;
 	}
 	

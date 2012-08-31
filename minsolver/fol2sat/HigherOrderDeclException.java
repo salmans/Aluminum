@@ -21,32 +21,37 @@
  */
 package minsolver.fol2sat;
 
-import kodkod.ast.LeafExpression;
+import kodkod.ast.Decl;
+import kodkod.ast.operator.Multiplicity;
 
 /**
- * Thrown when a node contains an undeclared variable or a relation with no bounds.
- * @specfield leaf: LeafExpression // the unbound leaf that caused the exception to be thrown
+ * Thrown when a node contains a higher order declaration that cannot
+ * be skolemized, or it can be skolemized but skolemization is disabled.
+ * 
+ * @specfield decl: Decl // higher order decl that caused the exception to be thrown
  * @author Emina Torlak
  */
-public final class MinUnboundLeafException extends RuntimeException {
-	private final LeafExpression leaf;
-	private static final long serialVersionUID = 2472395272061454465L;
+public final class HigherOrderDeclException extends RuntimeException {
+	private final Decl decl;
+	private static final long serialVersionUID = 1892780864484615171L;
 
 	/**
-	 * Constructs an UnboundLeafException for the given leaf.
-	 * @effects this.leaf' = leaf
+	 * Constructs a HigherOrderDeclException for the given decl.
+	 * @requires decl.multiplicity != ONE
+	 * @effects this.decl' = decl
 	 */
-	MinUnboundLeafException(String msg, LeafExpression leaf) {
-		super(msg + ": " +leaf);
-		this.leaf = leaf;
+	 HigherOrderDeclException(Decl decl) {
+		super("Higher order declaration: " + decl);
+		assert decl.multiplicity() != Multiplicity.ONE;
+		this.decl = decl;
 	}
 
 	/**
-	 * Returns this.leaf.
-	 * @return this.leaf
+	 * Returns this.decl
+	 * @return this.decl
 	 */
-	public LeafExpression leaf() { 
-		return leaf;
+	public Decl decl() {
+		return decl;
 	}
 
 }

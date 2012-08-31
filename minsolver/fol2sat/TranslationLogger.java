@@ -37,7 +37,7 @@ import kodkod.engine.bool.BooleanValue;
  * @invariant Solver.solve(formula, bounds).instance() == null iff Solver.solve(originalFormula, originalBounds).instance() == null
  * @author Emina Torlak
  */
-abstract class MinTranslationLogger {
+abstract class TranslationLogger {
 
 	/**
 	 * Optionally records the translation of the source of the 
@@ -48,10 +48,10 @@ abstract class MinTranslationLogger {
 	 * @throws IllegalArgumentException - some aspect of the given translation event prevents it from being logged
 	 * @throws IllegalStateException - this log has been closed
 	 */
-	abstract void log(Formula f, BooleanValue translation, MinEnvironment<BooleanMatrix> env);
+	abstract void log(Formula f, BooleanValue translation, Environment<BooleanMatrix> env);
 	
 	/**
-	 * Closes this logger and releases associated resources.  Attempts to call {@link #log(Formula, BooleanValue, MinEnvironment)}
+	 * Closes this logger and releases associated resources.  Attempts to call {@link #log(Formula, BooleanValue, Environment)}
 	 * after the log has been closed may result in an IllegalStateException.
 	 * @effects closes this logger and releases associated resources. 
 	 */
@@ -61,5 +61,5 @@ abstract class MinTranslationLogger {
 	 * Returns a TranslationLog view of this.records.
 	 * @return a TranslationLog view of this.records.
 	 */
-	abstract MinTranslationLog log();
+	abstract TranslationLog log();
 }

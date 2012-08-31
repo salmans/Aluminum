@@ -55,7 +55,7 @@ import kodkod.util.ints.Ints;
  * 
  * @author Emina Torlak
  */
-final class MinBooleanFormulaFlattener implements BooleanVisitor<BooleanValue, BooleanAccumulator> {
+final class BooleanFormulaFlattener implements BooleanVisitor<BooleanValue, BooleanAccumulator> {
 
 
 
@@ -72,7 +72,7 @@ final class MinBooleanFormulaFlattener implements BooleanVisitor<BooleanValue, B
 		final int oldCompDepth = f.comparisonDepth();
 		f.setComparisonDepth(1);
 		f.clear(); // remove everything but the variables from the factory
-		final MinBooleanFormulaFlattener flattener = new MinBooleanFormulaFlattener(root, f);
+		final BooleanFormulaFlattener flattener = new BooleanFormulaFlattener(root, f);
 		final BooleanValue flatRoot = root.accept(flattener, null);
 		f.setComparisonDepth(oldCompDepth);
 		return flatRoot;
@@ -88,7 +88,7 @@ final class MinBooleanFormulaFlattener implements BooleanVisitor<BooleanValue, B
 	 * given factory.
 	 * @requires (root.*inputs & Variable) in factory.components
 	 */
-	private MinBooleanFormulaFlattener(BooleanFormula root, BooleanFactory factory) {
+	private BooleanFormulaFlattener(BooleanFormula root, BooleanFactory factory) {
 		this.factory = factory;
 		final FlatteningDataGatherer dataGatherer = new FlatteningDataGatherer(root);
 		root.accept(dataGatherer, null);

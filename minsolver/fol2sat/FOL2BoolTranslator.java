@@ -83,7 +83,7 @@ import kodkod.util.nodes.Nodes;
  * @specfield env: Environment<BooleanMatrix> // current environment
  * @author Emina Torlak
  */
-abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, BooleanValue, Object, Int> {
+abstract class FOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, BooleanValue, Object, Int> {
 	
 	/**
 	 * Translates the given annotated formula or expression into a boolean
@@ -93,13 +93,13 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 *           annotated.node in Formula => transl in BooleanValue, 
 	 *           annotated.node in Expression => transl in BooleanMatrix, 
 	 *           annotated.node in IntExpression => transl in Int}
-	 * @throws MinHigherOrderDeclException - annotated.node contains a higher order declaration
-	 * @throws MinUnboundLeafException - annotated.node refers to an undeclared variable 
+	 * @throws HigherOrderDeclException - annotated.node contains a higher order declaration
+	 * @throws UnboundLeafException - annotated.node refers to an undeclared variable 
 	 **/
 	@SuppressWarnings("unchecked")
-	static final <T> T translate(AnnotatedNode<? extends Node> annotated, MinLeafInterpreter interpreter) {
-		final MinFOL2BoolCache cache = new MinFOL2BoolCache(annotated);
-		final MinFOL2BoolTranslator translator = new MinFOL2BoolTranslator(cache, interpreter) {};
+	static final <T> T translate(AnnotatedNode<? extends Node> annotated, LeafInterpreter interpreter) {
+		final FOL2BoolCache cache = new FOL2BoolCache(annotated);
+		final FOL2BoolTranslator translator = new FOL2BoolTranslator(cache, interpreter) {};
 		return (T) annotated.node().accept(translator);
 	}
 
@@ -110,12 +110,12 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 * @requires annotated.source[annotated.sourceSensitiveRoots()] = Nodes.roots(annotated.source[annotated.node])
 	 * @return BooleanAccumulator that is the meaning of the given annotated formula with respect to the given interpreter
 	 * @effects log.records' contains the translation events that occurred while generating the returned value
-	 * @throws MinHigherOrderDeclException - annotated.node contains a higher order declaration
-	 * @throws MinUnboundLeafException - annotated.node refers to an undeclared variable 
+	 * @throws HigherOrderDeclException - annotated.node contains a higher order declaration
+	 * @throws UnboundLeafException - annotated.node refers to an undeclared variable 
 	 **/
-	static final BooleanAccumulator translate(final AnnotatedNode<Formula> annotated, MinLeafInterpreter interpreter, final MinTranslationLogger logger) {
-		final MinFOL2BoolCache cache = new MinFOL2BoolCache(annotated);
-		final MinFOL2BoolTranslator translator = new MinFOL2BoolTranslator(cache, interpreter) {
+	static final BooleanAccumulator translate(final AnnotatedNode<Formula> annotated, LeafInterpreter interpreter, final TranslationLogger logger) {
+		final FOL2BoolCache cache = new FOL2BoolCache(annotated);
+		final FOL2BoolTranslator translator = new FOL2BoolTranslator(cache, interpreter) {
 			BooleanValue cache(Formula formula, BooleanValue translation) {
 				logger.log(formula, translation, super.env);
 				return super.cache(formula, translation);
@@ -137,11 +137,12 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 * the provided interpreter and environment.
 	 * @requires interpreter.relations = AnnotatedNode.relations(annotated)
 	 * @return a boolean matrix that is a least sound upper bound on the expression's value
-	 * @throws MinHigherOrderDeclException - annotated.node contains a higher order declaration
-	 * @throws MinUnboundLeafException - annotated.node refers to a variable that neither declared nor bound in env
+	 * @throws HigherOrderDeclException - annotated.node contains a higher order declaration
+	 * @throws UnboundLeafException - annotated.node refers to a variable that neither declared nor bound in env
 	 **/
-	static final BooleanMatrix approximate(AnnotatedNode<Expression> annotated, MinLeafInterpreter interpreter, MinEnvironment<BooleanMatrix> env) {
-		final MinFOL2BoolTranslator approximator = new MinFOL2BoolTranslator(new MinFOL2BoolCache(annotated), interpreter, env) {
+	@SuppressWarnings("unchecked")
+	static final BooleanMatrix approximate(AnnotatedNode<Expression> annotated, LeafInterpreter interpreter, Environment<BooleanMatrix> env) {
+		final FOL2BoolTranslator approximator = new FOL2BoolTranslator(new FOL2BoolCache(annotated), interpreter, env) {
 			public final BooleanMatrix visit(BinaryExpression binExpr) {
 				final BooleanMatrix ret = lookup(binExpr); 
 				if (ret!=null) return ret;
@@ -191,21 +192,21 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 
 	
 	/*---------------------------------------------------------*/
-	private final MinLeafInterpreter interpreter;
+	private final LeafInterpreter interpreter;
 	/* When visiting the body of a quantified formula or a comprehension, this
 	 * environment contains the current values of the enclosing quantified variable(s) */
-	private MinEnvironment<BooleanMatrix> env;
+	private Environment<BooleanMatrix> env;
 
-	private final MinFOL2BoolCache cache;
+	private final FOL2BoolCache cache;
 
 	/**
 	 * Constructs a new translator that will use the given translation cache
 	 * and interpreter to perform the translation.
 	 * @effects this.node' = manager.node
 	 */   
-	private MinFOL2BoolTranslator(MinFOL2BoolCache cache,  MinLeafInterpreter interpreter) {
+	private FOL2BoolTranslator(FOL2BoolCache cache,  LeafInterpreter interpreter) {
 		this.interpreter = interpreter;
-		this.env = MinEnvironment.empty();
+		this.env = Environment.empty();
 		this.cache = cache;
 	}
 
@@ -214,7 +215,7 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 * interpreter and environment to perform the translation.
 	 * @effects this.node' = manager.node
 	 */   
-	private MinFOL2BoolTranslator(MinFOL2BoolCache cache,  MinLeafInterpreter interpreter, MinEnvironment<BooleanMatrix> env) {
+	private FOL2BoolTranslator(FOL2BoolCache cache,  LeafInterpreter interpreter, Environment<BooleanMatrix> env) {
 		this.interpreter = interpreter;
 		this.env = env;
 		this.cache = cache;
@@ -278,7 +279,7 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 		BooleanMatrix matrix = lookup(decl);
 		if (matrix!=null) return matrix;
 		if (decl.multiplicity()!=Multiplicity.ONE)
-			throw new MinHigherOrderDeclException(decl);
+			throw new HigherOrderDeclException(decl);
 		return cache(decl, decl.expression().accept(this));
 	}
 
@@ -286,12 +287,12 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 	 * Calls this.env.lookup(variable) and returns the current binding for the
 	 * given variable. If no binding is found, an UnboundLeafException is thrown.
 	 * @return this.env.lookup(variable)
-	 * @throws MinUnboundLeafException - no this.env.lookup(variable)
+	 * @throws UnboundLeafException - no this.env.lookup(variable)
 	 */
 	public final BooleanMatrix visit(Variable variable) {
 		final BooleanMatrix ret = env.lookup(variable);
 		if (ret != null) return ret;
-		else throw new MinUnboundLeafException("Unbound variable", variable);
+		else throw new UnboundLeafException("Unbound variable", variable);
 	}
 
 	/**
@@ -1008,3 +1009,4 @@ abstract class MinFOL2BoolTranslator implements ReturnVisitor<BooleanMatrix, Boo
 		return cache(intComp, ret);
 	}
 }
+

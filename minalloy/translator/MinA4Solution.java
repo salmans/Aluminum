@@ -59,7 +59,7 @@ import minsolver.MinSolution;
 import minsolver.MinSolver;
 import minsolver.MyReporter;
 import kodkod.engine.config.Options;
-import minsolver.fol2sat.MinTranslationRecord;
+import minsolver.fol2sat.TranslationRecord;
 import minsolver.fol2sat.MinTranslator;
 import kodkod.engine.satlab.SATFactory;
 import kodkod.instance.Bounds;
@@ -988,7 +988,7 @@ public final class MinA4Solution {
                  if (opt.coreMinimization==1) try { p.minimize(new MinHybridStrategy(p.log())); } catch(Throwable ex) {}
                  rep.minimized(cmd, i, p.highLevelCore().size());
               }
-              for(Iterator<MinTranslationRecord> it=p.core(); it.hasNext();) {
+              for(Iterator<TranslationRecord> it=p.core(); it.hasNext();) {
                  Object n=it.next().node();
                  if (n instanceof Formula) lCore.add((Formula)n);
               }

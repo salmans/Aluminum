@@ -42,14 +42,15 @@ import kodkod.util.nodes.AnnotatedNode;
  * @specfield cache: cached -> (Object ->lone Environment)
  * @author Emina Torlak
  */
-final class MinFOL2BoolCache {
+final class FOL2BoolCache {
 	private final Map<Node,Record> cache;
 	
 	/**
 	 * Constructs a new translation cache for the given annotated node.
 	 * @effects this.node' = annotated.node 
 	 */
-	MinFOL2BoolCache(AnnotatedNode<? extends Node> annotated) {
+	@SuppressWarnings("unchecked") 
+	FOL2BoolCache(AnnotatedNode<? extends Node> annotated) {
 		final CacheCollector collector = new CacheCollector(annotated.sharedNodes());
 		annotated.node().accept(collector);
 
@@ -72,7 +73,7 @@ final class MinFOL2BoolCache {
 	 *         this.cache[node].map, null
 	 */
 	@SuppressWarnings("unchecked")
-	<T> T lookup(Node node, MinEnvironment<BooleanMatrix> env) {
+	<T> T lookup(Node node, Environment<BooleanMatrix> env) {
 		final Record info = cache.get(node);
 		return info==null ? null : (T) info.get(env);
 	}
@@ -86,7 +87,7 @@ final class MinFOL2BoolCache {
 	 *           this.cache' = this.cache
 	 * @return translation
 	 */
-	final <T> T cache(Node node, T translation, MinEnvironment<BooleanMatrix> env) {
+	final <T> T cache(Node node, T translation, Environment<BooleanMatrix> env) {
 		final Record info = cache.get(node);
 		if (info != null) {
 			info.set(translation, env);
@@ -102,7 +103,7 @@ final class MinFOL2BoolCache {
 	 * @invariant all c: root.*children | some cached[c] => cached[c] = freeVariables(c)
 	 * @author Emina Torlak
 	 */
-	private static final class CacheCollector extends MinFreeVariableCollector {
+	private static final class CacheCollector extends FreeVariableCollector {
 
 		/**
 		 * Constructs a new cache collector.
@@ -130,6 +131,7 @@ final class MinFOL2BoolCache {
 		 *            this.cache' = this.cache
 		 * @return freeVars
 		 */
+		@SuppressWarnings("unchecked")
 		@Override
 		protected final Set<Variable> cache(Node node, Set<Variable> freeVars) {
 			if (cached.contains(node) || !varsInScope.empty() && !freeVars.contains(varsInScope.peek())) {
@@ -164,7 +166,7 @@ final class MinFOL2BoolCache {
 		 * @return all v: varBinding.int | e.lookup(v).get(varBinding[v])=TRUE => this.translation, null
 		 * @throws NullPointerException - e = null
 		 */
-		abstract Object get(MinEnvironment<BooleanMatrix> e);
+		abstract Object get(Environment<BooleanMatrix> e);
 		
 		/**
 		 * Sets this.translation to the given translation
@@ -176,7 +178,7 @@ final class MinFOL2BoolCache {
 		 *           {v: this.varBinding.int, tupleIndex: int | 
 		 *             tupleIndex = env.lookup(v).iterator().next().index() }
 		 */
-		abstract void set(Object transl, MinEnvironment<BooleanMatrix> env);
+		abstract void set(Object transl, Environment<BooleanMatrix> env);
 	}
 	
 	/**
@@ -200,7 +202,7 @@ final class MinFOL2BoolCache {
 		/**
 		 * @see kodkod.engine.fol2sat.FOL2BoolCache.Record#get(kodkod.engine.fol2sat.Environment)
 		 */
-		Object get(MinEnvironment<BooleanMatrix> e) {
+		Object get(Environment<BooleanMatrix> e) {
 			if (translation==null) return null;
 			for(int i = 0; i < vars.length; i++) {
 				if (e.lookup(vars[i]).get(tuples[i])!=BooleanConstant.TRUE)
@@ -212,7 +214,7 @@ final class MinFOL2BoolCache {
 		/**
 		 * @see kodkod.engine.fol2sat.FOL2BoolCache.Record#set(java.lang.Object, kodkod.engine.fol2sat.Environment)
 		 */
-		void set(Object transl, MinEnvironment<BooleanMatrix> env) {
+		void set(Object transl, Environment<BooleanMatrix> env) {
 			translation = transl;
 			for(int i = 0; i < vars.length; i++) {
 				tuples[i] = env.lookup(vars[i]).iterator().next().index();
@@ -246,14 +248,14 @@ final class MinFOL2BoolCache {
 		/**
 		 * @see kodkod.engine.fol2sat.FOL2BoolCache.Record#get(kodkod.engine.fol2sat.Environment)
 		 */
-		Object get(MinEnvironment<BooleanMatrix> e) {
+		Object get(Environment<BooleanMatrix> e) {
 			return translation;
 		}
 		
 		/**
 		 * @see kodkod.engine.fol2sat.FOL2BoolCache.Record#set(java.lang.Object, kodkod.engine.fol2sat.Environment)
 		 */
-		void set(Object transl, MinEnvironment<BooleanMatrix> env) {
+		void set(Object transl, Environment<BooleanMatrix> env) {
 			translation = transl;
 		}
 		

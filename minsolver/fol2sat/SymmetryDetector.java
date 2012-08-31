@@ -45,7 +45,7 @@ import kodkod.util.ints.Ints;
  * @specfield bounds: Bounds // bounds on which the partitioning is based
  * @author Emina Torlak
  */
-final class MinSymmetryDetector {
+final class SymmetryDetector {
 	private final Bounds bounds;
 	/* invariant: representatives always holds a sequence of IntSets that partition bounds.universe */
 	private final List<IntSet> parts;
@@ -55,7 +55,7 @@ final class MinSymmetryDetector {
 	 * Constructs a new SymmetryDetector for the given bounds.
 	 * @effects this.bounds' = bounds
 	 */
-	private MinSymmetryDetector(Bounds bounds) {
+	private SymmetryDetector(Bounds bounds) {
 		this.bounds = bounds;
 		this.usize = bounds.universe().size();
 		
@@ -75,7 +75,7 @@ final class MinSymmetryDetector {
 	 * into symmetry classes
 	 */
 	static Set<IntSet> partition(Bounds bounds) {		
-		final MinSymmetryDetector detector = new MinSymmetryDetector(bounds);
+		final SymmetryDetector detector = new SymmetryDetector(bounds);
 		detector.computePartitions();
 		final Set<IntSet> parts = new LinkedHashSet<IntSet>(detector.parts);
 		assert parts.size()==detector.parts.size(); // sanity check

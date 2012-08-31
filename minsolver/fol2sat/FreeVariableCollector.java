@@ -49,7 +49,7 @@ import kodkod.util.collections.Stack;
  * @specfield varsInScope: Stack<Variable> // variables currently in scope
  * @author Emina Torlak
  */
-abstract class MinFreeVariableCollector extends AbstractCollector<Variable> {
+abstract class FreeVariableCollector extends AbstractCollector<Variable> {
 	/* Holds the variables that are currently in scope, with the
 	 * variable at the top of the stack being the last declared variable. */
 	protected final Stack<Variable> varsInScope;
@@ -59,7 +59,7 @@ abstract class MinFreeVariableCollector extends AbstractCollector<Variable> {
 	 * The given set is required to contain the syntactically shared subtrees of the
 	 * node for which we are computing caching information.
 	 */
-	protected MinFreeVariableCollector(Set<Node> cached) {
+	protected FreeVariableCollector(Set<Node> cached) {
 		super(cached);
 		this.varsInScope = new ArrayStack<Variable>();
 	}
