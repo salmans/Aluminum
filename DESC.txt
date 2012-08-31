@@ -44,9 +44,9 @@ constraints (removeAllConstraints()).
 
 IMPLEMENTATION:
 
-All kodkod-level changes are confined to the minsolver/ branch of the
-repository. The minalloy/ branch contains the UI changes we made to
-Alloy.
+All kodkod-level changes are confined to the minsolver/ directory of
+the repository. The minalloy/ directory contains the UI changes we
+made to Alloy.
 
 ----------------------------------------
 

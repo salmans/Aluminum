@@ -62,8 +62,6 @@ import kodkod.engine.config.Options;
 import minsolver.fol2sat.MinTranslationRecord;
 import minsolver.fol2sat.MinTranslator;
 import kodkod.engine.satlab.SATFactory;
-import minsolver.ucore.MinHybridStrategy;
-import minsolver.ucore.MinRCEStrategy;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
@@ -978,7 +976,7 @@ public final class MinA4Solution {
         // To ensure no more output during SolutionEnumeration
         //solver.options().setReporter(oldReporter);
         // If unsatisfiable, then retreive the unsat core if desired
-        if (inst==null && solver.options().solver()==SATFactory.MiniSatProver) {
+       /* if (inst==null && solver.options().solver()==SATFactory.MiniSatProver) {
            try {
               lCore = new LinkedHashSet<Node>();
               MinProof p = sol.proof();
@@ -1000,7 +998,7 @@ public final class MinA4Solution {
            } catch(Throwable ex) {
               lCore = hCore = null;
            }
-        }
+        }*/
         // If satisfiable, then add/rename the atoms and skolems
         if (inst!=null) {
            eval = new Evaluator(inst, solver.options());
