@@ -27,6 +27,9 @@ import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.TupleSet;
 
+// ALUMINUM: Keep track of statistics on minimization. Also the
+// new sanitizeToBounds() method used for our test cases.
+
 /**
  * Represents the full solution to a formula:  an
  * instance if the formula is satisfiable or a
@@ -68,7 +71,7 @@ public final class MinSolution{
 	private final Outcome outcome;
 	private final MinStatistics stats;
 	private Instance instance;
-	private final MinProof proof;
+	private final Proof proof;
 	public final MinimizationHistory minimizationHistory;
 	
 	/** Stores the propositional model for this solution. 
@@ -87,7 +90,7 @@ public final class MinSolution{
 	 * @requires outcome != null && stats != null
 	 * @requires outcome = SATISFIABLE || TRIVIALLY_SATISFIABLE => instance != null
 	 */
-	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, MinProof proof, MinimizationHistory minimizationHistory,int[] propositionalModel) {
+	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, Proof proof, MinimizationHistory minimizationHistory,int[] propositionalModel) {
 		assert outcome != null && stats != null;
 		this.outcome = outcome;
 		this.stats = stats;
@@ -117,7 +120,7 @@ public final class MinSolution{
 	 * Returns a new Solution with a UNSATISFIABLE outcome, given stats and proof.
 	 * @return {s: Solution | s.outcome() = UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
-	static MinSolution unsatisfiable(MinStatistics stats, MinProof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+	static MinSolution unsatisfiable(MinStatistics stats, Proof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
 		return new MinSolution(Outcome.UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
 	}
 	
@@ -125,7 +128,7 @@ public final class MinSolution{
 	 * Returns a new Solution with a TRIVIALLY_UNSATISFIABLE outcome, given stats and proof.
 	 * @return {s: Solution | s.outcome() = TRIVIALLY_UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
-	static MinSolution triviallyUnsatisfiable(MinStatistics stats, MinProof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
+	static MinSolution triviallyUnsatisfiable(MinStatistics stats, Proof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
 		return new MinSolution(Outcome.TRIVIALLY_UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
 	}
 		
@@ -169,7 +172,7 @@ public final class MinSolution{
 	 * Otherwise, null is returned.  
 	 * @return a proof of this.formula's unsatisfiability, if  one is available.
 	 */
-	public MinProof proof() {
+	public Proof proof() {
 		return proof;
 	}
 	

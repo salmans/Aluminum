@@ -53,11 +53,11 @@ import kodkod.ast.operator.FormulaOperator;
 import kodkod.engine.CapacityExceededException;
 import kodkod.engine.Evaluator;
 import minsolver.ExplorationException;
-import minsolver.MinProof;
+import minsolver.Proof;
 import minsolver.MinSATSolverFactory;
 import minsolver.MinSolution;
 import minsolver.MinSolver;
-import minsolver.MyReporter;
+import minsolver.MinReporterToGatherSkolemBounds;
 import kodkod.engine.config.Options;
 import minsolver.fol2sat.TranslationRecord;
 import minsolver.fol2sat.MinTranslator;
@@ -310,7 +310,7 @@ public final class MinA4Solution {
         } else*/ {
             //solver.options().setSolver(SATFactory.DefaultSAT4J); // Even for "KK" and "CNF", we choose SAT4J here; later, just before solving, we'll change it to a Write2CNF solver
             //Set MinSATSolverFactory to set the solver's SAT solver.
-        	MyReporter myReporter = new MyReporter();
+        	MinReporterToGatherSkolemBounds myReporter = new MinReporterToGatherSkolemBounds();
             solver.options().setSolver(new MinSATSolverFactory(myReporter));
             solver.options().setReporter(myReporter);
         }
@@ -940,7 +940,7 @@ public final class MinA4Solution {
         //final Reporter oldReporter = solver.options().reporter();
         final boolean solved[] = new boolean[]{true};
         //AbstractReporter -> MyReporter
-        solver.options().setReporter(new MyReporter() { // Set up a reporter to catch the type+pos of skolems
+        solver.options().setReporter(new MinReporterToGatherSkolemBounds() { // Set up a reporter to catch the type+pos of skolems
             @Override public void skolemizing(Decl decl, Relation skolem, List<Decl> predecl) {
                 try {
                     Type t=kv2typepos(decl.variable()).a;
@@ -979,7 +979,7 @@ public final class MinA4Solution {
        /* if (inst==null && solver.options().solver()==SATFactory.MiniSatProver) {
            try {
               lCore = new LinkedHashSet<Node>();
-              MinProof p = sol.proof();
+              Proof p = sol.proof();
               if (sol.outcome()==UNSATISFIABLE) {
                  // only perform the minimization if it was UNSATISFIABLE, rather than TRIVIALLY_UNSATISFIABLE
                  int i = p.highLevelCore().size();

@@ -7,14 +7,14 @@ import org.sat4j.minisat.SolverFactory;
 
 public class MinSATSolverFactory extends SATFactory
 {   
-	private MyReporter theReporter; 
+	private MinReporterToGatherSkolemBounds theReporter; 
 
 	public MinSATSolverFactory()
 	{
 		super();
 	}
 	
-	public MinSATSolverFactory(MyReporter theReporter)
+	public MinSATSolverFactory(MinReporterToGatherSkolemBounds theReporter)
 	{
 		super();
 		this.theReporter = theReporter;

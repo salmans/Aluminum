@@ -150,7 +150,7 @@ public final class MinSolver {
 	 * @see Cost
 	 */
 /*	public MinSolution solve(Formula formula, Bounds bounds, Cost cost)
-			throws MinHigherOrderDeclException, UnboundLeafException, MinAbortedException {
+			throws MinHigherOrderDeclException, UnboundLeafException, AbortedException {
 		if (options.logTranslation()>0 || !options.solver().minimizer())
 			throw new IllegalStateException();
 		
@@ -176,14 +176,14 @@ public final class MinSolver {
 			final boolean isSat = cnf.solve();
 			final long endSolve = System.currentTimeMillis();
 
-			final MinStatistics stats = new MinStatistics(translation, endTransl - startTransl, endSolve - startSolve);
+			final Statistics stats = new Statistics(translation, endTransl - startTransl, endSolve - startSolve);
 			
 			return isSat ? sat(bounds, translation, stats) : unsat(translation, stats);
 		} catch (TrivialFormulaException trivial) {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(bounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
-			throw new MinAbortedException(sae);
+			throw new AbortedException(sae);
 		}
 	}*/
 
@@ -209,7 +209,7 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public MinSolution solve(Formula formula, Bounds origBounds)
-			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+			throws HigherOrderDeclException, UnboundLeafException, AbortedException {
 		final long startTransl = System.currentTimeMillis();
 		
 		try {		
@@ -231,7 +231,7 @@ public final class MinSolver {
 			final long endTransl = System.currentTimeMillis();
 			return trivial(origBounds, trivial, endTransl - startTransl);
 		} catch (SATAbortedException sae) {
-			throw new MinAbortedException(sae);
+			throw new AbortedException(sae);
 		}
 	}
 	
@@ -259,7 +259,7 @@ public final class MinSolver {
 	 * @see Proof
 	 */
 	public Iterator<MinSolution> solveAll(final Formula formula, final Bounds origBounds) 
-		throws HigherOrderDeclException, UnboundLeafException, MinAbortedException {
+		throws HigherOrderDeclException, UnboundLeafException, AbortedException {
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
 						
@@ -278,13 +278,13 @@ public final class MinSolver {
 	 * @return a new iterator over the augmented models.
 	 * @throws MinHigherOrderDeclException
 	 * @throws UnboundLeafException
-	 * @throws MinAbortedException
+	 * @throws AbortedException
 	 */
 	//TODO in a refined implementation, we don't need the formula and bound since we have the translation 
 	//via previous iterator.
 	public MinSolutionIterator augment(final Formula formula, Iterator<MinSolution> prevIterator, 
 			Instance augmentWith)
-			throws HigherOrderDeclException, UnboundLeafException, MinAbortedException, ExplorationException {
+			throws HigherOrderDeclException, UnboundLeafException, AbortedException, ExplorationException {
 		
 		if (!options.solver().incremental())
 			throw new IllegalArgumentException("cannot enumerate solutions without an incremental solver.");
@@ -308,7 +308,7 @@ public final class MinSolver {
 		}
 		
 		// Augmenting is always performed on skolemBounds.
-		Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;
+		Bounds skBounds = ((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds;
 		
 		ArrayList<Integer> allAugments = new ArrayList<Integer>();
 		
@@ -364,7 +364,7 @@ public final class MinSolver {
 		if(theIterator.trivial)
 		{
 			// No translation available to augment. Get the upper bounds - the lower bounds:
-			Bounds skBounds = ((MyReporter)options.reporter()).skolemBounds;			
+			Bounds skBounds = ((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds;			
 			Instance results = new Instance(skBounds.universe());			
 			for(Relation r : skBounds.relations())
 			{				
@@ -379,7 +379,7 @@ public final class MinSolver {
 
 		// If not trivial, go through the propositional translation
 		return MinTwoWayTranslator.translatePropositions(
-				theIterator.translation, ((MyReporter)theIterator.options.reporter()).skolemBounds,
+				theIterator.translation, ((MinReporterToGatherSkolemBounds)theIterator.options.reporter()).skolemBounds,
 				theIterator.mapVarToRelation,
 				theIterator.getConsistentFacts()); 
 	}
@@ -415,7 +415,7 @@ public final class MinSolver {
 		MinSolutionIterator miniterator = ((MinSolutionIterator)iterator);
 		MinTranslation translation = miniterator.translation;	
 		
-		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
+		Bounds bounds = ((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds;
 		
 		// Keeps the pattern of the output when a NEW is involved. The outputs that have
 		// repetitive patterns will be discarded.
@@ -561,7 +561,7 @@ public final class MinSolver {
 			stringComponentsGiven.add(tokenizer.nextToken().trim());
 		}
 
-		Bounds bounds = ((MyReporter)options.reporter()).skolemBounds;
+		Bounds bounds = ((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds;
 		
 		Set<Relation> relations = bounds.relations();
 		Relation relation = null;
@@ -672,7 +672,7 @@ public final class MinSolver {
 	 * Returns the bounds after skolemization.
 	 */
 	public Bounds getSkolemBounds(){
-		return ((MyReporter)options.reporter()).skolemBounds;
+		return ((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds;
 	}
 	
 	/**
@@ -705,13 +705,14 @@ public final class MinSolver {
 	private static MinSolution unsat(MinTranslation translation, MinStatistics stats) {
 		final SATSolver cnf = translation.cnf();
 		final TranslationLog log = translation.log();
-		if (cnf instanceof SATProver && log != null) {
-			return MinSolution.unsatisfiable(stats, new MinResolutionBasedProof((SATProver) cnf, log), null, null);
-		} else { // can free memory
+		// Never instanceof SATProver in aluminum
+		//if (cnf instanceof SATProver && log != null) {
+		//	return MinSolution.unsatisfiable(stats, new ResolutionBasedProof((SATProver) cnf, log), null, null);
+		//} else { // can free memory
 			final MinSolution sol = MinSolution.unsatisfiable(stats, null, null, null);
 			//cnf.free();
 			return sol;
-		}
+		//}
 	}
 	
 	/**
@@ -748,8 +749,8 @@ public final class MinSolver {
 	 * @return a proof for the trivially unsatisfiable log.formula,
 	 * provided that log is non-null.  Otherwise returns null.
 	 */
-	private static MinProof trivialProof(TranslationLog log) {
-		return log==null ? null : new MinTrivialProof(log);
+	private static Proof trivialProof(TranslationLog log) {
+		return log==null ? null : new TrivialProof(log);
 	}
 	
 	/**
@@ -989,7 +990,7 @@ public final class MinSolver {
 				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
 				if (isSat) {
 					int[] propositionalModel = translation.cnf().getLastModel().clone();
-					MyReporter reporter = (MyReporter)options.reporter();
+					MinReporterToGatherSkolemBounds reporter = (MinReporterToGatherSkolemBounds)options.reporter();
 					MinimizationHistory history = null;
 					if(extraOptions.logMinimizationHistory())
 						history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), 
@@ -1003,7 +1004,7 @@ public final class MinSolver {
 					return unsatSolution;
 				}
 			} catch (SATAbortedException sae) {
-				throw new MinAbortedException(sae);
+				throw new AbortedException(sae);
 			}
 		}
 		
@@ -1151,7 +1152,7 @@ public final class MinSolver {
 					//We use this data structure for translation:
 					//mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, bounds);
 					mapVarToRelation = MinTwoWayTranslator.buildVarToRelationMap(translation, 
-							((MyReporter)options.reporter()).skolemBounds);
+							((MinReporterToGatherSkolemBounds)options.reporter()).skolemBounds);
 					
 					// Print the translation (DEBUG ONLY!)
 					//String transStr = MinTwoWayTranslator.printTranslation(translation, 
@@ -1329,7 +1330,7 @@ public final class MinSolver {
 				computeDifference(modelBeforeMinimization, modelAfterMinimization);
 			}
 			
-			((MyReporter)options.reporter()).setIterations(iterationCounter);
+			((MinReporterToGatherSkolemBounds)options.reporter()).setIterations(iterationCounter);
 						
 			if(!isAugmented()) //if the iterator is NOT an augmentation, activate SBP.
 				theSolver.activateSBP();
@@ -1352,7 +1353,7 @@ public final class MinSolver {
 			int reducedAttributes = 0;
 			int reducedRelations = 0;
 			
-			MyReporter reporter = (MyReporter)options.reporter();
+			MinReporterToGatherSkolemBounds reporter = (MinReporterToGatherSkolemBounds)options.reporter();
 			
 			Set<Object> atomsBeforeMinimization = new LinkedHashSet<Object>();
 			Set<Object> atomsAfterMinimization = new LinkedHashSet<Object>();

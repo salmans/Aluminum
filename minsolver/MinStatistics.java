@@ -1,4 +1,3 @@
-package minsolver;
 /* 
  * Kodkod -- Copyright (c) 2005-2007, Emina Torlak
  *
@@ -20,7 +19,12 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+package minsolver;
+
 import minsolver.fol2sat.MinTranslation;
+
+// ALUMINUM: Needed to accept a MinTranslation, which cannot extend Translation
+// since Translation is final
 
 /**
  * Stores the statistics gathered while solving

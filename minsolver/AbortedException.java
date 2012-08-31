@@ -1,4 +1,3 @@
-package minsolver;
 /* 
  * Kodkod -- Copyright (c) 2005-2007, Emina Torlak
  *
@@ -20,39 +19,40 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+package minsolver;
 
 /**
  * Indicates that a solving or evaluation task has been aborted
  * by calling Thread.interrupt on the solving (evaluation) thread.
  * @author Emina Torlak
  */
-public final class MinAbortedException extends RuntimeException {
+public final class AbortedException extends RuntimeException {
 
 	private static final long serialVersionUID = 201522560152091247L;
 
 	/**
 	 * Constructs an aborted exception with no message.
 	 */
-	MinAbortedException() {}
+	AbortedException() {}
 
 	/**
 	 * Constructs an aborted exception with the given message.
 	 */
-	MinAbortedException(String message) {
+	AbortedException(String message) {
 		super(message);
 	}
 
 	/**
 	 * Constructs an aborted exception with the given cause.
 	 */
-	MinAbortedException(Throwable cause) {
+	AbortedException(Throwable cause) {
 		super(cause); 
 	}
 
 	/**
 	 * Constructs an aborted exception with the given message and cause.
 	 */
-	MinAbortedException(String message, Throwable cause) {
+	AbortedException(String message, Throwable cause) {
 		super(message, cause);
 	}
 

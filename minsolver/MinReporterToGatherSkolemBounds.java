@@ -11,7 +11,7 @@ import kodkod.engine.config.Reporter;
 import kodkod.instance.Bounds;
 import kodkod.util.ints.IntSet;
 
-public class MyReporter implements Reporter
+public class MinReporterToGatherSkolemBounds implements Reporter
 {
 	Bounds skolemBounds = null; 
 	private int primaryVars;

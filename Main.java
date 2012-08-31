@@ -637,7 +637,7 @@ public class Main {
 		Formula fmla = fs.getFmla();
 		Bounds b = fs.getBounds();
 		
-		MyReporter rep = new MyReporter();		
+		MinReporterToGatherSkolemBounds rep = new MinReporterToGatherSkolemBounds();		
 		
 		// Invoking the solver
 		MinSolver solver = new MinSolver();
@@ -855,7 +855,7 @@ public class Main {
 		Formula fmla = fs.getFmla();
 		Bounds bnds = fs.getBounds();
 		
-		MyReporter rep = new MyReporter();		
+		MinReporterToGatherSkolemBounds rep = new MinReporterToGatherSkolemBounds();		
 		
 		// Invoking the solver
 		MinSolver minSolver = new MinSolver();

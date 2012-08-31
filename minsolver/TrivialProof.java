@@ -1,9 +1,14 @@
 package minsolver;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import minsolver.fol2sat.RecordFilter;
+import minsolver.fol2sat.TranslationLog;
+import minsolver.fol2sat.TranslationRecord;
 
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.ComparisonFormula;
@@ -19,9 +24,6 @@ import kodkod.ast.QuantifiedFormula;
 import kodkod.ast.RelationPredicate;
 import kodkod.ast.Variable;
 import kodkod.ast.visitor.AbstractVoidVisitor;
-import minsolver.fol2sat.RecordFilter;
-import minsolver.fol2sat.TranslationLog;
-import minsolver.fol2sat.TranslationRecord;
 import kodkod.engine.satlab.ReductionStrategy;
 import kodkod.instance.TupleSet;
 import kodkod.util.collections.IdentityHashSet;
@@ -35,7 +37,7 @@ import kodkod.util.ints.TreeSequence;
  *  
  * @author Emina Torlak
  */
-final class MinTrivialProof extends MinProof {
+final class TrivialProof extends Proof {
 	private Map<Formula,Node> coreRoots;
 	private RecordFilter coreFilter;
 	
@@ -45,7 +47,7 @@ final class MinTrivialProof extends MinProof {
 	 * @requires log != null
 	 * @effects this.formula' = log.formula
 	 */
-	MinTrivialProof(TranslationLog log) {
+	TrivialProof(TranslationLog log) {
 		super(log);
 		this.coreFilter = null;
 		this.coreRoots = null;
@@ -159,6 +161,7 @@ final class MinTrivialProof extends MinProof {
 		 * Constructs a proof finder for the given log.
 		 * @effects this.log' = log
 		 */
+		@SuppressWarnings("unchecked")
 		NodePruner(TranslationLog log) {
 			visited = new IdentityHashSet<Node>();
 			relevant = new IdentityHashSet<Node>();

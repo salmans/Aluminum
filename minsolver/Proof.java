@@ -1,4 +1,3 @@
-package minsolver;
 /* 
  * Kodkod -- Copyright (c) 2005-2007, Emina Torlak
  *
@@ -20,14 +19,14 @@ package minsolver;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+package minsolver;
+
 import java.util.Iterator;
 import java.util.Map;
-
+import minsolver.fol2sat.*;
 import kodkod.ast.Formula;
 import kodkod.ast.Node;
 import kodkod.engine.config.Options;
-import minsolver.fol2sat.TranslationLog;
-import minsolver.fol2sat.TranslationRecord;
 import kodkod.engine.satlab.ReductionStrategy;
 import kodkod.util.nodes.Nodes;
 
@@ -37,14 +36,14 @@ import kodkod.util.nodes.Nodes;
  * 
  * @specfield log: TranslationLog // log of the translation of this.formula with respect to this.bounds
  */
-public abstract class MinProof {
+public abstract class Proof {
 	private final TranslationLog log;
 	
 	/**
 	 * Constructs a new Proof of unsatisfiability for log.formula.
 	 * @effects this.log = log
 	 */
-	MinProof(TranslationLog log) {
+	Proof(TranslationLog log) {
 		this.log = log;
 	}
 	
