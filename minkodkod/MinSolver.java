@@ -47,7 +47,6 @@ import kodkod.engine.config.Options;
 import minkodkod.MinSolution.MinimizationHistory;
 import minkodkod.engine.fol2sat.*;
 import kodkod.engine.satlab.SATAbortedException;
-import kodkod.engine.satlab.SATProver;
 import kodkod.engine.satlab.SATSolver;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
@@ -703,8 +702,8 @@ public final class MinSolver {
 	 * @return the result of solving an unsat formula.
 	 */
 	private static MinSolution unsat(MinTranslation translation, MinStatistics stats) {
-		final SATSolver cnf = translation.cnf();
-		final TranslationLog log = translation.log();
+		//final SATSolver cnf = translation.cnf();
+		//final TranslationLog log = translation.log();
 		// Never instanceof SATProver in aluminum
 		//if (cnf instanceof SATProver && log != null) {
 		//	return MinSolution.unsatisfiable(stats, new ResolutionBasedProof((SATProver) cnf, log), null, null);

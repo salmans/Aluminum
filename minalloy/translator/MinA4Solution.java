@@ -20,7 +20,6 @@ import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.SIGINT;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.SEQIDX;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.STRING;
 import static edu.mit.csail.sdg.alloy4compiler.ast.Sig.NONE;
-import static minkodkod.MinSolution.Outcome.UNSATISFIABLE;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -57,11 +56,8 @@ import minkodkod.MinReporterToGatherSkolemBounds;
 import minkodkod.MinSATSolverFactory;
 import minkodkod.MinSolution;
 import minkodkod.MinSolver;
-import minkodkod.Proof;
 import minkodkod.engine.fol2sat.MinTranslator;
-import minkodkod.engine.fol2sat.TranslationRecord;
 import kodkod.engine.config.Options;
-import kodkod.engine.satlab.SATFactory;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
@@ -973,6 +969,8 @@ public final class MinA4Solution {
 
         if (!solved[0]) rep.solve(0, 0, 0);
         final Instance inst = sol.instance();
+        
+        // Aluminum: Never using MiniSatProver
         // To ensure no more output during SolutionEnumeration
         //solver.options().setReporter(oldReporter);
         // If unsatisfiable, then retreive the unsat core if desired

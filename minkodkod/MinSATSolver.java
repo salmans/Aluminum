@@ -652,6 +652,7 @@ public final class MinSATSolver implements SATSolver {
 	public String printConstraints()
 	{
 		// For debug: print out the clauses...
+		@SuppressWarnings("rawtypes")
 		org.sat4j.minisat.core.Solver aSolver = (org.sat4j.minisat.core.Solver) this.solver;
 		
 		String s = "";
