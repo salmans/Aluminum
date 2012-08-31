@@ -1,4 +1,4 @@
-Modified: August 30th 2012 (TN)
+Modified: August 31st 2012 (TN)
 
 This document describes the classes we added to Kodkod in order to
 produce minimal models and allow augmentation of those models.
@@ -21,11 +21,11 @@ CAVEATS:
 * The new classes are just modifications to the originals.  Where
 Kodkod has Solver, we have MinSolver. SolutionIterator becomes
 MinSolutionIterator, and so on. Since many of Kodkod's classes were
-final, we circumvented that restriction by duplicating quite a few
-classes, giving them the "Min" prefix, rather than extending them,
-which would have avoided a great deal of duplicate code: many of the
-files in the current repo do not contain any actual changes
-vs. kodkod.
+final, we duplicate some code (e.g. Solver and MinSolver). Since many
+of Kodkod's fields and constructors are not accessible from outside
+the Kodkod package, our package (minkodkod) contains verbatim copies
+of some Kodkod files. Files that we have modified have the "Min"
+prefix; others can be ignored.
 
 * Our code only uses SAT4J, not any of the other solvers that Kodkod
 supports. To support other solvers, some additional work would be
@@ -44,7 +44,7 @@ constraints (removeAllConstraints()).
 
 IMPLEMENTATION:
 
-All kodkod-level changes are confined to the minsolver/ directory of
+All kodkod-level changes are confined to the minkodkod/ directory of
 the repository. The minalloy/ directory contains the UI changes we
 made to Alloy.
 
@@ -63,9 +63,11 @@ produces. This required some changes to the fol2sat package:
   This is not without performance cost; by splitting the two formulas
   we sacrifice some simplification.
 
-* MinSATSolver.java is our wrapper for SAT4J, analogous to the
-  SATSolver class in kodkod. We added the ability to add/remove the
-  SBP's clauses via its activateSBP() and deactivateSBP() methods.
+and in the root minkodkod package:
+
+* MinSATSolver.java is our wrapper for SAT4J, and it implements the
+  SATSolver interface from Kodkod. We added the ability to add/remove
+  the SBP's clauses via its activateSBP() and deactivateSBP() methods.
 
 ----------------------------------------
 
