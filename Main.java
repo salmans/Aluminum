@@ -3,7 +3,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
 
-import minsolver.*;
+import minkodkod.*;
 
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.TimeoutException;

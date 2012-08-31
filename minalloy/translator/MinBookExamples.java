@@ -15,8 +15,8 @@
 
 package minalloy.translator;
 
-import static minsolver.MinSolution.Outcome.SATISFIABLE;
-import static minsolver.MinSolution.Outcome.TRIVIALLY_SATISFIABLE;
+import static minkodkod.MinSolution.Outcome.SATISFIABLE;
+import static minkodkod.MinSolution.Outcome.TRIVIALLY_SATISFIABLE;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
@@ -24,8 +24,8 @@ import kodkod.ast.BinaryExpression;
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.ast.Expression;
-import minsolver.MinSolver;
-import minsolver.MinSolution;
+import minkodkod.MinSolution;
+import minkodkod.MinSolver;
 import kodkod.engine.satlab.SATFactory;
 import kodkod.instance.Bounds;
 import kodkod.instance.Tuple;

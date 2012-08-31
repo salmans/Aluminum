@@ -33,8 +33,8 @@ import test.translator.TranslateAlloyToKodkod;
 import minalloy.translator.MinA4Options;
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinTranslateAlloyToKodkod;
-import minsolver.ExplorationException;
-import minsolver.MinSolution.MinimizationHistory;
+import minkodkod.ExplorationException;
+import minkodkod.MinSolution.MinimizationHistory;
 
 
 public final class ExecutionTimeRecorder {

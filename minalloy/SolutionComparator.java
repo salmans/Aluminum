@@ -8,7 +8,7 @@ import kodkod.engine.Solution;
 import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleSet;
-import minsolver.MinSolution;
+import minkodkod.MinSolution;
 
 public class SolutionComparator {
 	public static final int INCOMPARABLE = 2;

@@ -32,7 +32,7 @@ import test.translator.TranslateAlloyToKodkod;
 import minalloy.translator.MinA4Options;
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinTranslateAlloyToKodkod;
-import minsolver.MinSolution;
+import minkodkod.MinSolution;
 
 
 public final class AluminumTester {

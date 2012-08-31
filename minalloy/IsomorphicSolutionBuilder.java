@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import minsolver.MinSolution;
-import minsolver.MinSolutionFactory;
-import minsolver.fol2sat.MinSymmetryDetectorDelegate;
+import minkodkod.MinSolution;
+import minkodkod.MinSolutionFactory;
+import minkodkod.engine.fol2sat.MinSymmetryDetectorDelegate;
 import kodkod.ast.Relation;
 import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
