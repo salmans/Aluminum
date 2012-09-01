@@ -54,6 +54,8 @@ made to Alloy.
 
 ----------------------------------------
 
+KEEPING THE SYMMETRY-BREAKING PREDICATE SEPARATE
+
 Some of our changes required separating out the CNF for the original
 sentence and the symmetry-breaking predicate that Kodkod
 produces. This required some changes to the fol2sat package:
@@ -76,6 +78,8 @@ and in the root minkodkod package:
   the SBP's clauses via its activateSBP() and deactivateSBP() methods.
 
 ----------------------------------------
+
+PRODUCING MINIMAL MODELS
 
 MinSolver.java produces iterators (MinSolutionIterator) over only the
 <=-minimal instances. The actual minimization is done in the iterator
@@ -113,6 +117,8 @@ vs. addPermConeRestriction().
 
 ---------------------------------------- 
 
+GETTING ALL CONSISTENT FACTS
+
 Given an instance I, a consistent-fact of I is a relational fact F
 that is *not* true in I, but for which there exists an I' > I where F
 is true. 
@@ -128,6 +134,8 @@ We disable symmetry-breaking via deactivateSBP() when computing this
 set. (I can give more detail here if desired.)
 
 ---------------------------------------- 
+
+AUGMENTING MODELS WITH CONSISTENT FACTS
 
 MinSolver can "augment" the latest model of one of its iterators with
 a relational fact F, producing a *new* iterator for the models that are
