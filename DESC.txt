@@ -1,4 +1,5 @@
 Modified: August 31st 2012 (TN)
+Contact: tn@cs.wpi.edu
 
 This document describes the classes we added to Kodkod in order to
 produce minimal models and allow augmentation of those models.
@@ -27,6 +28,9 @@ the Kodkod package, our package (minkodkod) contains verbatim copies
 of some Kodkod files. Files that we have modified have the "Min"
 prefix; others can be ignored.
 
+New classes describe their purpose in their javadoc, or in a comment
+marked "ALUMINUM:" after the imports in the file.
+
 * Our code only uses SAT4J, not any of the other solvers that Kodkod
 supports. To support other solvers, some additional work would be
 needed.
@@ -39,7 +43,7 @@ are not permanently learned by the solver.
 * In our prototype code, all MinSolutionIterators share the same SAT4J
 instance. More details on this decision follow, but this is why you
 will see calls to e.g. reclaim the solver (claimSATSolver()) or remove
-constraints (removeAllConstraints()).
+constraints (removeAllConstraints()) in iterator code.
 
 
 IMPLEMENTATION:
@@ -61,7 +65,9 @@ produces. This required some changes to the fol2sat package:
   MinBool2CNFTranslator.java keep the original CNF and the SBP's CNF
   separate rather than conjoining them in the Boolean-circuit stage.
   This is not without performance cost; by splitting the two formulas
-  we sacrifice some simplification.
+  we sacrifice some simplification. Without this change, minimization
+  is profoundly unsound. So enabling minimization should probably be
+  an option.
 
 and in the root minkodkod package:
 
@@ -89,20 +95,21 @@ symmetry-breaking predicate as well. So we keep the two separate as
 mentioned above, and minimize() calls deactivateSBP() before trying to
 minimize.
 
-* Where Kodkod would issue a clause with the negation of the diagram
-of M ("Never give me this model again"), we issue the negation of the
-positive diagram of M ("Never give me a model >= this one."); we call
-this the "cone-restriction" clause in some of the comments. Each
-iterator remembers its cone-restriction clauses
+* Of course, we make sure that minimal models are never
+repeated. Where Kodkod would issue a clause with the negation of the
+diagram of M ("Never give me this model again"), we issue the negation
+of the positive diagram of (minimal) M ("Never give me a model >= this
+one."); we call this the "cone-restriction" clause in some of the
+comments. Each iterator remembers its cone-restriction clauses
 (MinSolutionIterator.coneRestrictionClauses). This is done in the
 nonTrivialSolution() method of MinSolutionIterator.
 
 * We issue additional cone restriction clauses in an attempt to rule
-out isomorphic models that were admitted by disabling the SBP for
-minimization. We call these the "shadow" or "perm" clauses in some of
-the comments. The cone-restriction clause and the shadow clauses are
-added separately via calls to addConeRestriction() vs. addPerm
-ConeRestriction().
+out isomorphic models admitted by disabling the SBP for
+minimization. We call these the "shadow" or "permutation" clauses in
+some of the comments. The cone-restriction clause and the shadow
+clauses are added separately via calls to addConeRestriction()
+vs. addPermConeRestriction().
 
 ---------------------------------------- 
 

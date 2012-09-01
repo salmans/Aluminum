@@ -27,17 +27,15 @@ import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
 import kodkod.instance.TupleSet;
 
-// ALUMINUM: Keep track of statistics on minimization. Also the
-// new sanitizeToBounds() method used for our test cases.
-
 /**
+ * From Kodkod Javadoc:
  * Represents the full solution to a formula:  an
  * instance if the formula is satisfiable or a
  * proof of unsatisfiability if not.
  * 
- * @specfield formula: Formula // the formula being solved
- * @specfield bounds: Bounds // the bounds on the formula
- * @author Emina Torlak
+ * ALUMINUM: Keep track of statistics on minimization. Also the
+ * new sanitizeToBounds() method used for our test cases.
+ * 
  */
 public final class MinSolution{
 	public static class MinimizationHistory{

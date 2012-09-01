@@ -37,11 +37,10 @@ import org.sat4j.specs.IVecInt;
 import org.sat4j.specs.IteratorInt;
 
 /**
- * A wrapper class that provides
- * access to the basic funcionality of the MiniSAT solvers
- * (org.sat4j.specs.ISolver) from CRIL. 
- * 
- * @author Emina Torlak
+ * Implementor of Kodkod's SATSolver interface. Used as a wrapper atop SAT4J, 
+ * but more importantly this class allows the caller to activate and deactivate
+ * all symmetry-breaking clauses. Also stores the last propositional model seen
+ * for use by consistent-fact generation. 
  */
 public final class MinSATSolver implements SATSolver {
 	private ISolver solver;

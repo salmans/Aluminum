@@ -11,6 +11,12 @@ import kodkod.engine.config.Reporter;
 import kodkod.instance.Bounds;
 import kodkod.util.ints.IntSet;
 
+/**
+ * Implementor of Kodkod's Reporter interface; used to acquire the post-Skolemization
+ * Bounds that Kodkod creates internally. Also used to count minimization statistics.
+ * @author Tim
+ *
+ */
 public class MinReporterToGatherSkolemBounds implements Reporter
 {
 	Bounds skolemBounds = null; 

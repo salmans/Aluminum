@@ -5,6 +5,9 @@ import kodkod.engine.satlab.SATSolver;
 
 import org.sat4j.minisat.SolverFactory;
 
+/**
+ * Factory to produce MinSATSolver instances. 
+ */
 public class MinSATSolverFactory extends SATFactory
 {   
 	private MinReporterToGatherSkolemBounds theReporter; 
