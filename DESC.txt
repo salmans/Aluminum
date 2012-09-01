@@ -2,7 +2,14 @@ Modified: August 31st 2012 (TN)
 Contact: tn@cs.wpi.edu
 
 This document describes the classes we added to Kodkod in order to
-produce minimal models and allow augmentation of those models.
+produce minimal models and allow augmentation of those models. 
+
+ADVANTAGES:
+
+Aluminum (our modified version of Alloy that produces minimal models)
+required these changes to Kodkod, and only some UI alterations to
+Alloy otherwise. With these changes, Aluminum could use Kodkod
+out-of-the-box to produce models and perform augmentation.
 
 THEORY: 
 
