@@ -1384,15 +1384,24 @@ public final class SimpleGUI implements ComponentListener, Listener {
     private Runner doAboutAluminum() {
        if (wrap) return wrapMe();
        OurDialog.showmsg("About Aluminum Analyzer " + AluminumVersion.version() +  " (based on Alloy Analyzer" + Version.version() + ")",
-             OurUtil.loadIcon("resources/wpi_logo.png"),
+
+    		   // Aluminum is a WPI/Brown collaboration, so don't want to just show a single logo.
+    		   // Instead, just use the Al logo:
+    		   OurUtil.loadIcon("resources/aluminum_logo.png"),
              "Aluminum Analyzer ",
-             "Birth date: July 2012",
+             "Version: "+AluminumVersion.version(),
+             "Built on: "+AluminumVersion.buildDate(),
              " ",
+             "Project Members: ",
+             " ",
+             "Tim Nelson",
+             "Salman Saghafi", 
              "Dan Dougherty",
-             "Kathi Fisler",
-             "Salman Saghafi",
+             "Kathi Fisler",             
              "Shriram Krishnamurthi",
-             "Tim Nelson"
+             " ",
+             "Please direct questions and comments to: ",
+             "tn@cs.wpi.edu"
        );
        return null;
     }
@@ -1400,7 +1409,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** This method displays the about box. */
     private Runner doAbout() {
        if (wrap) return wrapMe();
-       OurDialog.showmsg("About Alloy Analyzer " + Version.version(),
+       OurDialog.showmsg(
+    		   "The Aluminum Analyzer is based on the Alloy Analyzer:",
+    		   " ",
+    		   
+    		 "About Alloy Analyzer " + Version.version(),
              OurUtil.loadIcon("images/logo.gif"),
              "Alloy Analyzer " + Version.version(),
              "Build date: " + Version.buildDate(),
@@ -1485,6 +1498,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
            }
         };
         OurDialog.showmsg("Copyright Notices",
+        	  "The source code for Aluminum is available under the MIT license.",
+        	  " ",
               "The source code for the Alloy Analyzer is available under the MIT license.",
               " ",
               "The Alloy Analyzer utilizes several third-party packages whose code may",
@@ -1584,7 +1599,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
             SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, Verbosity.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
             SimpleTask2 task = new SimpleTask2();
-            task.filename = arg;
+            task.filename = arg;                       
+            
+            
+            
+            log.log("Attempting to fetch another minimal instance...\n");
+            
             try {
                 WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
             } catch(Throwable ex) {
@@ -1597,7 +1617,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 log.flush();
                 doStop(2);
                 return arg;
-            }
+            }           	
+            
             subrunningTask=2;
             runmenu.setEnabled(false);
             runbutton.setVisible(false);
@@ -1953,9 +1974,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
             windowmenu  = menu(bar,  "&Window",  doRefreshWindow(false));
             windowmenu2 = menu(null, "&Window",  doRefreshWindow(true));
             helpmenu    = menu(bar,  "&Help",    null);
-            if (!Util.onMac()) menuItem(helpmenu, "About Alloy...", 'A', doAbout());
-            menuItem(helpmenu, "About Aluminum...", 'M', doAboutAluminum());            
-            menuItem(helpmenu, "Quick Guide",                       'Q', doHelp());
+            menuItem(helpmenu, "About Aluminum...", 'M', doAboutAluminum());
+            //if (!Util.onMac()) menuItem(helpmenu, "About Alloy...", 'A', doAbout());
+            //menuItem(helpmenu, "Quick Guide",                       'Q', doHelp());
             menuItem(helpmenu, "See the Copyright Notices...",      'L', doLicense());
         } finally {
             wrap = false;

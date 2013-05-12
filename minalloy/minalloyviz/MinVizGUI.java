@@ -565,7 +565,8 @@ public final class MinVizGUI implements ComponentListener {
       consistentFactsButton.setVisible(!isMeta && settingsOpen==0 && consistentFactsFinder!=null);
       backtrackButton.setVisible(!isMeta && settingsOpen==0 && backtracker!=null);
       saveModelButton.setVisible(!isMeta && settingsOpen==0);
-      toolbar.setVisible(true);
+      toolbar.setVisible(true);            
+      
       // Now, generate the graph or tree or textarea that we want to display on the right
       if (frame!=null) frame.setTitle(makeVizTitle());
       switch (currentMode) {
