@@ -493,3 +493,6 @@ public final class AluminumTester {
 
 // -i "c:\Users\Tim\research\wpi-brown\projects\aluminum\examples\misc\addressbook\addressBook2a.als" -o testout.txt -iso
 // -i "c:\Users\Tim\research\wpi-brown\projects\aluminum\examples\change-impact\continue-small1.als" -o testout.txt -iso
+
+// Without -iso here, there is an immediate mismatch. Don't panic: it's just because no iso.
+// -i "C:\Users\Tim\research\dj-git\test-git-sizes.als" -o "C:\Users\Tim\research\dj-git\testout.txt" -dl "C:\Users\Tim\research\dj-git\dl.txt"
