@@ -187,6 +187,12 @@ public final class ExecutionTimeRecorder {
     		System.out.println("Command: "+command + "-------------\n");
     		output.add("Command:\t" + command.toString() + "-------------\n");
     		
+    		if(command.check)
+    		{
+    			output.add("Skipped check.\n");
+    			continue;
+    		}
+    		
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
             int lineNumber = output.size();
     		
@@ -400,7 +406,10 @@ public final class ExecutionTimeRecorder {
         String info = null;
         if(logMinimizationHistory){
         	MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
-        	info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
+        	if(history != null)
+        		info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
+        	else
+        		info = "No solutions.";
         }
         else{
         	if(logConsistentFacts){
@@ -501,6 +510,12 @@ public final class ExecutionTimeRecorder {
         	System.out.println("Command: "+command + "-------------\n");
         	output.add("Command:\t" + command.toString() + "-------------\n");
 
+    		if(command.check)
+    		{
+    			output.add("Skipped check.\n");
+    			continue;
+    		}
+        	
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
             int lineNumber = output.size();
 
@@ -631,3 +646,7 @@ class AugmentationElement {
 		this.augmentingFact = augmentationFact;
 	}
 }
+
+
+//-i test/akhawe/authn.als -o test/akhawe/authn.txt  -t 1 -n 10 -cf -m
+// -i c:/users/tim/desktop/alloycnm.als -o c:/users/tim/desktop/out.txt -hist

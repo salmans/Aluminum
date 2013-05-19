@@ -22,14 +22,12 @@ import java.util.List;
 
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinA4Tuple;
+import minalloy.translator.MinA4TupleSet;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprHasName;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
-import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
-import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.OurTree;
 import edu.mit.csail.sdg.alloy4.Pair;
@@ -47,7 +45,7 @@ public final class MinVizTree extends OurTree {
    @Override public String convertValueToText(Object val, boolean selected, boolean expanded, boolean leaf, int row, boolean focus) {
       String c = ">";
       if (onWindows) c = selected ? " style=\"color:#ffffff;\">" : " style=\"color:#000000;\">";
-      if (val instanceof A4Solution) return "<html> <b" + c + encode(title==null ? "" : title)+"</b></html>";
+      if (val instanceof MinA4Solution) return "<html> <b" + c + encode(title==null ? "" : title)+"</b></html>";
       if (val instanceof Sig) {
          String label = ((Sig)val).label;
          if (label.startsWith("this/")) label = label.substring(5);
@@ -56,9 +54,9 @@ public final class MinVizTree extends OurTree {
       if (val instanceof ExprVar) return "<html> <b" + c + "set " + encode(((ExprVar)val).label) + "</b></html>";
       if (val instanceof String) return "<html> <span" + c + encode((String)val) + "</span></html>";
       if (val instanceof Pair) return "<html> <b" + c + "field " + encode(((ExprHasName)(((Pair<?,?>)val).b)).label) + "</b></html>";
-      if (val instanceof A4Tuple) {
+      if (val instanceof MinA4Tuple) {
          StringBuilder sb = new StringBuilder("<html> <span" + c);
-         A4Tuple tp = (A4Tuple) val;
+         MinA4Tuple tp = (MinA4Tuple) val;
          for(int i=1; i<tp.arity(); i++) {
             if (i>1) sb.append(" -> ");
             sb.append(encode(tp.atom(i)));
@@ -76,28 +74,28 @@ public final class MinVizTree extends OurTree {
    @Override public List<?> do_ask(Object parent) {
       List<Object> ans = new ArrayList<Object>();
       try {
-         if (parent instanceof A4Solution) {
+         if (parent instanceof MinA4Solution) {
             return toplevel;
          } else if (parent instanceof Sig || parent instanceof ExprVar) {
-            A4TupleSet ts = (A4TupleSet) (instance.eval((Expr)parent));
-            for(A4Tuple t: ts) ans.add(t.atom(0));
+            MinA4TupleSet ts = (MinA4TupleSet) (instance.eval((Expr)parent));
+            for(MinA4Tuple t: ts) ans.add(t.atom(0));
          } else if (parent instanceof String) {
             String atom = (String)parent;
             for(Sig s: instance.getAllReachableSigs()) for(Field f: s.getFields()) for(MinA4Tuple t: instance.eval(f)) {
                if (t.atom(0).equals(atom)) { ans.add(new Pair<String,ExprHasName>(atom, f)); break; }
             }
-            for(ExprVar f: instance.getAllSkolems()) if (f.type().arity()>1) for(A4Tuple t: (A4TupleSet)(instance.eval(f))) {
+            for(ExprVar f: instance.getAllSkolems()) if (f.type().arity()>1) for(MinA4Tuple t: (MinA4TupleSet)(instance.eval(f))) {
                if (t.atom(0).equals(atom)) { ans.add(new Pair<String,ExprHasName>(atom, f)); break; }
             }
          } else if (parent instanceof Pair) {
             Pair<?,?> p = (Pair<?,?>)parent;
             ExprHasName rel = (ExprHasName) (p.b);
             String atom = (String) (p.a);
-            for(A4Tuple tuple: (A4TupleSet) (instance.eval(rel))) if (tuple.atom(0).equals(atom)) {
+            for(MinA4Tuple tuple: (MinA4TupleSet) (instance.eval(rel))) if (tuple.atom(0).equals(atom)) {
                if (tuple.arity()==2) ans.add(tuple.atom(1)); else ans.add(tuple);
             }
-         } else if (parent instanceof A4Tuple) {
-            A4Tuple tp = (A4Tuple)parent;
+         } else if (parent instanceof MinA4Tuple) {
+            MinA4Tuple tp = (MinA4Tuple)parent;
             for(int i=1; i<tp.arity(); i++) if (!ans.contains(tp.atom(i))) ans.add(tp.atom(i));
             return ans; // we don't want to sort this; we want the original order
          }

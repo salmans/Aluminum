@@ -1,0 +1,20 @@
+This is the repository for Aluminum, a modified version of Alloy that
+presents only minimal instances. For more information, see:
+
+http://cs.brown.edu/~sk/Publications/Papers/Published/nsfdk-aluminum-scen-expl-min/
+
+To download the latest version, go here:
+
+http://cs.brown.edu/research/plt/dl/aluminum/
+
+
+----------------------------------
+
+Development notes:
+
+When building, make certain the SAT4j .jar is above the Alloy4 .jar in
+priority. Alloy4's .jar file contains an outdated version of
+SAT4j. One of the fixes made in recent versions is that calling
+addClause with unit clauses returns an appropriate IConstr, rather
+than null. According to the changelog, now addClause will return null
+only when the clause can be ignored.

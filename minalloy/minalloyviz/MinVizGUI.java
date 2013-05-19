@@ -63,6 +63,7 @@ import edu.mit.csail.sdg.alloy4.OurCheckbox;
 import edu.mit.csail.sdg.alloy4.OurConsole;
 import edu.mit.csail.sdg.alloy4.OurDialog;
 import edu.mit.csail.sdg.alloy4.Runner;
+import minalloy.AluminumVersion;
 import minalloy.Util;
 import edu.mit.csail.sdg.alloy4.OurUtil;
 import edu.mit.csail.sdg.alloy4.Version;
@@ -570,7 +571,8 @@ public final class MinVizGUI implements ComponentListener {
       // Now, generate the graph or tree or textarea that we want to display on the right
       if (frame!=null) frame.setTitle(makeVizTitle());
       switch (currentMode) {
-         case Tree: {
+         case Tree: {        	
+        	 
             final MinVizTree t = new MinVizTree(myState.getOriginalInstance().originalA4, makeVizTitle(), fontSize);
             final JScrollPane scroll = OurUtil.scrollpane(t, Color.BLACK, Color.WHITE, new OurBorder(true, false, true, false));
             scroll.addFocusListener(new FocusListener() {
@@ -578,6 +580,13 @@ public final class MinVizGUI implements ComponentListener {
                public final void focusLost(FocusEvent e) { }
             });
             content = scroll;
+            
+            
+        	//OurDialog.showmsg("Test: treeview ",
+        	//		" ",
+        	//		myState.getOriginalInstance().originalA4,
+        	//		" ",
+        	//		scroll.getVisibleRect()); 
             break;
          }
          case XML: {
