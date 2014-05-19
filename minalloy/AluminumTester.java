@@ -214,6 +214,26 @@ public final class AluminumTester {
         	// Print the number here and later on (in case it takes a long time to run)
         	System.out.println("\n  Got "+minimalSolutions+" minimal solutions from Aluminum.");
 
+        	
+        	
+        	
+        	////////////////////////////////////////////
+        	////////////////////////////////////////////
+        	// WARNING:
+        	// Removing "remainder" relations in Aluminum
+        	// means that the ontologies of instances returned
+        	// by the two tools will not match. More work needs to
+        	// be done if we are going to re-use this containment checking code.
+        	////////////////////////////////////////////
+        	////////////////////////////////////////////        	
+        	
+        	
+        	
+        	
+        	
+        	
+        	
+        	
         	List<AluminumSolution> aluminumSolutionsWithIsos = new ArrayList<AluminumSolution>();
 
         	// groupindex -> dupe groupindices
