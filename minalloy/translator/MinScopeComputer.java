@@ -346,7 +346,7 @@ final class MinScopeComputer {
         Set<String> set = cmd.getAllStringConstants(sigs);
         if (sc.maxstring>=0 && set.size()>sc.maxstring) rep.scope("Sig String expanded to contain all "+set.size()+" String constant(s) referenced by this command.\n");
         for(int i=0; set.size()<sc.maxstring; i++) set.add("\"String" + i + "\"");
-        sc.atoms.addAll(set);
+        sc.atoms.addAll(set);        
         MinA4Solution sol = new MinA4Solution(cmd.toString(), sc.bitwidth, sc.maxseq, set, sc.atoms, rep, opt, cmd.expects);
         return new Pair<MinA4Solution,MinScopeComputer>(sol, sc);
     }

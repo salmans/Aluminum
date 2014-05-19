@@ -1,3 +1,5 @@
 *.class
 *.DS_Store
 alloy_example_output.xml
+.metadata/*
+resources/Thumbs.db

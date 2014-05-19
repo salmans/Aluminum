@@ -89,6 +89,9 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 	static MinSATSolver translate(BooleanFormula circuit, BooleanValue sbp, SATFactory factory, int numPrimaryVariables) {
 		final SATSolver solver = factory.instance();		
 		
+		//System.out.println("BF Circuit: "+circuit);
+		//System.out.println("BV sbp: "+sbp);
+		
 		assert(solver instanceof MinSATSolver);
 		MinSATSolver minsolver = (MinSATSolver) solver;
 		
@@ -125,8 +128,9 @@ final class MinBool2CNFTranslator implements BooleanVisitor<int[], Object> {
 	 * Constructs a translator for the given circuit.
 	 * @effects this.root' = circuit
 	 */
-	private MinBool2CNFTranslator(MinSATSolver solver, boolean forSBP, int numPrimaryVars, BooleanFormula circuit) {
+	private MinBool2CNFTranslator(MinSATSolver solver, boolean forSBP, int numPrimaryVars, BooleanFormula circuit) {		
 		final int maxLiteral = StrictMath.abs(circuit.label());
+		//System.out.println("max literal: "+maxLiteral);
 		this.solver = solver;
 		this.forSBP = forSBP;
 		

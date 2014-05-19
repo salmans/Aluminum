@@ -71,6 +71,8 @@ public final class MinSolution{
 	private Instance instance;
 	private final Proof proof;
 	public final MinimizationHistory minimizationHistory;
+	public final boolean isCanonical; 
+	
 	
 	/** Stores the propositional model for this solution. 
 	 * This field is going to be used for augmenting operations.*/ 
@@ -88,7 +90,7 @@ public final class MinSolution{
 	 * @requires outcome != null && stats != null
 	 * @requires outcome = SATISFIABLE || TRIVIALLY_SATISFIABLE => instance != null
 	 */
-	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, Proof proof, MinimizationHistory minimizationHistory,int[] propositionalModel) {
+	private MinSolution(Outcome outcome, MinStatistics stats, Instance instance, Proof proof, MinimizationHistory minimizationHistory,int[] propositionalModel, boolean isCanonical) {
 		assert outcome != null && stats != null;
 		this.outcome = outcome;
 		this.stats = stats;
@@ -96,14 +98,15 @@ public final class MinSolution{
 		this.proof = proof;
 		this.propositionalModel = propositionalModel;
 		this.minimizationHistory = minimizationHistory;
+		this.isCanonical = isCanonical;
 	}
 	
 	/**
 	 * Returns a new Solution with a SATISFIABLE outcome, given stats and instance.
 	 * @return {s: Solution | s.outcome() = SATISFIABLE && s.stats() = stats && s.instance() = instance }
 	 */
-	static MinSolution satisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel) {
-		return new MinSolution(Outcome.SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel);
+	static MinSolution satisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel, boolean isCanonical) {
+		return new MinSolution(Outcome.SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel, isCanonical);
 	}
 	
 	/**
@@ -111,7 +114,7 @@ public final class MinSolution{
 	 * @return {s: Solution | s.outcome() = TRIVIALLY_SATISFIABLE && s.stats() = stats && s.instance() = instance }
 	 */
 	static MinSolution triviallySatisfiable(MinStatistics stats, Instance instance, MinimizationHistory minimizationHistory, int[] propositionalModel) {
-		return new MinSolution(Outcome.TRIVIALLY_SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel);
+		return new MinSolution(Outcome.TRIVIALLY_SATISFIABLE, stats, instance, null, minimizationHistory, propositionalModel, true);
 	}
 	
 	/**
@@ -119,7 +122,7 @@ public final class MinSolution{
 	 * @return {s: Solution | s.outcome() = UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
 	static MinSolution unsatisfiable(MinStatistics stats, Proof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
-		return new MinSolution(Outcome.UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
+		return new MinSolution(Outcome.UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel, true);
 	}
 	
 	/**
@@ -127,7 +130,7 @@ public final class MinSolution{
 	 * @return {s: Solution | s.outcome() = TRIVIALLY_UNSATISFIABLE && s.stats() = stats && s.proof() = proof }
 	 */
 	static MinSolution triviallyUnsatisfiable(MinStatistics stats, Proof proof, MinimizationHistory minimizationHistory, int[] propositionalModel) {
-		return new MinSolution(Outcome.TRIVIALLY_UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel);
+		return new MinSolution(Outcome.TRIVIALLY_UNSATISFIABLE, stats, null, proof, minimizationHistory, propositionalModel, true);
 	}
 		
 	/**

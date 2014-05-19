@@ -80,7 +80,9 @@ public final class AluminumTester {
     	//Distribution of Alloy models wrt Aluminum models
     	FileOption optDistributionLog = new FileOption("-dl");
     	//Output verbosity
-    	IntOption optVerbosity = new IntOption("-v", 0);
+    	IntOption optVerbosity = new IntOption("-v", 0);    	
+    	// Force SB respect
+    	BooleanOption optSBRespect = new BooleanOption("-sbrespect");
     	
     	CmdLineParser optParser = new CmdLineParser();
     	optParser.addOption(optInput);
@@ -90,6 +92,7 @@ public final class AluminumTester {
     	optParser.addOption(optSkolemDepth);
     	optParser.addOption(optDistributionLog);
     	optParser.addOption(optVerbosity);
+    	optParser.addOption(optSBRespect);
     	
     	try{
     		optParser.parse(args);
@@ -114,15 +117,16 @@ public final class AluminumTester {
     	System.out.println("-dl = " + optDistributionLog.value);
     	System.out.println("-sb = " + optSymmetryBreaking.value);
     	System.out.println("-iso = " + optIsomorphicSolutions.value);
+    	System.out.println("-sprespect = " + optSBRespect.value);
     	
-    	test(optInput, optOutput, optSymmetryBreaking, optSkolemDepth, optIsomorphicSolutions, optDistributionLog, optVerbosity);
+    	test(optInput, optOutput, optSymmetryBreaking, optSkolemDepth, optIsomorphicSolutions, optDistributionLog, optVerbosity, optSBRespect);
     }
 	
 	/**
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
 	private static void test(FileOption optInput, FileOption optOutput, IntOption optSymmetryBreaking, IntOption optSkolemDepth, BooleanOption optIsomorphicSolutions,
-			FileOption optDistributionLog, IntOption optVerbosity) throws Err{
+			FileOption optDistributionLog, IntOption optVerbosity, BooleanOption optSBRespect) throws Err{
 		long startTime = System.currentTimeMillis();
 		
 		boolean logDistribution = optDistributionLog.value != null; 
@@ -144,6 +148,7 @@ public final class AluminumTester {
         MinA4Options aluminumOptions = new MinA4Options();
         A4Options alloyOptions = new A4Options();
         aluminumOptions.symmetry = optSymmetryBreaking.value;
+        aluminumOptions.forceRespectSB = optSBRespect.value;        
         aluminumOptions.skolemDepth = optSkolemDepth.value;
         alloyOptions.symmetry = optSymmetryBreaking.value;
         alloyOptions.skolemDepth = optSkolemDepth.value;
@@ -166,7 +171,7 @@ public final class AluminumTester {
     			distributionLog.append("Executing command: " + command + " -----\n");
     			distributionLog.append("Alloy Solution\tMinimal Solution\tIsomorphism Group\tComparison\n");
     		}
-            System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": ");
+            System.out.print("Running Aluminum to build minimal solutions for command: " + command + ": \n");
 
             // Clear out the cache:
             uniqueSolutions.clear();
@@ -191,10 +196,13 @@ public final class AluminumTester {
         		//System.out.println(aluminum.getCurrentSolution());
         		//System.out.println(aluminum.toString());
         		//if((initialSolutions.size() + dupes) % 10 == 0)
-        			System.out.print("Fresh instance number: "+initialSolutions.size()+"; dupe count="+dupes+"; hash="+aluminum.toString().hashCode()+"\n");
+        			
+        			System.out.print("Fresh instance number: "+initialSolutions.size()+"; dupe count="+dupes+
+        					"; hash="+aluminum.toString().hashCode()+
+        					"; SBsat?="+aluminum.getCurrentSolution().isCanonical+"\n");
         	}
 
-        	System.out.print("Total min instances: "+initialSolutions.size()+"; dupe count="+dupes+"; hash="+aluminum.toString().hashCode()+"\n");
+        	System.out.print("\nTotal min instances: "+initialSolutions.size()+"; dupe count="+dupes);
         	minimalSolutions = initialSolutions.size();
         	
         	// Per command

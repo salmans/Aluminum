@@ -146,6 +146,11 @@ public final class MinA4Options implements Serializable {
      */
     public int symmetry = 20;
     
+    /**
+     * Force the solver to find a minimal instance that satisfies the SB. May be very slow.
+     */
+    public boolean forceRespectSB = false;
+    
     /** Tells the underlying solver to log minimization information. */
     public boolean logMinimizationHistory = false;
 
@@ -200,6 +205,7 @@ public final class MinA4Options implements Serializable {
         x.originalFilename = originalFilename;
         x.recordKodkod = recordKodkod;
         x.logMinimizationHistory = logMinimizationHistory;
+        x.forceRespectSB = forceRespectSB;
         return x;
     }
 }

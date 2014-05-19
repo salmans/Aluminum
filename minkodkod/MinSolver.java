@@ -76,6 +76,9 @@ public final class MinSolver {
 	
 	//The iterator that acquires the SAT solver.
 	private MinSolutionIterator activeIterator;
+	
+	// Option: force SBP to be respected
+	public boolean forceRespectSB;
 
 	/**
 	 * Constructs a new Solver with the default options and extraOptions.
@@ -797,24 +800,30 @@ public final class MinSolver {
 					JOptionPane.showMessageDialog(null, "CONTRADICTION exception in nonTrivialSolution()");
 				}
 				
+				////////////////////////////////////////////////////////
 				options.reporter().solvingCNF(translation.numPrimaryVariables(), internalSolver.numberOfVariables(), internalSolver.numberOfClauses());				
 				final long startSolve = System.currentTimeMillis();				
-				boolean isSat = false;
-				boolean gotNonMinimal;
-				do
-				{
-					gotNonMinimal = false;					
+				boolean isSat = false;				
+
+				System.out.println("Finding a non trivial solution...");
+				
+				// This populates a MINIMAL model in lastModel, NOT the candidate
+				boolean respectsSB = false;							
+				
+				// If a model found, need to add constraints to forbid its cone.
+				// Possibly add more sets of CR clauses if SBP must be respected					
+				do {
+					// Get the next minimal model, if any				
 					isSat = solve();
-					
-					// If a model found, add constraints to forbid its cone.
-					if(isSat)
-					{												
+
+					if(isSat) 
+					{					
 						final int primary = translation.numPrimaryVariables();					
 						final Set<Integer> notModel = new HashSet<Integer>();		
 						
 						// Negate this model's positive diagram. 
 						// We will use this disjunctively for "cone-restriction": preventing models 
-						// (or any of their supermodels) from occuring again.
+						// (or any of their supermodels) from occurring again.
 						for(int i = 1; i <= primary; i++){
 							if(internalSolver.valueOf(i)){
 								notModel.add(-i);
@@ -833,40 +842,57 @@ public final class MinSolver {
 							// or a cone restriction clause has resulted in a contradiction. So make sure
 							// that this iterator never yields a model again:
 							JOptionPane.showMessageDialog(null, "Contradiction; out of models. Augmentation will be disabled.");
-							final long endSolveU = System.currentTimeMillis();				
-							final MinStatistics statsU = new MinStatistics(translation, translTime, endSolveU - startSolve);
-							unsatSolution = unsat(translation, statsU);							
+							//final long endSolveU = System.currentTimeMillis();				
+							//final MinStatistics statsU = new MinStatistics(translation, translTime, endSolveU - startSolve);
+							//unsatSolution = unsat(translation, statsU);	
+							// But still return the model we generated
 						}
-					} // end constraints to forbid current cone									
-					
-				} while(gotNonMinimal && isSat);
+						
+						respectsSB = translation.satisfiesSBP(translation.cnf().getLastModel());						
+						if(minSolver.forceRespectSB)
+						{							
+							System.out.println("Must respect SB. Result: "+respectsSB);													
+						}				
+						// Keep going until we either run out of models or find one that respects the SBP  
+					}
+				} while(isSat && minSolver.forceRespectSB && !respectsSB);											
+			
+			final long endSolve = System.currentTimeMillis();				
+			final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
 				
-				
+			if(isSat) {
 				/////////////////////////////////////////////
-				// Found a minimal model (or unsat)
+				// Found a minimal model: report it				
+				int[] minPropositionalModel = translation.cnf().getLastModel().clone();
+				MinReporterToGatherSkolemBounds reporter = (MinReporterToGatherSkolemBounds)options.reporter();
+				MinimizationHistory history = null;
+				if(extraOptions.logMinimizationHistory())
+					history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), 
+							reporter.getReducedAttributes(), reporter.getReducedRelations());
 				
-				final long endSolve = System.currentTimeMillis();				
-				final MinStatistics stats = new MinStatistics(translation, translTime, endSolve - startSolve);
-				if (isSat) {
-					int[] propositionalModel = translation.cnf().getLastModel().clone();
-					MinReporterToGatherSkolemBounds reporter = (MinReporterToGatherSkolemBounds)options.reporter();
-					MinimizationHistory history = null;
-					if(extraOptions.logMinimizationHistory())
-						history = new MinimizationHistory(reporter.getIterations(), reporter.getReducedElements(), 
-								reporter.getReducedAttributes(), reporter.getReducedRelations());
+				//////////////////////////////////////////
+				// Does this solution satisfy the SBP?
+				// If not, flag this solution as spurious (we're guaranteed to get an isomorph either before or after)
+				boolean isCanonical = translation.satisfiesSBP(minPropositionalModel);										
 					
-					// extract the current solution; can't use the sat(..) method because it frees the sat solver
-					final MinSolution sol = MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), history, propositionalModel);
-					return sol;
-				} else {
-					unsatSolution = unsat(translation, stats); 
-					return unsatSolution;
-				}
-			} catch (SATAbortedException sae) {
-				throw new AbortedException(sae);
+				////////////////////////////////////////
+				// extract the current solution; can't use the sat(..) method because it frees the sat solver
+				final MinSolution sol = 
+						MinSolution.satisfiable(stats, padInstance(translation.interpret(), origBounds), 
+								                history, minPropositionalModel, isCanonical);
+				return sol;				
 			}
-		}
-		
+			else {
+				//////////////////////////////////////
+				// No viable solution remaining
+				unsatSolution = unsat(translation, stats); 
+				return unsatSolution;
+			}
+		} catch (SATAbortedException sae) {
+			throw new AbortedException(sae);
+		}				
+	}
+				
 		/**
 		 * Add a clause for this negated positive-diagram.
 		 * 
@@ -1000,6 +1026,8 @@ public final class MinSolver {
 		public MinSolution next() {
 			if (!hasNext()) return unsatSolution;
 			
+			System.out.println("Calling next()...");
+			
 			claimSATSolver();
 
 			if (translation==null) {
@@ -1027,7 +1055,7 @@ public final class MinSolver {
 			} else {
 				setLastSolution(nonTrivialSolution());
 			}						
-						
+				
 			return getLastSolution();
 		}
 
@@ -1076,7 +1104,7 @@ public final class MinSolver {
 		}
 		
 		/**
-		 * Prepares a minimal model.
+		 * Prepares a minimal model. May not respect SBP.
 		 * @return true if there is a next solution; otherwise, false.
 		 * @throws NotMinimalModelException 
 		 */
@@ -1088,25 +1116,24 @@ public final class MinSolver {
 				Set<Integer> allUnits = new HashSet<Integer>();
 				allUnits.addAll(toSet(augments));
 				allUnits.addAll(coneRestrictionUnits);
-				
+								
 				if(allUnits.size() == 0)
 					sat = Boolean.valueOf(translation.cnf().solve());
 				else
 					sat = Boolean.valueOf(translation.cnf().solve(toIntCollection(allUnits)));
 		
-				//JOptionPane.showMessageDialog(null, sat+" "+allUnits.size());
+				//	JOptionPane.showMessageDialog(null, sat+" "+allUnits.size());
 				
-				if(sat)
-				{	
-					try{
+				if(sat) {	
+					try {
 						minimize();
 					}
 					catch(ContradictionException e)
 					{
 						JOptionPane.showMessageDialog(null, "CONTRADICTION exception in minimize() call");
 					}
-				}								
-				
+				}		
+										
 				return sat;
 			} catch (org.sat4j.specs.TimeoutException e) {
 				throw new RuntimeException("timed out");
@@ -1139,7 +1166,7 @@ public final class MinSolver {
 				unitClauses.add(value);
 			
 			MinSATSolver theSolver = ((MinSATSolver)translation.cnf());						
-			if(logDifference)		
+			//if(logDifference)		
 				modelBeforeMinimization = theSolver.getLastModel().clone();
 			
 			theSolver.deactivateSBP();

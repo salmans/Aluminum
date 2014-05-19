@@ -234,8 +234,9 @@ public final class MinA4Solution {
      * @param expected - whether the user expected an instance or not (1 means yes, 0 means no, -1 means the user did not express an expectation)
      */
     MinA4Solution(String originalCommand, int bitwidth, int maxseq, Set<String> stringAtoms, Collection<String> atoms, final A4Reporter rep, MinA4Options opt, int expected) throws Err {
-        opt = opt.dup();
-                
+            	
+    	opt = opt.dup();                        
+    	
         this.solutionStack = new Stack<SolutionStackElement>();
         this.currentSolution = null;
         this.unrolls = opt.unrolls;
@@ -313,6 +314,7 @@ public final class MinA4Solution {
             solver.options().setReporter(myReporter);
         }
         solver.options().setSymmetryBreaking(sym);
+        solver.forceRespectSB = opt.forceRespectSB;
         solver.options().setSkolemDepth(opt.skolemDepth);        
         solver.options().setBitwidth(bitwidth);
         solver.options().setIntEncoding(Options.IntEncoding.TWOSCOMPLEMENT);
@@ -910,8 +912,8 @@ public final class MinA4Solution {
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
     MinA4Solution solve(final A4Reporter rep, Command cmd, MinSimplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
-        if (solved) return this;
-
+        if (solved) return this;        
+        
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
         if (cmd==null) {
            Instance inst = new Instance(bounds.universe());

@@ -120,7 +120,7 @@ public final class MinTranslateAlloyToKodkod extends VisitReturn<Object> {
         this.rep = (rep != null) ? rep : A4Reporter.NOP;
         this.cmd = cmd;
         Pair<MinA4Solution, MinScopeComputer> pair = MinScopeComputer.compute(this.rep, opt, sigs, cmd);
-        this.frame = pair.a;
+        this.frame = pair.a;        
         this.bitwidth = pair.a.getBitwidth();
         this.min = pair.a.min();
         this.max = pair.a.max();

@@ -21,6 +21,7 @@ package minkodkod;
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -90,7 +91,7 @@ public final class MinSATSolver implements SATSolver {
 	 * @return
 	 */
 	public boolean activateSBP() 
-	{
+	{		
 		if(sbpActive) return false;
 				
 		for(int[] lits : sbpClauses)
@@ -213,6 +214,7 @@ public final class MinSATSolver implements SATSolver {
 	 * @see kodkod.engine.satlab.SATSolver#addClause(int[])
 	 */
 	public boolean addClause(int[] lits) {
+		//System.out.println("(nonsb) CLAUSE ADDED: "+Arrays.toString(lits));
 		try {
 			//if (!Boolean.FALSE.equals(sat)) {
 				clauses++;
@@ -245,6 +247,7 @@ public final class MinSATSolver implements SATSolver {
 	
 	public boolean addSBPClause(int[] lits)
 	{
+		//System.out.println("SBP CLAUSE ADDED: "+Arrays.toString(lits));
 		// Can't just call addClause, that would obstruct the IConstr
 		try {			
 
@@ -310,6 +313,7 @@ public final class MinSATSolver implements SATSolver {
 	 */
 	IVecInt getAssumptions(int[] assumptions)
 	{
+		//System.out.println("Getting assumptions. SBP="+sbpActive);
 		if(sbpActive)
 		{
 			int[] together = new int[assumptions.length+sbpUnitClauses.size()];

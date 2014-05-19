@@ -131,7 +131,7 @@ public class IsomorphicSolutionBuilder {
 				if(newTupleSet.size() > 0)
 					instance.add(r, factory.setOf(newTupleSet)); //add the new tuple set to the this relation
 			}
-			MinSolution solution = MinSolutionFactory.satisfiable(input.stats(), instance, input.minimizationHistory, input.getPropositionalModel());
+			MinSolution solution = MinSolutionFactory.satisfiable(input.stats(), instance, input.minimizationHistory, input.getPropositionalModel(), input.isCanonical);
 			
 			results.add(solution);
 		}

@@ -406,7 +406,7 @@ public final class MinTranslator {
 	private MinTranslation toCNF(BooleanFormula fmlaCircuit, BooleanValue sbpValue, int primaryVars, Map<Relation,IntSet> varUsage, MinSymmetryBreaker breaker) {	
 		options.reporter().translatingToCNF(fmlaCircuit);			
 		final MinSATSolver cnf = MinBool2CNFTranslator.translate((BooleanFormula)fmlaCircuit, sbpValue, options.solver(), primaryVars);		
-		return new MinTranslation(cnf, bounds, varUsage, primaryVars, log, breaker.getSymmetries(), breaker.brokenPermutations);
+		return new MinTranslation(cnf, bounds, varUsage, primaryVars, log, breaker.getSymmetries(), breaker.brokenPermutations, sbpValue);
 	}
 	
 }

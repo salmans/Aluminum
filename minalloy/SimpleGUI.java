@@ -210,9 +210,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** The skolem depth. */
     private static final IntPref SkolemDepth = new IntPref("SkolemDepth3", 0, 1, 4);
 
-    /** The skolem depth. */
+    /** Max length of SB predicate */
     private static final IntPref SymmetryBreaking = new IntPref("SB", 0, 20, 1000);
 
+    /** Force minimal instances to respect SBP? */
+    private static final BooleanPref SBForceRespect = new BooleanPref("SBRespect");
     
     /** The unsat core minimization strategy. */
     private static final IntPref CoreMinimization = new IntPref("CoreMinimization",0,2,2);
@@ -336,6 +338,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** The current choices of SAT solver. */
     private List<SatSolver> satChoices;
 
+    private int instanceCounter = 0;
+    
      /** The most recent Alloy version (as queried from alloy.mit.edu); -1 if alloy.mit.edu has not replied yet. */
     private int latestAlloyVersion = (-1);
 
@@ -975,6 +979,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
     /** This method executes a particular RUN or CHECK command. */
     private Runner doRun(Integer commandIndex) {
+    	instanceCounter = 0;
+    	
         if (wrap) return wrapMe(commandIndex);
         final int index = commandIndex;
         if (WorkerEngine.isBusy()) return null;
@@ -1001,6 +1007,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
         opt.skolemDepth = SkolemDepth.get();
         opt.symmetry = SymmetryBreaking.get();
+        opt.forceRespectSB = SBForceRespect.get();
         opt.coreMinimization = CoreMinimization.get();
         opt.originalFilename = Util.canon(text.get().getFilename());
         opt.solver = SatSolver.get();
@@ -1239,14 +1246,16 @@ public final class SimpleGUI implements ComponentListener, Listener {
             for(int n=0; n<=4; n++) { menuItem(skDepthMenu, ""+n, doOptSkolemDepth(n), n==skDepth?iconYes:iconNo); }
             optmenu.add(skDepthMenu);
             //
-            final int sbSize = SymmetryBreaking.get();
-            final JMenu sbSizeMenu = new JMenu("Symmetry Breaking Predicate: "+sbSize);
+            final int sbSize = SymmetryBreaking.get();            
+            final JMenu sbSizeMenu = new JMenu("Max Symmetry-Breaking Predicate Length: "+sbSize);
             menuItem(sbSizeMenu, ""+0, doOptSB(0), 0==sbSize?iconYes:iconNo);
             menuItem(sbSizeMenu, ""+20, doOptSB(20), 20==sbSize?iconYes:iconNo);
             menuItem(sbSizeMenu, ""+100, doOptSB(100), 100==sbSize?iconYes:iconNo);
             menuItem(sbSizeMenu, ""+500, doOptSB(500), 500==sbSize?iconYes:iconNo);
             menuItem(sbSizeMenu, ""+1000, doOptSB(1000), 1000==sbSize?iconYes:iconNo);
             optmenu.add(sbSizeMenu);
+            //
+            menuItem(optmenu, "Force SBP respecting minimal instances (may be very slow): "+(SBForceRespect.get()?"Yes":"No"), doSBForce());
             //
             if (Version.experimental) {
               final int unrolls = Unrolls.get();
@@ -1357,6 +1366,12 @@ public final class SimpleGUI implements ComponentListener, Listener {
         if (!wrap) SymmetryBreaking.set(size.intValue());
         return wrapMe(size);
     }
+
+    private Runner doSBForce() {
+        if (!wrap) SBForceRespect.set(!SBForceRespect.get());
+        return wrapMe();
+    }
+
     
     /** This method changes the speed of unsat core minimization (larger integer means faster but less optimal). */
     private Runner doOptCore(Integer speed) {
@@ -1622,7 +1637,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
             
             
             
-            log.log("Attempting to fetch another minimal instance...\n");
+            log.log("Attempting to fetch another minimal instance... (Last was number "+instanceCounter+")\n");
+            instanceCounter++;
             
             try {
                 WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
