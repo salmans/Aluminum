@@ -173,15 +173,28 @@ public final class AluminumTester {
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
         	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();        	        	
         	        	
+        	int dupes = 0;
+        	
         	while(aluminum.satisfiable()){
-        		if(uniqueSolutions.add(aluminum.toString())){
+        		// aluminum.toString() --- Alloy's renamed version of the instance
+        		//   dupes will be spotted here: dupes if would be DISPLAYED the same
+        		// but actually record the original, pre-alloy instance
+        		if(uniqueSolutions.add(aluminum.toString())){        		
         			initialSolutions.add(aluminum.getCurrentSolution());
+        		}
+        		else {
+        			dupes ++;        		
         		}
         		aluminum = aluminum.next();
         		
-        		System.out.print(".");
+        		//System.out.print(".");
+        		//System.out.println(aluminum.getCurrentSolution());
+        		//System.out.println(aluminum.toString());
+        		//if((initialSolutions.size() + dupes) % 10 == 0)
+        			System.out.print("Fresh instance number: "+initialSolutions.size()+"; dupe count="+dupes+"; hash="+aluminum.toString().hashCode()+"\n");
         	}
 
+        	System.out.print("Total min instances: "+initialSolutions.size()+"; dupe count="+dupes+"; hash="+aluminum.toString().hashCode()+"\n");
         	minimalSolutions = initialSolutions.size();
         	
         	// Per command
@@ -309,7 +322,7 @@ public final class AluminumTester {
     				}
     				
     				// Logging cone distribution
-    				if(logDistribution)
+    				if(logDistribution && dupeSolnMap.containsKey(thisAlumIsomorph.groupIndex))
     				{						
     					
     					//////////
@@ -321,6 +334,7 @@ public final class AluminumTester {
     						{
     							ordinalSumAlloy += counter; // Not +1; alloy starts with from 1 not 0
     							minInstanceCoverage = counter;
+    							    	    							    							
     							wantToSeeClassesForOrdinal.removeAll(dupeSolnMap.get(thisAlumIsomorph.groupIndex));    							
     							
     							System.out.println("  MATCH for Ordinal Sum: "+thisAlumIsomorph.groupIndex+
@@ -496,3 +510,6 @@ public final class AluminumTester {
 
 // Without -iso here, there is an immediate mismatch. Don't panic: it's just because no iso.
 // -i "C:\Users\Tim\research\dj-git\test-git-sizes.als" -o "C:\Users\Tim\research\dj-git\testout.txt" -dl "C:\Users\Tim\research\dj-git\dl.txt"
+
+// -i "C:\vbox\nat2\props.als" -o "C:\vbox\nat2\testout.txt" -dl "C:\vbox\nat2\dl.txt" -sb 1000
+// -i "C:\vbox\nat2\javatypes.als" -o "C:\vbox\nat2\testout.txt" -dl "C:\vbox\nat2\dl.txt"

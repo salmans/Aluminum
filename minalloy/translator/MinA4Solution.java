@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import javax.swing.JOptionPane;
+
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.TimeoutException;
 
@@ -311,7 +313,7 @@ public final class MinA4Solution {
             solver.options().setReporter(myReporter);
         }
         solver.options().setSymmetryBreaking(sym);
-        solver.options().setSkolemDepth(opt.skolemDepth);
+        solver.options().setSkolemDepth(opt.skolemDepth);        
         solver.options().setBitwidth(bitwidth);
         solver.options().setIntEncoding(Options.IntEncoding.TWOSCOMPLEMENT);
         if(originalOptions.logMinimizationHistory)
@@ -957,7 +959,14 @@ public final class MinA4Solution {
         solved[0] = false; // this allows the reporter to report the # of vars/clauses
         for(Relation r: bounds.relations()) { formulas.add(r.eq(r)); } // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
-
+        //JOptionPane.showMessageDialog(null, "SOLVING: "+fgoal);
+        //JOptionPane.showMessageDialog(null, "BOUNDS: "+bounds);
+        
+        PrintWriter out = new PrintWriter("foobar.txt");
+        out.println(formulas);
+        out.println(bounds);
+        out.close();
+        
         rep.debug("Begin solveAll()\n");
         Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
         

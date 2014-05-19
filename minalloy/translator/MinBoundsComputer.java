@@ -121,13 +121,15 @@ final class BoundsComputer {
            sol.addFormula(sum.intersection(childexpr).no(), child.isSubsig);
            sum = sum.union(childexpr);
         }
+        
         TupleSet lower = lb.get(sig).clone(), upper = ub.get(sig).clone();
+        
         if (sum == null) {
            // If sig doesn't have children, then sig should make a fresh relation for itself
            sum = sol.addRel(sig.label, lower, upper);
         } else if (sig.isAbstract == null) {
            // If sig has children, and sig is not abstract, then create a new relation to act as the remainder.
-           for(PrimSig child:sig.children()) {
+           /*for(PrimSig child:sig.children()) {
               // Remove atoms that are KNOWN to be in a subsig;
               // it's okay to mistakenly leave some atoms in, since we will never solve for the "remainder" relation directly;
               // instead, we union the remainder with the children, then solve for the combined solution.
@@ -136,7 +138,12 @@ final class BoundsComputer {
               lower.removeAll(childTS);
               upper.removeAll(childTS);
            }
-           sum = sum.union(sol.addRel(sig.label+" remainder", lower, upper));
+          sum = sum.union(sol.addRel(sig.label+" remainder", lower, upper));
+          */
+        	//sum = sum.union(sol.addRel(sig.label, lower, upper));        	
+        	Relation r = sol.addRel(sig.label, lower, upper);
+        	sol.addFormula(sum.in(r), Pos.UNKNOWN);
+        	sum = r;
         }
         sol.addSig(sig, sum);
         return sum;

@@ -210,6 +210,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** The skolem depth. */
     private static final IntPref SkolemDepth = new IntPref("SkolemDepth3", 0, 1, 4);
 
+    /** The skolem depth. */
+    private static final IntPref SymmetryBreaking = new IntPref("SB", 0, 20, 1000);
+
+    
     /** The unsat core minimization strategy. */
     private static final IntPref CoreMinimization = new IntPref("CoreMinimization",0,2,2);
 
@@ -996,6 +1000,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.recordKodkod = RecordKodkod.get();
         opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
         opt.skolemDepth = SkolemDepth.get();
+        opt.symmetry = SymmetryBreaking.get();
         opt.coreMinimization = CoreMinimization.get();
         opt.originalFilename = Util.canon(text.get().getFilename());
         opt.solver = SatSolver.get();
@@ -1234,6 +1239,15 @@ public final class SimpleGUI implements ComponentListener, Listener {
             for(int n=0; n<=4; n++) { menuItem(skDepthMenu, ""+n, doOptSkolemDepth(n), n==skDepth?iconYes:iconNo); }
             optmenu.add(skDepthMenu);
             //
+            final int sbSize = SymmetryBreaking.get();
+            final JMenu sbSizeMenu = new JMenu("Symmetry Breaking Predicate: "+sbSize);
+            menuItem(sbSizeMenu, ""+0, doOptSB(0), 0==sbSize?iconYes:iconNo);
+            menuItem(sbSizeMenu, ""+20, doOptSB(20), 20==sbSize?iconYes:iconNo);
+            menuItem(sbSizeMenu, ""+100, doOptSB(100), 100==sbSize?iconYes:iconNo);
+            menuItem(sbSizeMenu, ""+500, doOptSB(500), 500==sbSize?iconYes:iconNo);
+            menuItem(sbSizeMenu, ""+1000, doOptSB(1000), 1000==sbSize?iconYes:iconNo);
+            optmenu.add(sbSizeMenu);
+            //
             if (Version.experimental) {
               final int unrolls = Unrolls.get();
               final JMenu unrollsMenu = new JMenu("Recursion Depth: "+(unrolls<0 ? "Disabled" : (""+unrolls)));
@@ -1339,6 +1353,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
         return wrapMe(size);
     }
 
+    private Runner doOptSB(Integer size) {
+        if (!wrap) SymmetryBreaking.set(size.intValue());
+        return wrapMe(size);
+    }
+    
     /** This method changes the speed of unsat core minimization (larger integer means faster but less optimal). */
     private Runner doOptCore(Integer speed) {
         if (!wrap) CoreMinimization.set(speed.intValue());
