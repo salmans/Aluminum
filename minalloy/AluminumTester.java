@@ -172,16 +172,21 @@ public final class AluminumTester {
             uniqueSolutions.clear();
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
         	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();        	        	
-        	        	
+        	     
+        	int dupes = 0;
         	while(aluminum.satisfiable()){
         		if(uniqueSolutions.add(aluminum.toString())){
         			initialSolutions.add(aluminum.getCurrentSolution());
+        		} 
+        		else {
+        			dupes++;
         		}
+        			
         		aluminum = aluminum.next();
         		
         		System.out.print(".");
         		if(uniqueSolutions.size() % 50 == 0) {
-        			System.out.println("\nMin solns so far: "+uniqueSolutions.size());
+        			System.out.println("\nMin solns so far: "+uniqueSolutions.size()+" with "+dupes+" duplicates ignored.");
         		}
         	}
 
