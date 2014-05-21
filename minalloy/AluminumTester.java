@@ -180,6 +180,9 @@ public final class AluminumTester {
         		aluminum = aluminum.next();
         		
         		System.out.print(".");
+        		if(uniqueSolutions.size() % 50 == 0) {
+        			System.out.println("\nMin solns so far: "+uniqueSolutions.size());
+        		}
         	}
 
         	minimalSolutions = initialSolutions.size();
