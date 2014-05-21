@@ -175,9 +175,11 @@ public final class AluminumTester {
 
             // Clear out the cache:
             uniqueSolutions.clear();
+            
+            // This call will do an initial solution-hunt. 
         	MinA4Solution aluminum = MinTranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, aluminumOptions);
         	List<MinSolution> initialSolutions = new ArrayList<MinSolution>();        	        	
-        	        	
+        	        	        	
         	int dupes = 0;
         	
         	while(aluminum.satisfiable()){
@@ -189,9 +191,8 @@ public final class AluminumTester {
         		}
         		else {
         			dupes ++;        		
-        		}
-        		aluminum = aluminum.next();
-        		
+        		}        		
+        		        		
         		//System.out.print(".");
         		//System.out.println(aluminum.getCurrentSolution());
         		//System.out.println(aluminum.toString());
@@ -200,6 +201,9 @@ public final class AluminumTester {
         			System.out.print("Fresh instance number: "+initialSolutions.size()+"; dupe count="+dupes+
         					"; hash="+aluminum.toString().hashCode()+
         					"; SBsat?="+aluminum.getCurrentSolution().isCanonical+"\n");
+        		
+        		// Is there another solution?
+        		aluminum = aluminum.next();        			
         	}
 
         	System.out.print("\nTotal min instances: "+initialSolutions.size()+"; dupe count="+dupes);

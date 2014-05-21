@@ -337,7 +337,7 @@ public final class MinA4Solution {
         //Pass the solutionStack to the next iterator.
         solutionStack = old.solutionStack;
         Instance inst = null;
-        if(currentSolution == null){
+        if(currentSolution == null){        	        
         	this.currentSolution = old.kEnumerator.next();
         	inst = this.currentSolution.instance();
         }
