@@ -72,7 +72,7 @@ final class MinSymmetryBreaker {
 	private final Set<IntSet> symmetries;
 	private final int usize;
 	
-	Set<Map<Integer, Integer>> brokenPermutations = new HashSet<Map<Integer, Integer>>();
+	List<Map<Integer, Integer>> brokenPermutations = new ArrayList<Map<Integer, Integer>>();
 	
 	/**
 	 * Constructs a new symmetry breaker for the given Bounds.
@@ -113,7 +113,7 @@ final class MinSymmetryBreaker {
 		return results;
 	}
 	
-	Set<Map<Integer, Integer>> getBrokenPermutations()
+	List<Map<Integer, Integer>> getBrokenPermutations()
 	{
 		return brokenPermutations;
 	}

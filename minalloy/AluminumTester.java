@@ -217,7 +217,7 @@ public final class AluminumTester {
         	
         	// Print the number here and later on (in case it takes a long time to run)
         	System.out.println("\n  Got "+minimalSolutions+" minimal solutions from Aluminum.");
-
+        	System.out.println("\nTime since started translation: "+(System.currentTimeMillis()-startTime)+"ms.");
         	
         	
         	

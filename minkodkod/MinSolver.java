@@ -821,6 +821,12 @@ public final class MinSolver {
 						final int primary = translation.numPrimaryVariables();					
 						final Set<Integer> notModel = new HashSet<Integer>();		
 						
+						respectsSB = translation.satisfiesSBP(translation.cnf().getLastModel());						
+						if(minSolver.forceRespectSB)
+						{							
+							System.out.println("Must respect SB. Result: "+respectsSB);													
+						}
+						
 						// Negate this model's positive diagram. 
 						// We will use this disjunctively for "cone-restriction": preventing models 
 						// (or any of their supermodels) from occurring again.
@@ -834,7 +840,9 @@ public final class MinSolver {
 							//JOptionPane.showMessageDialog(null, translation.permutations);
 							// Add the cone restriction for this model:
 							addConeRestriction(notModel, internalSolver);
-							// Add the cone restriction for all (safe) adjacent transpositions: 
+							// Add the cone restriction for all (safe) adjacent transpositions.
+							// (If forcing results to respect SBP, this function needs to make sure it doesn't add a cone-restriction clause
+							// for SBP-respecting solutions, or it risks preventing us from seeing the canonical soln we need.) 							 							
 							addPermConeRestrictions(notModel, internalSolver);
 						}
 						catch(ContradictionException e) {
@@ -847,12 +855,7 @@ public final class MinSolver {
 							//unsatSolution = unsat(translation, statsU);	
 							// But still return the model we generated
 						}
-						
-						respectsSB = translation.satisfiesSBP(translation.cnf().getLastModel());						
-						if(minSolver.forceRespectSB)
-						{							
-							System.out.println("Must respect SB. Result: "+respectsSB);													
-						}				
+																
 						// Keep going until we either run out of models or find one that respects the SBP  
 					}
 				} while(isSat && minSolver.forceRespectSB && !respectsSB);											
@@ -941,6 +944,8 @@ public final class MinSolver {
 			// the CALLER is responsible for adding the original restriction clause:
 			//addConeRestriction(notModel, internalSolver);
 			
+			
+			
 			int permCounter = 0;
 			for(Map<Integer, Integer> aPerm : translation.permutations)
 			{
@@ -950,21 +955,29 @@ public final class MinSolver {
 				// the *length* of each sub-formula.
 				if(permCounter >= options.symmetryBreaking())
 					break;				
-				
+								
 				// Apply this permutation and add the permuted C.R. clause. The permutation
 				// is assumed to be complete. I.e., if 2->3, then 3->x for some x. In our
-				// case, the permutations are actually length 2 (2->3 then 3->2). 
-				Set<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);				
-				addConeRestriction(permNotModel, internalSolver);								
-				permCounter++;
+				// case, the permutations are always length 2 (2->3 then 3->2). 
+				Set<Integer> permNotModel = permuteNegatedPositiveDiagram(notModel, aPerm);												
+				
+				// Does this permutation get us to a canonical model? Then don't rule it out!
+				// TODO: really we should cache it somehow
+				if(minSolver.forceRespectSB && translation.negationSatisfiesSBP(permNotModel)) {
+					//System.out.println("negation satisfies SBP and forceRespectSB = true. Continuing to avoid missing a canonical solution.");
+					continue;
+				}
 
+				addConeRestriction(permNotModel, internalSolver);								
+				permCounter++;								
+				//System.out.println("Added perm. cone restriction "+permCounter);
 				//JOptionPane.showMessageDialog(null, permCounter+" Added restriction. notModel="+notModel+"\naPerm="+aPerm+"\npermNotModel="+permNotModel);				
 			}			
 		}
 
 		/**
 		 * Given a negated positive diagram, apply a permutation to it.
-		 * We do NOT need an ordering on the diagram.
+		 * We do NOT need an ordering on the diagram. The order of literals shouldn't matter.
 		 * @param notModel
 		 * @param aPerm
 		 * @return

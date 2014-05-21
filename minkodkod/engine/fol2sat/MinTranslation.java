@@ -21,7 +21,10 @@
  */
 package minkodkod.engine.fol2sat;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,7 +68,8 @@ public final class MinTranslation {
 	private final int maxPrimaryLit;
 	
 	public final Set<IntSet> symmetries;
-	public final Set<Map<Integer, Integer>> permutations;
+	//public final Set<Map<Integer, Integer>> permutations;
+	public final List<Map<Integer, Integer>> permutations;
 	public final BooleanValue sbpValue;
 	
 	/**
@@ -77,14 +81,14 @@ public final class MinTranslation {
 	 */
 	MinTranslation(MinSATSolver solver, Bounds bounds, Map<Relation, IntSet> varUsage,
 			int maxPrimaryLit, TranslationLog log, Set<IntSet> symmetries,
-			Set<Map<Integer, Integer>> permutations,
+			List<Map<Integer, Integer>> permutations,
 			BooleanValue sbpValue) {			
 		this.solver = solver;				
 		this.bounds = bounds;
 		this.primaryVarUsage = varUsage;
 		this.maxPrimaryLit = maxPrimaryLit;
 		this.log = log;
-		this.symmetries = symmetries;
+		this.symmetries = symmetries;		
 		this.permutations = permutations;
 		this.sbpValue = sbpValue;
 	}
@@ -176,20 +180,31 @@ public final class MinTranslation {
 	// and so any secondary variables in the SBP clauses may not match. We need instead to evaluate the original
 	// SBP Boolean circuit on this model.
 	public boolean satisfiesSBP(int[] propositionalModel) {
-				
 		Set<Integer> positives = new HashSet<Integer>(propositionalModel.length);
-		for(int ii=0;ii<propositionalModel.length;ii++) {
-			if(propositionalModel[ii] > 0)
-				positives.add(propositionalModel[ii]);
+		
+		for(int x : propositionalModel) {
+			if(x > 0) positives.add(x);		
 		}
 				
-		//System.out.println("Testing "+positives+" in formula "+sbpValue);
 		if(sbpValue instanceof BooleanFormula)
 			return ((BooleanFormula)sbpValue).accept(new BooleanFormulaEvaluator(positives), 0);
 		else
 			return true;		
 	}
-
+	
+	// TODO: share code between this and satisfiesSBP.
+	public boolean negationSatisfiesSBP(Set<Integer> negatedModel) {
+		Set<Integer> positives = new HashSet<Integer>(negatedModel.size());
+		
+		for(int x : negatedModel) {
+			if(x < 0) positives.add(-1*x);		
+		}
+						
+		if(sbpValue instanceof BooleanFormula)
+			return ((BooleanFormula)sbpValue).accept(new BooleanFormulaEvaluator(positives), 0);
+		else
+			return true;		
+	}
 	
 }
 
