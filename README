@@ -21,3 +21,7 @@ SAT4j. One of the fixes made in recent versions is that calling
 addClause with unit clauses returns an appropriate IConstr, rather
 than null. According to the changelog, now addClause will return null
 only when the clause can be ignored.
+
+May 29 2014 (TN): Removed SAT4J's folder from the project's alloy4.jar
+entirely. It was working fine in Eclipse with the above ordering, but the
+exported JAR was using the wrong version of SAT4J still.

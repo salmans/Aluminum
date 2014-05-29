@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path=""/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="org.sat4j.core.jar"/>
-	<classpathentry kind="lib" path="alloy4.jar"/>
-	<classpathentry kind="lib" path="args4j-1.0.jar"/>
-	<classpathentry kind="lib" path="kodkod.jar"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="org.sat4j.core.jar"/>
+	<classpathentry exported="true" kind="lib" path="alloy4.jar"/>
+	<classpathentry exported="true" kind="lib" path="args4j-1.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="kodkod.jar"/>
 	<classpathentry kind="output" path=""/>
 </classpath>
