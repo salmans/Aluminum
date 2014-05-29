@@ -964,10 +964,10 @@ public final class MinA4Solution {
         //JOptionPane.showMessageDialog(null, "SOLVING: "+fgoal);
         //JOptionPane.showMessageDialog(null, "BOUNDS: "+bounds);
         
-        PrintWriter out = new PrintWriter("foobar.txt");
-        out.println(formulas);
-        out.println(bounds);
-        out.close();
+        //PrintWriter out = new PrintWriter("bounds_output.txt");
+        //out.println(formulas);
+        //out.println(bounds);
+        //out.close();
         
         rep.debug("Begin solveAll()\n");
         Iterator<MinSolution> solution = solver.solveAll(fgoal, bounds);
