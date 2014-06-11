@@ -512,7 +512,7 @@ public final class AluminumTester {
 		out.close();
 	}
 	
-	private static void clearFile(File file) throws IOException{
+	static void clearFile(File file) throws IOException{
 		FileWriter fstream = new FileWriter(file);
 		BufferedWriter out = new BufferedWriter(fstream);					
 		out.close();

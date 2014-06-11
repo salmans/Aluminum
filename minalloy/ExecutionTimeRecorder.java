@@ -50,7 +50,7 @@ public final class ExecutionTimeRecorder {
      * You should catch them and display them,
      * and they may contain filename/line/column information.
      */
-    public static void main(String[] args) throws Err {
+    public static void main(String[] args) throws Err, IOException {
     	//The input spec file
     	FileOption optInput = new FileOption("-i");
     	//The output file
@@ -127,12 +127,16 @@ public final class ExecutionTimeRecorder {
 
     /**
      * Runs the tests using Aluminum
+     * @throws IOException 
      */
 	private static void solveMinimal(FileOption optInput, FileOption optOutput, 
 			IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, FileOption optAugmentation, 
 			IntOption optNumberOfTrials, BooleanOption optLogMinimizationHistory,
-			BooleanOption optLogConsistentFacts) throws Err {
+			BooleanOption optLogConsistentFacts) throws Err, IOException {
+		
+    
+	    AluminumTester.clearFile(optOutput.value);
 		
 		//Loads a dummy model in order to load Kodkod classes.
 		try{
@@ -153,7 +157,7 @@ public final class ExecutionTimeRecorder {
                 System.out.flush();
             }
         };
-
+        
         // Parse+typecheck the model
         System.out.println("Parsing+Typechecking "+optInput.value.getName());
         output.add("Spec: " + optInput.value.getName());
@@ -169,7 +173,10 @@ public final class ExecutionTimeRecorder {
         System.out.println("-t = " + optNumberOfTrials.value + "\n"); 
         
         Module world = CompUtil.parseEverything_fromFile(rep, null, optInput.value.getPath());
-
+        
+        writeOutput(output, optOutput.value, true); 
+        output.clear();
+        
         // Choose some default options for how you want to execute the commands
         MinA4Options options = new MinA4Options();
         options.symmetry = optSymmetryBreaking.value;
@@ -189,13 +196,16 @@ public final class ExecutionTimeRecorder {
         for (Command command: world.getAllCommands()) {
     		// Execute the command
     		System.out.println("Command: "+command + "-------------\n");
-    		output.add("Command:\t" + command.toString() + "-------------\n");
+    		output.add("\n\nCommand:\t" + command.toString() + "-------------\n");
     		
     		if(command.check)
     		{
     			output.add("Skipped check.\n");
     			continue;
     		}
+    		
+    		writeOutput(output, optOutput.value, true); 
+            output.clear();
     		
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
             int lineNumber = output.size();
@@ -332,7 +342,7 @@ public final class ExecutionTimeRecorder {
         		//Writing the current state of data to a file.
     	        try{
     	        	//We are not keeping appending data to a previous log file.
-    	        	writeOutput(output, optOutput.value, false);    	        	
+    	        	writeOutput(output, optOutput.value, true);    	        	
     	        }
     	        catch(IOException e){
     	        	System.err.println(e.getMessage());
@@ -340,17 +350,18 @@ public final class ExecutionTimeRecorder {
         	}	  // end for each trial
         	
         	output.clear();
-    		output.add("Average translation: "+avg(translationTimes));
+    		output.add("\nAverage translation: "+avg(translationTimes));
     		output.add("Average first soln or unsat: "+avg(firstSolveTimes));    		
     		output.add("StdDev translation: "+stddev(translationTimes));
     		output.add("StdDev first soln or unsat: "+stddev(firstSolveTimes));
-    		
+    		output.add("----------------------------------------------------");
     		try {
 				writeOutput(output, optOutput.value, true);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+    		output.clear();
 
         } // end for each command
 	}
