@@ -260,7 +260,7 @@ public final class ExecutionTimeRecorder {
         			
         			//System.out.println(ans.toString());
         			
-        			//time = System.currentTimeMillis();
+        			//time = System.currentTimeMillis();        			
         			ans = ans.next();
         			//time = System.currentTimeMillis() - time;
         			time = ans.getCurrentSolution().stats().solvingTime();
@@ -462,7 +462,11 @@ public final class ExecutionTimeRecorder {
 				consistentFacts = -1;
 			}
         }
-        
+        */
+        // see minsolver.computeDifference
+        // elements = actual atoms that no longer get used
+        // attributes: unary relations
+        // relations: >1ary relations
         String info = null;
         if(logMinimizationHistory){
         	MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
@@ -471,6 +475,9 @@ public final class ExecutionTimeRecorder {
         	else
         		info = "No solutions.";
         }
+        else
+        	info = new Long(time).toString();
+        	/*
         else{
         	if(logConsistentFacts){
         		info = time + "\t" + consistentFacts + "\t" + (totalAugmentationTimeNS/1000000);        		
@@ -478,9 +485,7 @@ public final class ExecutionTimeRecorder {
         	else{
         		info = new Long(time).toString();        		
         	}
-        }*/
-        
-        String info = new Long(time).toString();   
+        }*/                   
         
         times.add(translTime);
         times.add(time);
