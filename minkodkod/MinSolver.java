@@ -805,7 +805,7 @@ public final class MinSolver {
 				final long startSolve = System.currentTimeMillis();				
 				boolean isSat = false;				
 
-				System.out.println("Finding a non trivial solution...");
+				//System.out.println("Finding a non trivial solution...");
 				
 				// This populates a MINIMAL model in lastModel, NOT the candidate
 				boolean respectsSB = false;							
@@ -822,10 +822,10 @@ public final class MinSolver {
 						final Set<Integer> notModel = new HashSet<Integer>();		
 						
 						respectsSB = translation.satisfiesSBP(translation.cnf().getLastModel());						
-						if(minSolver.forceRespectSB)
+						/*if(minSolver.forceRespectSB)
 						{							
 							System.out.println("Must respect SB. Result: "+respectsSB);													
-						}
+						}*/
 						
 						// Negate this model's positive diagram. 
 						// We will use this disjunctively for "cone-restriction": preventing models 
@@ -1039,7 +1039,7 @@ public final class MinSolver {
 		public MinSolution next() {
 			if (!hasNext()) return unsatSolution;
 			
-			System.out.println("Calling next()...");
+			//System.out.println("Calling next()...");
 			
 			claimSATSolver();
 
