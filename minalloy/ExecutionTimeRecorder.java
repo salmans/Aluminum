@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
 
@@ -54,11 +56,14 @@ public final class ExecutionTimeRecorder {
     	//The output file
     	FileOption optOutput = new FileOption("-o");
     	//Produce minimal solutions (by default non-minimal)
-    	BooleanOption optMinimal = new BooleanOption("-m", false);
+    //	BooleanOption optMinimal = new BooleanOption("-m", false);
     	//Number of models to produce
     	IntOption optNumberOfModels = new IntOption("-n", 10);
     	//Symmetry Breaking (Equal to Aluminum's SB by default)
     	IntOption optSymmetryBreaking = new IntOption("-sb", 20);
+    	// respect
+    	BooleanOption optSBRespect = new BooleanOption("-sbrespect", false);
+    	
     	//Record augmentation time
     	FileOption optAugmentation = new FileOption("-a");
     	//Number of trials
@@ -72,13 +77,14 @@ public final class ExecutionTimeRecorder {
     	CmdLineParser optParser = new CmdLineParser();
     	optParser.addOption(optInput);
     	optParser.addOption(optOutput);
-    	optParser.addOption(optMinimal);
+    //	optParser.addOption(optMinimal);
     	optParser.addOption(optNumberOfModels);
     	optParser.addOption(optSymmetryBreaking);
     	optParser.addOption(optAugmentation);
     	optParser.addOption(optNumberOfTrials);
     	optParser.addOption(optLogMinimizationHistory);
     	optParser.addOption(optLogConsistentFacts);
+    	optParser.addOption(optSBRespect);
     	
     	try{
     		optParser.parse(args);
@@ -96,34 +102,34 @@ public final class ExecutionTimeRecorder {
     		System.exit(0);
     	}
     	if(optLogMinimizationHistory.value){	//If -hist is active, then run it only for one trial for only minimal solutions
-    		optMinimal.value = true;
+ //   		optMinimal.value = true;
     		optNumberOfTrials.value = 1;
     	}
     	if(optLogConsistentFacts.value){	//If -cf is active, then run it for only minimal solutions
-    		optMinimal.value = true;
+ //   		optMinimal.value = true;
     	}    	
-    	if(!optMinimal.value && optAugmentation.value != null){
+/*    	if(!optMinimal.value && optAugmentation.value != null){
     		System.err.println("Augmentation is only applicable on minimal model finding.");
     		System.exit(0);
-    	}
+    	}*/
     	if(optLogConsistentFacts.value && optLogMinimizationHistory.value){
     		System.err.println("One one of -hist or -cf can be active.");
     		System.exit(0);
     	}
     	
     	//TODO this is the worst code ever! Consider revision:
-    	if(optMinimal.value)
-    		solveMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials, 
+    	//if(optMinimal.value)
+    		solveMinimal(optInput, optOutput, optNumberOfModels, optSymmetryBreaking, optAugmentation, optNumberOfTrials, 
     				optLogMinimizationHistory, optLogConsistentFacts);
-    	else
-    		solveNonMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optNumberOfTrials);
+    	//else
+//    		solveNonMinimal(optInput, optOutput, optMinimal, optNumberOfModels, optSymmetryBreaking, optNumberOfTrials);
     }
 
     /**
      * Runs the tests using Aluminum
      */
 	private static void solveMinimal(FileOption optInput, FileOption optOutput, 
-			BooleanOption optMinimal, IntOption optNumberOfModels, 
+			IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, FileOption optAugmentation, 
 			IntOption optNumberOfTrials, BooleanOption optLogMinimizationHistory,
 			BooleanOption optLogConsistentFacts) throws Err {
@@ -152,8 +158,6 @@ public final class ExecutionTimeRecorder {
         System.out.println("Parsing+Typechecking "+optInput.value.getName());
         output.add("Spec: " + optInput.value.getName());
         
-        System.out.println("-m = " + optMinimal.value);
-        output.add("-m = " + optMinimal.value);
         System.out.println("-sb = " + optSymmetryBreaking.value);
         output.add("-sb = " + optSymmetryBreaking.value);
         System.out.println("-n = " + optNumberOfModels.value);
@@ -196,6 +200,9 @@ public final class ExecutionTimeRecorder {
             //Keeps the number of items in the output so far. We keep this number to add data in the next trials.
             int lineNumber = output.size();
     		
+            ArrayList<Long> firstSolveTimes = new ArrayList<Long>();
+            ArrayList<Long> translationTimes = new ArrayList<Long>();
+            
         	for(int i = 0; i < optNumberOfTrials.value; i++){   
         		System.out.println("TRIAL " + (i + 1) + "------");
 
@@ -213,15 +220,21 @@ public final class ExecutionTimeRecorder {
         			}
         		}
         		
+        		ArrayList<Long> times = new ArrayList<Long>();
+        		
+        		// Get first solutions actually writes the first column!
         		MinA4Solution ans = null;
         		try{
-        			ans = getFirstSolution(rep, world, command, options, output, stack, optLogMinimizationHistory.value, optLogConsistentFacts.value, i, lineNumber);
+        			ans = getFirstSolution(rep, world, command, options, output, stack, 
+        					  optLogMinimizationHistory.value, optLogConsistentFacts.value, i, lineNumber, times);
+        			translationTimes.add(times.get(0));
+        			firstSolveTimes.add(times.get(1));
         		}
         		catch(ExplorationException e){
         			System.err.println(e.getMessage());
         			System.exit(0);
         		}
-
+        		        		
         		long time = 0;
         		int consistentFacts = 0;
         		int counter = 1;
@@ -242,6 +255,7 @@ public final class ExecutionTimeRecorder {
         			//time = System.currentTimeMillis() - time;
         			time = ans.getCurrentSolution().stats().solvingTime();
 
+        			/*
         			if(optLogConsistentFacts.value){
         				if(ans.satisfiable()){
         					//Get all the consistent facts:
@@ -285,7 +299,7 @@ public final class ExecutionTimeRecorder {
         					time = -1;
         					consistentFacts = -1;
         				}
-        			}
+        			} */
         			
         			String info = null;
         			if(optLogMinimizationHistory.value){        				
@@ -314,22 +328,57 @@ public final class ExecutionTimeRecorder {
         					output.set(counter + lineNumber -1, output.get(counter + lineNumber - 1) + "\t" + info);        				
         			}
         		} // end for each solution
-        		
+        		        		
         		//Writing the current state of data to a file.
     	        try{
     	        	//We are not keeping appending data to a previous log file.
-    	        	writeOutput(output, optOutput.value, false);
+    	        	writeOutput(output, optOutput.value, false);    	        	
     	        }
     	        catch(IOException e){
     	        	System.err.println(e.getMessage());
     	        }        	
-        	}	        
-        }
+        	}	  // end for each trial
+        	
+        	output.clear();
+    		output.add("Average translation: "+avg(translationTimes));
+    		output.add("Average first soln or unsat: "+avg(firstSolveTimes));    		
+    		output.add("StdDev translation: "+stddev(translationTimes));
+    		output.add("StdDev first soln or unsat: "+stddev(firstSolveTimes));
+    		
+    		try {
+				writeOutput(output, optOutput.value, true);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+        } // end for each command
+	}
+		
+	private static double avg(ArrayList<Long> vals) {
+		double sum = 0;
+		for(long val : vals) {
+			sum = sum + val;
+		}
+		return sum / vals.size();
+	}
+	
+	private static double stddev(ArrayList<Long> vals) {						
+		double mean = avg(vals);
+		
+		double temp = 0;
+		for (long val : vals) {
+			temp = temp + Math.pow(val - mean, 2);
+		}
+		
+		// POPULATION stddev. sample would take -1 on the bottom
+		// If double-checking in Excel, that's STDEVP, not STDEV
+		return Math.sqrt(temp/vals.size());
 	}
 	
 	private static MinA4Solution getFirstSolution(A4Reporter rep, Module world, Command command, 
 			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, boolean logMinimizationHistory, 
-			boolean logConsistentFacts, int trial, int lineNumber)
+			boolean logConsistentFacts, int trial, int lineNumber, ArrayList<Long> times)
 					throws Err, ExplorationException{
         long time = 0;
         long translTime = 0;
@@ -357,7 +406,7 @@ public final class ExecutionTimeRecorder {
         	//time = System.currentTimeMillis() - time;	
         }
         
-		long totalAugmentationTimeNS = 0;		
+		/*long totalAugmentationTimeNS = 0;		
         if(logConsistentFacts){ //When logging consistent facts, ignore the time to fetch the last model.
 			if(ans.satisfiable()){
 				//Get all the consistent facts:
@@ -418,10 +467,15 @@ public final class ExecutionTimeRecorder {
         	else{
         		info = new Long(time).toString();        		
         	}
-        }
+        }*/
+        
+        String info = new Long(time).toString();   
+        
+        times.add(translTime);
+        times.add(time);
         
         if(!logMinimizationHistory && !logConsistentFacts)
-        	System.out.println("0: " + translTime);
+        	System.out.println("translate: " + translTime);
         	
         System.out.println("1: " + info);
         if(trial == 0){
@@ -431,15 +485,15 @@ public final class ExecutionTimeRecorder {
         }
         else{
             if(!logMinimizationHistory && !logConsistentFacts){
-            	output.set(lineNumber, output.get(lineNumber) + "\t" + translTime);
+            	output.set(lineNumber, output.get(lineNumber)  + "\t" +translTime);
             	lineNumber++;
             }
-        	output.set(lineNumber, output.get(lineNumber) + "\t" + info);
+        	output.set(lineNumber, output.get(lineNumber) + "\t"+ info);
         }
 		
 		return ans;
 	}
-	
+		
 	/**
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
@@ -465,6 +519,7 @@ public final class ExecutionTimeRecorder {
 	/**
 	 * Runs the tests using Alloy 
 	 */
+	/*
 	private static void solveNonMinimal(FileOption optInput, FileOption optOutput, 
 			BooleanOption optMinimal, IntOption optNumberOfModels, 
 			IntOption optSymmetryBreaking, IntOption optNumberOfTrials) throws Err {
@@ -572,11 +627,12 @@ public final class ExecutionTimeRecorder {
                 }
         	}
         }        
-	}
+	}*/
     
 	/**
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
+	/*
 	private static void initNonMinimal() throws Err{
         A4Reporter rep = new A4Reporter() {
             // For example, here we choose to display each "warning" by printing it to System.out
@@ -595,6 +651,7 @@ public final class ExecutionTimeRecorder {
         for(Command command: world.getAllCommands())
         	TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);   
 	}
+	*/
 	
 	/**
 	 * Helper methods
