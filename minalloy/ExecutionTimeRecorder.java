@@ -202,11 +202,11 @@ public final class ExecutionTimeRecorder {
     		System.out.println("Command: "+command + "-------------\n");
     		output.add("\n\nCommand:\t" + command.toString() + "-------------\n");
     		
-    		if(command.check)
+    		/*if(command.check)
     		{
     			output.add("Skipped check.\n");
     			continue;
-    		}
+    		}*/
     		
     		// aggregate over all trials
     		Map<String, ArrayList<Integer>> unaryCounts = new HashMap<String, ArrayList<Integer>>(); 
@@ -262,8 +262,10 @@ public final class ExecutionTimeRecorder {
         		{
             		long totalAugmentationTimeNS = 0;
       		
-        			if(counter == optNumberOfModels.value)
-        				break;
+            		// Don't stop after num models in first trial; gotta compute median sizes.
+            		// (But do refrain from printing or saving time infos)
+        			if(counter == optNumberOfModels.value && i>0)
+            		 	break;
         			
         			//System.out.println(ans.toString());
         			
@@ -271,81 +273,44 @@ public final class ExecutionTimeRecorder {
         			ans = ans.next();
         			//time = System.currentTimeMillis() - time;
         			time = ans.getCurrentSolution().stats().solvingTime();
-
+        			
         			countUnary(unaryCounts, ans);
+        			if(counter % 50 == 0)
+        				System.out.println("   Counting model number "+counter);        	
         			
-        			/*
-        			if(optLogConsistentFacts.value){
-        				if(ans.satisfiable()){
-        					//Get all the consistent facts:
-	            			time = System.currentTimeMillis();
-	            			Instance facts = ans.getConsistentFacts();
-	            			time = System.currentTimeMillis() - time;
-	                        consistentFacts = 0;	
-	                        // Compute the total number of consistent facts:
-	                        for(Relation relation: facts.relations()){
-	                        	consistentFacts += facts.tuples(relation).size();
-	                        }
-	                        
-	                        // Compute the time to augment the solution using the consistent facts:
-	                        if(consistentFacts > 0) {	
-	                        	//  if there are any consistent facts
-	                        	for(Relation relation: facts.relations()){
-	                        		for(Tuple tuple: facts.tuples(relation)){
-	                        			// "This method provides nanosecond precision, but not necessarily nanosecond accuracy."
-			                        	long augmentationTimeNS = System.nanoTime();
-			                        	try{
-			                        		// No translation (so we can use the tuple string in raw form)
-			                        		ans = ans.augment(relation.toString()+tuple.toString(), null);
-			                        		augmentationTimeNS = System.nanoTime() - augmentationTimeNS;
-				                        	totalAugmentationTimeNS += augmentationTimeNS;
-			                        		ans = ans.backtrack();
-			                        	}
-			                        	catch(ExplorationException e){
-			                        		System.err.println(e.getMessage());
-			                        		System.exit(1);
-			                        	} catch (IOException e) {
-			                        		System.err.println(e.getMessage());
-			                        		System.exit(2);
-										}
-	                        		}
-	                        	}
-	                        	//Freeing up the garbage that augmentation and backtracking produces:
-                        		System.gc();
-	                        }
+        			// save timing data if #models below ceiling in args
+        			// (keep looping to count unaries)
+        			if(counter < optNumberOfModels.value) {
+        				String info = null;
+        				if(optLogMinimizationHistory.value){        				
+        					MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
+        					
+        					if(history == null) //The last unsatisfiable solution comes back with a null history.
+        						break;
+        				
+        					info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
+        				}else{
+        					if(optLogConsistentFacts.value){
+        						info = time + "\t" + consistentFacts + "\t" + (totalAugmentationTimeNS/1000000);        		
+        					}
+        					else{
+        						info = new Long(time).toString();
+        					}        				
         				}
+        			
+        				System.out.println(++counter + ": " + info);
+        				if(i == 0)
+        					output.add(info);
         				else{
-        					time = -1;
-        					consistentFacts = -1;
+        					if(!optLogConsistentFacts.value && !optLogMinimizationHistory.value)
+        						output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + info);
+        					else
+        						output.set(counter + lineNumber -1, output.get(counter + lineNumber - 1) + "\t" + info);        				
         				}
-        			} */
+        			} // end if under # models
+        			else
+        				counter++;
         			
-        			String info = null;
-        			if(optLogMinimizationHistory.value){        				
-        				MinimizationHistory history = ans.getCurrentSolution().minimizationHistory;
-        				
-        				if(history == null) //The last unsatisfiable solution comes back with a null history.
-        					break;
-        				
-        				info = history.SATSolverInvocations + "\t" + history.reducedElements + "\t" + history.reducedAttributes + "\t" + history.reducedRelations;
-        			}else{
-        	        	if(optLogConsistentFacts.value){
-        	        		info = time + "\t" + consistentFacts + "\t" + (totalAugmentationTimeNS/1000000);        		
-        	        	}
-        	        	else{
-        	        		info = new Long(time).toString();
-        	        	}        				
-        			}
-        			
-        			System.out.println(++counter + ": " + info);
-        			if(i == 0)
-            			output.add(info);
-        			else{
-        				if(!optLogConsistentFacts.value && !optLogMinimizationHistory.value)
-        					output.set(counter + lineNumber, output.get(counter + lineNumber) + "\t" + info);
-        				else
-        					output.set(counter + lineNumber -1, output.get(counter + lineNumber - 1) + "\t" + info);        				
-        			}
         		} // end for each solution
         		        		
         		//Writing the current state of data to a file.
@@ -551,6 +516,8 @@ public final class ExecutionTimeRecorder {
 		
 		// Count how many atoms are in each unary relation and return counts as a map
 		MinSolution kSol = ans.getCurrentSolution();
+		if(!ans.satisfiable()) return;
+		
 		for(Relation r : kSol.instance().relations())
 		{
 			if(r.arity() == 1)
