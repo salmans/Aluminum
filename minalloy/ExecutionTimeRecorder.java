@@ -8,7 +8,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.StringTokenizer;
@@ -36,6 +39,7 @@ import minalloy.translator.MinA4Options;
 import minalloy.translator.MinA4Solution;
 import minalloy.translator.MinTranslateAlloyToKodkod;
 import minkodkod.ExplorationException;
+import minkodkod.MinSolution;
 import minkodkod.MinSolution.MinimizationHistory;
 
 
@@ -204,6 +208,9 @@ public final class ExecutionTimeRecorder {
     			continue;
     		}
     		
+    		// aggregate over all trials
+    		Map<String, ArrayList<Integer>> unaryCounts = new HashMap<String, ArrayList<Integer>>(); 
+    		
     		writeOutput(output, optOutput.value, true); 
             output.clear();
     		
@@ -236,7 +243,7 @@ public final class ExecutionTimeRecorder {
         		MinA4Solution ans = null;
         		try{
         			ans = getFirstSolution(rep, world, command, options, output, stack, 
-        					  optLogMinimizationHistory.value, optLogConsistentFacts.value, i, lineNumber, times);
+        					  optLogMinimizationHistory.value, optLogConsistentFacts.value, i, lineNumber, times, unaryCounts);
         			translationTimes.add(times.get(0));
         			firstSolveTimes.add(times.get(1));
         		}
@@ -265,6 +272,8 @@ public final class ExecutionTimeRecorder {
         			//time = System.currentTimeMillis() - time;
         			time = ans.getCurrentSolution().stats().solvingTime();
 
+        			countUnary(unaryCounts, ans);
+        			
         			/*
         			if(optLogConsistentFacts.value){
         				if(ans.satisfiable()){
@@ -346,15 +355,24 @@ public final class ExecutionTimeRecorder {
     	        }
     	        catch(IOException e){
     	        	System.err.println(e.getMessage());
-    	        }        	
+    	        }
+    	        
         	}	  // end for each trial
         	
         	output.clear();
+	        output.add("----------------------------------------------------");    	        
+	        output.add("Medians of unary relation tuple counters: ");
+	        for(String rname : unaryCounts.keySet()) {
+	        	output.add(rname+": "+median(unaryCounts.get(rname))+" over "+unaryCounts.get(rname).size()+" scenarios.");
+	        }        	
+        	output.add("----------------------------------------------------");
     		output.add("\nAverage translation: "+avg(translationTimes));
     		output.add("Average first soln or unsat: "+avg(firstSolveTimes));    		
     		output.add("StdDev translation: "+stddev(translationTimes));
     		output.add("StdDev first soln or unsat: "+stddev(firstSolveTimes));
     		output.add("----------------------------------------------------");
+    		
+    		    		
     		try {
 				writeOutput(output, optOutput.value, true);
 			} catch (IOException e) {
@@ -374,6 +392,23 @@ public final class ExecutionTimeRecorder {
 		return sum / vals.size();
 	}
 	
+	private static int median(ArrayList<Integer> vals) {
+		Integer[] arr = vals.toArray(new Integer[vals.size()]);
+		Arrays.sort(arr);
+		System.out.println(vals);
+		System.out.println(Arrays.toString(arr));
+		int mididx = arr.length/2;
+		
+		if(arr.length % 2 == 0) {
+			int m1 = arr[mididx-1]; 
+			int m2 = arr[mididx];
+			return (m1+m2)/2;
+		}
+		else {
+			return arr[mididx];
+		}		
+	}
+	
 	private static double stddev(ArrayList<Long> vals) {						
 		double mean = avg(vals);
 		
@@ -389,7 +424,7 @@ public final class ExecutionTimeRecorder {
 	
 	private static MinA4Solution getFirstSolution(A4Reporter rep, Module world, Command command, 
 			MinA4Options options, ArrayList<String> output, Stack<AugmentationElement> stack, boolean logMinimizationHistory, 
-			boolean logConsistentFacts, int trial, int lineNumber, ArrayList<Long> times)
+			boolean logConsistentFacts, int trial, int lineNumber, ArrayList<Long> times, Map<String, ArrayList<Integer>> unaryCounts)
 					throws Err, ExplorationException{
         long time = 0;
         long translTime = 0;
@@ -400,6 +435,8 @@ public final class ExecutionTimeRecorder {
         //time = System.currentTimeMillis() - time;
         translTime = ans.getCurrentSolution().stats().translationTime();
         time = ans.getCurrentSolution().stats().solvingTime();
+        
+        countUnary(unaryCounts, ans);
         
         int counter = 1;
 
@@ -510,6 +547,23 @@ public final class ExecutionTimeRecorder {
 		return ans;
 	}
 		
+	private static void countUnary(Map<String, ArrayList<Integer>> result, MinA4Solution ans) {		
+		
+		// Count how many atoms are in each unary relation and return counts as a map
+		MinSolution kSol = ans.getCurrentSolution();
+		for(Relation r : kSol.instance().relations())
+		{
+			if(r.arity() == 1)
+			{
+				if(!result.containsKey(r.name()))
+					result.put(r.name(), new ArrayList<Integer>());
+								
+				// mutation, not functional sets
+				result.get(r.name()).add(kSol.instance().relationTuples().get(r).size());				
+			}
+		}				
+	}
+
 	/**
 	 * Loads Kodkod's classes by loading a dummy spec.
 	 */
