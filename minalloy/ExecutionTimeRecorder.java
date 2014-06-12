@@ -395,8 +395,8 @@ public final class ExecutionTimeRecorder {
 	private static int median(ArrayList<Integer> vals) {
 		Integer[] arr = vals.toArray(new Integer[vals.size()]);
 		Arrays.sort(arr);
-		System.out.println(vals);
-		System.out.println(Arrays.toString(arr));
+		//System.out.println(vals);
+		//System.out.println(Arrays.toString(arr));
 		int mididx = arr.length/2;
 		
 		if(arr.length % 2 == 0) {
