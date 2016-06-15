@@ -1192,32 +1192,34 @@ public final class MinSolver {
 				// add: disjunction of negations of all positive literals in M (constraint)
 				// add: all negative literals as unit clauses
 				
+				// [MAX] loseSomethingPositive -> loseSomethingNegative
+				
 				// An array of the next constraint being added.
-				List<Integer> loseSomethingPositive = new ArrayList<Integer>();
+				List<Integer> loseSomethingNegative = new ArrayList<Integer>();
 				
 				int numPrimaryVariables = translation.numPrimaryVariables();
 					
 				for(int i = 1; i <= numPrimaryVariables; i++){
-					if(theSolver.valueOf(i) == true)
-						loseSomethingPositive.add(-i);
+					if(theSolver.valueOf(i) == false)
+						loseSomethingNegative.add(i);
 					else // don't set anything curr. negative to positive.
-						unitClauses.add(-i);
+						unitClauses.add(i);
 				}
 				
-				if(loseSomethingPositive.size() == 0)
+				if(loseSomethingNegative.size() == 0)
 				{
 					// We have minimized down to the empty model. 
 					// Avoid calling the final SAT (would be adding the empty clause)
 					break;
 				}
-				if(loseSomethingPositive.size() == 1)
+				if(loseSomethingNegative.size() == 1)
 				{
 					// We have only one relational fact that can possibly be removed.
-					unitClauses.add(loseSomethingPositive.get(0));
+					unitClauses.add(loseSomethingNegative.get(0));
 				}
 				else
 				{
-					constraints.add(theSolver.addConstraint(toIntCollection(loseSomethingPositive)));
+					constraints.add(theSolver.addConstraint(toIntCollection(loseSomethingNegative)));
 				}
 				
 				iterationCounter++;

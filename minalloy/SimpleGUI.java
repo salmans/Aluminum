@@ -382,7 +382,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         if (text==null) return null; // If this was called prior to the "text" being fully initialized
         OurSyntaxWidget t = text.get();
         if (Util.onMac()) frame.getRootPane().putClientProperty("windowModified", Boolean.valueOf(t.modified()));
-        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version() + ")");
+        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle("[EXPERIMENTAL MAXIMIZING] Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version() + ")");
         toolbar.setBorder(new OurBorder(false, false, text.count()<=1, false));
         int c = t.getCaret();
         int y = t.getLineOfOffset(c)+1;
@@ -1928,7 +1928,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         frame.setSize(width,height);
         frame.setLocation(x,y);
         frame.setVisible(true);
-        frame.setTitle("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+") loading... please wait...");
+        frame.setTitle("[EXPERIMENTAL MAXIMIZING] Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+") loading... please wait...");
         final int windowWidth = width;
         // We intentionally call setVisible(true) first before settings the "please wait" title,
         // since we want the minimized window title on Linux/FreeBSD to just say Alloy Analyzer
@@ -2069,7 +2069,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         all.add(status, BorderLayout.SOUTH);
 
         // Generate some informative log messages
-        log.logBold("Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+")\n(Aluminum build date: "+AluminumVersion.buildDate()+")\n\n");
+        log.logBold("[EXPERIMENTAL MAXIMIZING] Aluminum Analyzer " + AluminumVersion.version() + " (based on Alloy Analyzer "+Version.version()+")\n(Aluminum build date: "+AluminumVersion.buildDate()+")\n\n");
 
         // If on Mac, then register an application listener
         try {
